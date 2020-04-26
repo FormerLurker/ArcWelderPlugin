@@ -298,10 +298,10 @@ $(function () {
             // If this is a commit, link to the commit
             if (self.version().includes("+"))
             {
-                return  'https://github.com/FormerLurker/ArcWelder/commit/' + git_version;
+                return  'https://github.com/FormerLurker/ArcWelderPlugin/commit/' + git_version;
             }
             // This is a release, link to the tag
-            return 'https://github.com/FormerLurker/ArcWelder/releases/tag/v' + self.version();
+            return 'https://github.com/FormerLurker/ArcWelderPlugin/releases/tag/v' + self.version();
         });
         self.version_text = ko.pureComputed(function () {
             if (self.version() && self.version() !== "unknown") {
