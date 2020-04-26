@@ -25,7 +25,7 @@
 ###################################################################################*/
 $(function() {
 
-    function AntiStutterSettingsViewModel(parameters) {
+    function ArcWelderSettingsViewModel(parameters) {
         var self = this;
 
         self.settings = parameters[0];
@@ -110,7 +110,7 @@ $(function() {
                 title = "Clear Log";
                 message = "The most recent Arc Welder log file will be cleared.  Are you sure?";
             }
-            AntiStutter.showConfirmDialog(
+            ArcWelder.showConfirmDialog(
                 "clear_log",
                 title,
                 message,
@@ -142,7 +142,7 @@ $(function() {
                                     desktop: true
                                 }
                             };
-                            AntiStutter.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
+                            ArcWelder.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
                         },
                         error: function (XMLHttpRequest, textStatus, errorThrown) {
                             var message = "Unable to clear the log.:(  Status: " + textStatus + ".  Error: " + errorThrown;
@@ -156,7 +156,7 @@ $(function() {
                                     desktop: true
                                 }
                             };
-                            AntiStutter.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
+                            ArcWelder.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
                         }
                     });
                 }
@@ -166,7 +166,7 @@ $(function() {
     }
 
     OCTOPRINT_VIEWMODELS.push([
-        AntiStutterSettingsViewModel,
+        ArcWelderSettingsViewModel,
         ["settingsViewModel"],
         ["#arc_welder_settings"]
     ]);

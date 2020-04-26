@@ -68,11 +68,11 @@ def format_log_time(time_seconds):
     return t
 
 
-class AntiStutterFormatter(logging.Formatter):
+class ArcWelderFormatter(logging.Formatter):
     def __init__(
         self, fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt=None
     ):
-        super(AntiStutterFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
+        super(ArcWelderFormatter, self).__init__(fmt=fmt, datefmt=datefmt)
 
     def formatTime(self, record, datefmt=None):
         ct = self.converter(record.created)
@@ -83,14 +83,14 @@ class AntiStutterFormatter(logging.Formatter):
         return s
 
 
-class AntiStutterConsoleHandler(logging.StreamHandler, AsyncLogHandlerMixin):
+class ArcWelderConsoleHandler(logging.StreamHandler, AsyncLogHandlerMixin):
     def __init__(self, *args, **kwargs):
-        super(AntiStutterConsoleHandler, self).__init__(*args, **kwargs)
+        super(ArcWelderConsoleHandler, self).__init__(*args, **kwargs)
 
 
-class AntiStutterFileHandler(CleaningTimedRotatingFileHandler, AsyncLogHandlerMixin):
+class ArcWelderFileHandler(CleaningTimedRotatingFileHandler, AsyncLogHandlerMixin):
     def __init__(self, *args, **kwargs):
-        super(AntiStutterFileHandler, self).__init__(*args, **kwargs)
+        super(ArcWelderFileHandler, self).__init__(*args, **kwargs)
 
     def delete_all_backups(self):
         # clean up old files on handler start
@@ -106,7 +106,7 @@ class LoggingConfigurator(object):
     BACKUP_COUNT = 3
 
     def __init__(self, root_logger_name, log_entry_prefix, log_file_prefix):
-        self.logging_formatter = AntiStutterFormatter()
+        self.logging_formatter = ArcWelderFormatter()
         self._root_logger_name = root_logger_name  # "arc_welder"
         self._log_entry_prefix = log_entry_prefix  # "arc_welder."
         self._log_file_prefix = log_file_prefix  # "octoprint_arc_welder."
@@ -156,7 +156,7 @@ class LoggingConfigurator(object):
             self._console_handler = None
 
     def _add_file_handler(self, log_file_path, log_level):
-        self._file_handler = AntiStutterFileHandler(
+        self._file_handler = ArcWelderFileHandler(
             log_file_path, when="D", backupCount=LoggingConfigurator.BACKUP_COUNT
         )
         self._file_handler.setFormatter(self.logging_formatter)
@@ -164,7 +164,7 @@ class LoggingConfigurator(object):
         self._root_logger.addHandler(self._file_handler)
 
     def _add_console_handler(self, log_level):
-        self._console_handler = AntiStutterConsoleHandler()
+        self._console_handler = ArcWelderConsoleHandler()
         self._console_handler.setFormatter(self.logging_formatter)
         self._console_handler.setLevel(log_level)
         self._root_logger.addHandler(self._console_handler)

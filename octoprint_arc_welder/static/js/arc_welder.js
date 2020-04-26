@@ -24,9 +24,9 @@
 # following email address: FormerLurker@pm.me
 ################################################################################### */
 $(function () {
-    // AntiStutter Global
-    AntiStutter = {};
-    AntiStutter.progressBar = function (cancel_callback, initial_text, title, subtitle) {
+    // ArcWelder Global
+    ArcWelder = {};
+    ArcWelder.progressBar = function (cancel_callback, initial_text, title, subtitle) {
         var self = this;
         self.notice = null;
         self.$progress = null;
@@ -104,39 +104,39 @@ $(function () {
         return self;
     };
 
-    AntiStutter.Popups = {};
-    AntiStutter.displayPopupForKey = function (options, popup_key, remove_keys) {
-        AntiStutter.closePopupsForKeys(remove_keys);
+    ArcWelder.Popups = {};
+    ArcWelder.displayPopupForKey = function (options, popup_key, remove_keys) {
+        ArcWelder.closePopupsForKeys(remove_keys);
         var popup = new PNotify(options);
-        AntiStutter.Popups[popup_key] = popup;
+        ArcWelder.Popups[popup_key] = popup;
         return popup;
     };
 
-    AntiStutter.closePopupsForKeys = function (remove_keys) {
+    ArcWelder.closePopupsForKeys = function (remove_keys) {
         if (!$.isArray(remove_keys)) {
             remove_keys = [remove_keys];
         }
         for (var index = 0; index < remove_keys.length; index++) {
             var key = remove_keys[index];
-            if (key in AntiStutter.Popups) {
-                var notice = AntiStutter.Popups[key];
+            if (key in ArcWelder.Popups) {
+                var notice = ArcWelder.Popups[key];
                 if (notice.state === "opening") {
                     notice.options.animation = "none";
                 }
                 notice.remove();
-                delete AntiStutter.Popups[key];
+                delete ArcWelder.Popups[key];
             }
         }
     };
 
-    AntiStutter.removeKeyForClosedPopup = function (key) {
-        if (key in AntiStutter.Popups) {
-            var notice = AntiStutter.Popups[key];
-            delete AntiStutter.Popups[key];
+    ArcWelder.removeKeyForClosedPopup = function (key) {
+        if (key in ArcWelder.Popups) {
+            var notice = ArcWelder.Popups[key];
+            delete ArcWelder.Popups[key];
         }
     };
 
-    AntiStutter.checkPNotifyDefaultConfirmButtons = function () {
+    ArcWelder.checkPNotifyDefaultConfirmButtons = function () {
         // check to see if exactly two default pnotify confirm buttons exist.
         // If we keep running into problems we might need to inspect the buttons to make sure they
         // really are the defaults.
@@ -144,7 +144,7 @@ $(function () {
             // Someone removed the confirmation buttons, darnit!  Report the error and re-add the buttons.
             var message = "Arc Welder detected the removal or addition of PNotify default confirmation buttons, " +
                 "which should not be done in a shared environment.  Some plugins may show strange behavior.  Please " +
-                "report this error at https://github.com/FormerLurker/AntiStutter/issues.  AntiStutter will now clear " +
+                "report this error at https://github.com/FormerLurker/ArcWelder/issues.  ArcWelder will now clear " +
                 "and re-add the default PNotify buttons.";
             console.error(message);
 
@@ -175,25 +175,25 @@ $(function () {
         }
     };
 
-    AntiStutter.ConfirmDialogs = {};
-    AntiStutter.closeConfirmDialogsForKeys = function (remove_keys) {
+    ArcWelder.ConfirmDialogs = {};
+    ArcWelder.closeConfirmDialogsForKeys = function (remove_keys) {
         if (!$.isArray(remove_keys)) {
             remove_keys = [remove_keys];
         }
         for (var index = 0; index < remove_keys.length; index++) {
             var key = remove_keys[index];
-            if (key in AntiStutter.ConfirmDialogs) {
+            if (key in ArcWelder.ConfirmDialogs) {
 
-                AntiStutter.ConfirmDialogs[key].remove();
-                delete AntiStutter.ConfirmDialogs[key];
+                ArcWelder.ConfirmDialogs[key].remove();
+                delete ArcWelder.ConfirmDialogs[key];
             }
         }
     };
 
-    AntiStutter.showConfirmDialog = function (key, title, text, onConfirm, onCancel, onComplete, onOption, optionButtonText) {
-        AntiStutter.closeConfirmDialogsForKeys([key]);
+    ArcWelder.showConfirmDialog = function (key, title, text, onConfirm, onCancel, onComplete, onOption, optionButtonText) {
+        ArcWelder.closeConfirmDialogsForKeys([key]);
         // Make sure that the default pnotify buttons exist
-        AntiStutter.checkPNotifyDefaultConfirmButtons();
+        ArcWelder.checkPNotifyDefaultConfirmButtons();
         options = {
             title: title,
             text: text,
@@ -229,7 +229,7 @@ $(function () {
                             onOption();
                         if (onComplete)
                             onComplete();
-                        AntiStutter.closeConfirmDialogsForKeys([key]);
+                        ArcWelder.closeConfirmDialogsForKeys([key]);
                     }
                 },
                 {
@@ -244,7 +244,7 @@ $(function () {
             ];
             options.confirm.buttons = confirmButtons;
         }
-        AntiStutter.ConfirmDialogs[key] = (
+        ArcWelder.ConfirmDialogs[key] = (
             new PNotify(options)
         ).get().on('pnotify.confirm', function () {
             if (onConfirm)
@@ -261,7 +261,7 @@ $(function () {
         });
     };
 
-    AntiStutter.ToTimer = function (seconds) {
+    ArcWelder.ToTimer = function (seconds) {
         if (seconds == null)
             return "";
         if (seconds <= 0)
@@ -280,7 +280,7 @@ $(function () {
         return ("0" + minutes).slice(-2) + ":" + ("0" + seconds).slice(-2);
     };
 
-    AntiStutter.AntiStutterViewModel = function (parameters) {
+    ArcWelder.ArcWelderViewModel = function (parameters) {
 
         var self = this;
 
@@ -298,10 +298,10 @@ $(function () {
             // If this is a commit, link to the commit
             if (self.version().includes("+"))
             {
-                return  'https://github.com/FormerLurker/AntiStutter/commit/' + git_version;
+                return  'https://github.com/FormerLurker/ArcWelder/commit/' + git_version;
             }
             // This is a release, link to the tag
-            return 'https://github.com/FormerLurker/AntiStutter/releases/tag/v' + self.version();
+            return 'https://github.com/FormerLurker/ArcWelder/releases/tag/v' + self.version();
         });
         self.version_text = ko.pureComputed(function () {
             if (self.version() && self.version() !== "unknown") {
@@ -334,7 +334,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    AntiStutter.displayPopupForKey(options, data.key, data, data.close_keys);
+                    ArcWelder.displayPopupForKey(options, data.key, data, data.close_keys);
                     break;
                 case "preprocessing-start":
                     if (self.pre_processing_progress != null) {
@@ -342,7 +342,7 @@ $(function () {
                     }
                     var subtitle = "<strong>Processing:</strong> " + data.source_filename;
                     self.preprocessing_job_guid = data.preprocessing_job_guid;
-                    self.pre_processing_progress = AntiStutter.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
+                    self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
                     break;
                 case "preprocessing-progress":
                     // TODO: CHANGE THIS TO A PROGRESS INDICATOR
@@ -358,12 +358,12 @@ $(function () {
                         console.log("The pre-processing progress bar is missing, creating the progress bar.");
                         console.log("Creating progress bar");
                         var subtitle = "<strong>Processing:</strong> " + data.source_filename;
-                        self.pre_processing_progress = AntiStutter.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
+                        self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
                     }
                     if (self.pre_processing_progress != null && data.percent_progress < 100.0) {
                         var progress_text =
-                            "<div class='row-fluid'><span class='span6'><strong>Remaining:&nbsp;</strong>" + AntiStutter.ToTimer(seconds_to_complete) + "<br/> <strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
-                            + "<span class='span6'><strong>Elapsed:</strong>&nbsp;" + AntiStutter.ToTimer(seconds_elapsed) + "<br/><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
+                            "<div class='row-fluid'><span class='span6'><strong>Remaining:&nbsp;</strong>" + ArcWelder.ToTimer(seconds_to_complete) + "<br/> <strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
+                            + "<span class='span6'><strong>Elapsed:</strong>&nbsp;" + ArcWelder.ToTimer(seconds_elapsed) + "<br/><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
                             //+ "  Line:" + lines_processed.toString()
                             //+ "<div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                             //+ "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span><div/>";
@@ -379,7 +379,7 @@ $(function () {
                         self.pre_processing_progress = null;
                         // Update the existing progress message
                         var progress_text =
-                            "<div>Preprocessing completed in " + AntiStutter.ToTimer(seconds_elapsed) + " seconds.</div><div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
+                            "<div>Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.</div><div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                             + "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
                         var options = {
                             title: "Arc Welder Preprocessing Complete",
@@ -391,7 +391,7 @@ $(function () {
                                 desktop: true
                             }
                         };
-                        AntiStutter.displayPopupForKey(options, "preprocessing", ["preprocessing"]);
+                        ArcWelder.displayPopupForKey(options, "preprocessing", ["preprocessing"]);
 
                     }
                     break;
@@ -406,7 +406,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    AntiStutter.displayPopupForKey(options, "unknown_message_type", ["unknown_message_type"]);
+                    ArcWelder.displayPopupForKey(options, "unknown_message_type", ["unknown_message_type"]);
             }
         };
 
@@ -437,7 +437,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    AntiStutter.displayPopupForKey(options,"cancel-popup-error", ["cancel-popup-error"]);
+                    ArcWelder.displayPopupForKey(options,"cancel-popup-error", ["cancel-popup-error"]);
                     return false;
                 }
             });
@@ -446,7 +446,7 @@ $(function () {
 
     };
 
-    AntiStutter.openAntiStutterSettings = function(tab_name) {
+    ArcWelder.openArcWelderSettings = function(tab_name) {
         $('a#navbar_show_settings').click();
         $('li#settings_plugin_arc_welder_link a').click();
         if(tab_name)
@@ -456,7 +456,7 @@ $(function () {
         }
     };
     OCTOPRINT_VIEWMODELS.push([
-        AntiStutter.AntiStutterViewModel,
+        ArcWelder.ArcWelderViewModel,
         ["settingsViewModel"],
         ["#tab_plugin_arc_welder_controls"]
     ]);

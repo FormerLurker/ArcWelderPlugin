@@ -71,7 +71,7 @@ plugin_author = "Brad Hochgesang"
 plugin_author_email = "FormerLurker@pm.me"
 
 # The plugin's homepage URL. Can be overwritten within OctoPrint's internal data via __plugin_url__ in the plugin module
-plugin_url = "https://github.com/FormerLurker/AntiStutterPlugin"
+plugin_url = "https://github.com/FormerLurker/ArcWelderPlugin"
 
 # The plugin's license. Can be overwritten within OctoPrint's internal data via __plugin_license__ in the plugin module
 plugin_license = "AGPLv3"

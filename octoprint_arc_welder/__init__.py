@@ -59,7 +59,7 @@ __git_version__ = get_versions()["full-revisionid"]
 del get_versions
 
 
-class AntiStutterPlugin(
+class ArcWelderPlugin(
     octoprint.plugin.StartupPlugin,
     octoprint.plugin.TemplatePlugin,
     octoprint.plugin.SettingsPlugin,
@@ -77,7 +77,7 @@ class AntiStutterPlugin(
         admin_permission = flask_principal.Permission(flask_principal.RoleNeed("admin"))
 
     def __init__(self):
-        super(AntiStutterPlugin, self).__init__()
+        super(ArcWelderPlugin, self).__init__()
         self.preprocessing_job_guid = None
         self.preprocessing_job_source_file_name = ""
         self.preprocessing_job_target_file_name = ""
@@ -130,7 +130,7 @@ class AntiStutterPlugin(
     @octoprint.plugin.BlueprintPlugin.route("/cancelPreprocessing", methods=["POST"])
     @restricted_access
     def cancel_preprocessing_request(self):
-        with AntiStutterPlugin.admin_permission.require(http_exception=403):
+        with ArcWelderPlugin.admin_permission.require(http_exception=403):
             request_values = request.get_json()
             preprocessing_job_guid = request_values["preprocessing_job_guid"]
             if self.preprocessing_job_guid is None or preprocessing_job_guid != str(
@@ -149,7 +149,7 @@ class AntiStutterPlugin(
     @octoprint.plugin.BlueprintPlugin.route("/clearLog", methods=["POST"])
     @restricted_access
     def clear_log_request(self):
-        with AntiStutterPlugin.admin_permission.require(http_exception=403):
+        with ArcWelderPlugin.admin_permission.require(http_exception=403):
             request_values = request.get_json()
             clear_all = request_values["clear_all"]
             if clear_all:
@@ -161,7 +161,7 @@ class AntiStutterPlugin(
             return jsonify({"success": True})
 
     # Callback Handler for /downloadFile
-    # uses the AntiStutterLargeResponseHandler
+    # uses the ArcWelderLargeResponseHandler
     def download_file_request(self, request_handler):
         download_file_path = None
         # get the args
@@ -439,7 +439,7 @@ class AntiStutterPlugin(
         return [
             (
                 r"/downloadFile",
-                AntiStutterLargeResponseHandler,
+                ArcWelderLargeResponseHandler,
                 dict(
                     request_callback=self.download_file_request,
                     as_attachment=True,
@@ -505,12 +505,12 @@ class AntiStutterPlugin(
 
 
 __plugin_pythoncompat__ = ">=2.7,<4"
-__plugin_implementation__ = AntiStutterPlugin()
+__plugin_implementation__ = ArcWelderPlugin()
 
 
 def __plugin_load__():
     global __plugin_implementation__
-    __plugin_implementation__ = AntiStutterPlugin()
+    __plugin_implementation__ = ArcWelderPlugin()
     global __plugin_hooks__
     __plugin_hooks__ = {
         "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
@@ -519,12 +519,12 @@ def __plugin_load__():
     }
 
 
-class AntiStutterLargeResponseHandler(LargeResponseHandler):
+class ArcWelderLargeResponseHandler(LargeResponseHandler):
 
     def initialize(self, request_callback, as_attachment=False, access_validation=None, default_filename=None,
         on_before_request=None, on_after_request=None
     ):
-        super(AntiStutterLargeResponseHandler, self).initialize(
+        super(ArcWelderLargeResponseHandler, self).initialize(
             '', default_filename=default_filename, as_attachment=as_attachment, allow_client_caching=False,
             access_validation=access_validation, path_validation=None, etag_generator=None,
             name_generator=self.name_generator, mime_type_guesser=None)
