@@ -142,7 +142,7 @@ $(function () {
         // really are the defaults.
         if (PNotify.prototype.options.confirm.buttons.length !== 2) {
             // Someone removed the confirmation buttons, darnit!  Report the error and re-add the buttons.
-            var message = "Anti-Stutter detected the removal or addition of PNotify default confirmation buttons, " +
+            var message = "Arc Welder detected the removal or addition of PNotify default confirmation buttons, " +
                 "which should not be done in a shared environment.  Some plugins may show strange behavior.  Please " +
                 "report this error at https://github.com/FormerLurker/AntiStutter/issues.  AntiStutter will now clear " +
                 "and re-add the default PNotify buttons.";
@@ -324,10 +324,9 @@ $(function () {
             }
             switch (data.message_type) {
                 case "toast":
-                    AntiStutter.displayPopupForKey();
                     var options = {
                         title: data.title,
-                        text: data.messages,
+                        text: data.message,
                         type: data.toast_type,
                         hide: data.auto_hide,
                         addclass: "arc_welder",
@@ -335,7 +334,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    AntiStutter.displayPopupForKey(options, data.key, data, remove_keys);
+                    AntiStutter.displayPopupForKey(options, data.key, data, data.close_keys);
                     break;
                 case "preprocessing-start":
                     if (self.pre_processing_progress != null) {
@@ -343,7 +342,7 @@ $(function () {
                     }
                     var subtitle = "<strong>Processing:</strong> " + data.source_filename;
                     self.preprocessing_job_guid = data.preprocessing_job_guid;
-                    self.pre_processing_progress = AntiStutter.progressBar(self.cancelPreprocessing, "Initializing...", "Anti-Stutter Progress", subtitle);
+                    self.pre_processing_progress = AntiStutter.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
                     break;
                 case "preprocessing-progress":
                     // TODO: CHANGE THIS TO A PROGRESS INDICATOR
@@ -359,7 +358,7 @@ $(function () {
                         console.log("The pre-processing progress bar is missing, creating the progress bar.");
                         console.log("Creating progress bar");
                         var subtitle = "<strong>Processing:</strong> " + data.source_filename;
-                        self.pre_processing_progress = AntiStutter.progressBar(self.cancelPreprocessing, "Initializing...", "Anti-Stutter Progress", subtitle);
+                        self.pre_processing_progress = AntiStutter.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
                     }
                     if (self.pre_processing_progress != null && data.percent_progress < 100.0) {
                         var progress_text =
@@ -383,7 +382,7 @@ $(function () {
                             "<div>Preprocessing completed in " + AntiStutter.ToTimer(seconds_elapsed) + " seconds.</div><div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                             + "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
                         var options = {
-                            title: "Anti-Stutter Preprocessing Complete",
+                            title: "Arc Welder Preprocessing Complete",
                             text: progress_text,
                             type: "success",
                             hide: false,
@@ -398,7 +397,7 @@ $(function () {
                     break;
                 default:
                     var options = {
-                        title: "Anti-Stutter Error",
+                        title: "Arc Welder Error",
                         text: "An unknown message was received.  This popup should have been removed prior to release.",
                         type: "error",
                         hide: false,

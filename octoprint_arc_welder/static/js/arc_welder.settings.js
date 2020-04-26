@@ -105,10 +105,10 @@ $(function() {
             var message;
             if (clear_all) {
                 title = "Clear All Logs";
-                message = "All Anti-Stutter log files will be cleared and deleted.  Are you sure?";
+                message = "All Arc Welder log files will be cleared and deleted.  Are you sure?";
             } else {
                 title = "Clear Log";
-                message = "The most recent Anti-Stutter log file will be cleared.  Are you sure?";
+                message = "The most recent Arc Welder log file will be cleared.  Are you sure?";
             }
             AntiStutter.showConfirmDialog(
                 "clear_log",
@@ -117,10 +117,10 @@ $(function() {
                 function () {
                     if (clear_all) {
                         title = "Logs Cleared";
-                        message = "All Anti-Stutter log files have been cleared.";
+                        message = "All Arc Welder log files have been cleared.";
                     } else {
                         title = "Most Recent Log Cleared";
-                        message = "The most recent Anti-Stutter log file has been cleared.";
+                        message = "The most recent Arc Welder log file has been cleared.";
                     }
                     var data = {
                         clear_all: clear_all

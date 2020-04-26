@@ -49,20 +49,20 @@
     </p>
     <h4>The Solution?</h4>
     <p>
-        As you probably guessed, the <i>Anti-Stutter</i> plugin was designed to mitigate the stuttering issue.  It does this by compressing many gcodes into one exactly where stuttering is likely to occur.  This is possible because of two infrequently used gcode commands:  G2 and G3.
+        As you probably guessed, the <i>Arc Welder</i> plugin was designed to mitigate the stuttering issue.  It does this by compressing many gcodes into one exactly where stuttering is likely to occur.  This is possible because of two infrequently used gcode commands:  G2 and G3.
     </p>
     <p>
         G2 (clockwise arc) and G3 (counterclockwise arc) are supported on many printers, but aren't supported by many slicers.  This is because the most commonly used 3D modeling files do not actually contain any curves.  For this reason most slicer designers and programmers don't see much benefit in implementing them.  In my opinion there are two big reasons that these commands should be more widely used:  they reduce file size <i>and</i> reduce the number of gcodes per second that a printer must receive to prevent a buffer underrun (which causes stuttering).
     </p>
     <p>
-        The <i>Anti-Stutter</i> plugin takes advantage of another fact about 3D printers in order to accurately generate G2 and G3 commands: they have a finite resolution.  Because of this, it is possible to convert a series of short segments that approximate a curve into an arc without noticeably changing to the final printed part.  If you know the resolution of your printer (mine is 50 microns or 0.05mm), you can enter it into the <i>Anti-Stutter</i> plugin, and it will guarantee (hopefully) that none of the generated paths are outside of that resolution.
+        The <i>Arc Welder</i> plugin takes advantage of another fact about 3D printers in order to accurately generate G2 and G3 commands: they have a finite resolution.  Because of this, it is possible to convert a series of short segments that approximate a curve into an arc without noticeably changing to the final printed part.  If you know the resolution of your printer (mine is 50 microns or 0.05mm), you can enter it into the <i>Arc Welder</i> plugin, and it will guarantee (hopefully) that none of the generated paths are outside of that resolution.
     </p>
     <p>
-        To use the plugin, make sure it is enabled and upload a new gcode file.  <i>Anti-Stutter</i> will then pre-process the file, and will try to convert as many segments into arcs as possible without altering the toolpaths beyond your printer's resolution.  You can set the plugin to modify the original file, or to output a new file (it will have a prefix that you can control).  You will notice that the final file size, provided it contains curved features, will be smaller than the original.
+        To use the plugin, make sure it is enabled and upload a new gcode file.  <i>Arc Welder</i> will then pre-process the file, and will try to convert as many segments into arcs as possible without altering the toolpaths beyond your printer's resolution.  You can set the plugin to modify the original file, or to output a new file (it will have a prefix that you can control).  You will notice that the final file size, provided it contains curved features, will be smaller than the original.
     </p>
     <h4>Limitations</h4>
     <p>
-        Not all printers support arc commands, and many people have disabled arc commands to save a small amount of memory.  If your firmware does not support these commands, then <i>Anti-Stutter</i> will not help you.  It's sometimes possible to change your printer's firmware to support these commands, but many flavors of firmware don't support arc commands for all printers, especially delta printers.
+        Not all printers support arc commands, and many people have disabled arc commands to save a small amount of memory.  If your firmware does not support these commands, then <i>Arc Welder</i> will not help you.  It's sometimes possible to change your printer's firmware to support these commands, but many flavors of firmware don't support arc commands for all printers, especially delta printers.
     </p>
     <p>
         Some firmware is compiled with options that will prevent the arc commands from working as expected in all instances.  In particular, Marlin has an option called <i>MM_PER_ARC_SEGMENT</i> that defaults to 1mm, which is a very conservative default value that few people have changed (G2 and G3 is not commonly used, afterall).  This means any arc segments shorter than 1mm will be converted into straight lines.  A 1mm curve that is printed as a straight line is very obvious.  I recommend reducing this value to 0.1mm, though I will have a better recommendation once I'm able to play with it a bit more.
@@ -72,11 +72,11 @@
     </p>
     <h4>Final Thoughts</h4>
     <p>
-        If you have experienced stuttering, I want to hear how the <i>Anti-Stutter</i> plugin has worked for you!  Please send me the following:
+        If you have experienced stuttering, I want to hear how the <i>Arc Welder</i> plugin has worked for you!  Please send me the following:
         <ul>
             <li>A picture of your part printed directly from your printer's SD card.</li>
             <li>A picture of your part printed locally from OctoPrint.</li>
-            <li>A picture of your part printed locally from Octoprint after compressing it with the <i>Anti-Stutter</i> plugin.</li>
+            <li>A picture of your part printed locally from Octoprint after compressing it with the <i>Arc Welder</i> plugin.</li>
         </ul>
         I would also love to hear any feedback you have, since I'm always trying to improve my plugins.
     </p>

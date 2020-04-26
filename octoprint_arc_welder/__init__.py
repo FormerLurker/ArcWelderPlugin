@@ -344,6 +344,13 @@ class AntiStutterPlugin(
         *args,
         **kwargs
     ):
+        if self._printer.is_printing():
+            self.send_notification_toast(
+                "error", "Arc-Welder: Unable to Process",
+                "Cannot preprocess gcode while a print is in progress because print quality may be affected.", False,
+                key="unable_to_process", close_keys=["unable_to_process"]
+            )
+            return
         if hasattr(file_object, "arc_welder"):
             return file_object
 
@@ -383,7 +390,7 @@ class AntiStutterPlugin(
         except Exception as e:
             self.send_notification_toast(
                 "error",
-                "Anti-Stutter Preprocessing Failed",
+                "Arc Welder Preprocessing Failed",
                 "An error occurred while preprocessing {0}.  Check plugin_arc_welder.log for details.",
                 False,
             )
@@ -443,6 +450,7 @@ class AntiStutterPlugin(
         ]
 
         # ~~ software update hook
+
     def get_update_information(self):
         # get the checkout type from the software updater
         prerelease_channel = None
@@ -495,8 +503,10 @@ class AntiStutterPlugin(
             arc_welder=arc_welder_info
         )
 
+
 __plugin_pythoncompat__ = ">=2.7,<4"
 __plugin_implementation__ = AntiStutterPlugin()
+
 
 def __plugin_load__():
     global __plugin_implementation__
