@@ -42,7 +42,6 @@
                     <a href="#arc_welder_about_tab" data-toggle="tab" data-settings-tab="about">About</a>
                 </li>
             </ul>
-
             <div class="tab-content">
                 <div id="arc_welder_settings_tab" class="tab-pane active">
                     <form class="form-horizontal" onsubmit="return false;">
@@ -101,6 +100,30 @@
                                 <div class="controls">
                                     <input class="input-text" type="checkbox" id="arc_welder_g90_g91_influences_extruder"
                                            data-bind="checked: plugin_settings().g90_g91_influences_extruder">
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset>
+                            <legend>Notifications</legend>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_show_started_notification"><strong>Show Pre-Processing Started Notification</strong></label>
+                                <div class="controls">
+                                    <input class="input-text" type="checkbox" id="arc_welder_show_started_notification"
+                                           data-bind="checked: plugin_settings().notification_settings.show_started_notification">
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_show_progress_bar"><strong>Show Progress Bar</strong></label>
+                                <div class="controls">
+                                    <input class="input-text" type="checkbox" id="arc_welder_show_progress_bar"
+                                           data-bind="checked: plugin_settings().notification_settings.show_progress_bar">
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_show_completed_notification"><strong>Show Pre-Processing Completed Notification</strong></label>
+                                <div class="controls">
+                                    <input class="input-text" type="checkbox" id="arc_welder_show_completed_notification"
+                                           data-bind="checked: plugin_settings().notification_settings.show_completed_notification">
                                 </div>
                             </div>
                         </fieldset>

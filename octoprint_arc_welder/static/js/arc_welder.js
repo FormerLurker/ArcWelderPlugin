@@ -88,9 +88,6 @@ $(function () {
             history: {
                 history: false
             },
-            desktop: {
-                desktop: true
-            },
             before_open: function (notice) {
                 self.notice = notice.get();
                 self.$progress = self.notice.find("div.progress-bar");
@@ -354,13 +351,13 @@ $(function () {
                     var arcs_created = data.arcs_created;
                     var points_compressed = data.points_compressed;
 
-                    if (self.pre_processing_progress == null && percent_finished != 100) {
+                    if (!data.suppress_popup && self.pre_processing_progress == null && percent_finished != 100) {
                         console.log("The pre-processing progress bar is missing, creating the progress bar.");
                         console.log("Creating progress bar");
                         var subtitle = "<strong>Processing:</strong> " + data.source_filename;
                         self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
                     }
-                    if (self.pre_processing_progress != null && data.percent_progress < 100.0) {
+                    if (!data.suppress_popup && self.pre_processing_progress != null && data.percent_progress < 100.0) {
                         var progress_text =
                             "<div class='row-fluid'><span class='span6'><strong>Remaining:&nbsp;</strong>" + ArcWelder.ToTimer(seconds_to_complete) + "<br/> <strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                             + "<span class='span6'><strong>Elapsed:</strong>&nbsp;" + ArcWelder.ToTimer(seconds_elapsed) + "<br/><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
@@ -378,6 +375,8 @@ $(function () {
                         }
                         self.pre_processing_progress = null;
                         // Update the existing progress message
+                        if (data.suppress_popup)
+                            return;
                         var progress_text =
                             "<div>Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.</div><div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                             + "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
@@ -387,12 +386,23 @@ $(function () {
                             type: "success",
                             hide: false,
                             addclass: "arc_welder",
-                            desktop: {
-                                desktop: true
-                            }
+
                         };
                         ArcWelder.displayPopupForKey(options, "preprocessing", ["preprocessing"]);
-
+                        progress_text =
+                            "Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.  " + arcs_created.toString() + " arcs were created and "
+                            + points_compressed.toString() + " points were compressed.";
+                        options = {
+                            title: "Arc Welder Preprocessing Complete",
+                            text: "Preprocessing Completed",
+                            type: "success",
+                            hide: false,
+                            desktop: {
+                                desktop: true,
+                                fallback: false
+                            }
+                        };
+                        ArcWelder.displayPopupForKey(options, "preprocessing-desktop", ["preprocessing-desktop"]);
                     }
                     break;
                 default:

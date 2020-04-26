@@ -88,6 +88,11 @@ class ArcWelderPlugin(
             resolution_mm=0.05,
             overwrite_source_file=False,
             target_prefix="AS_",
+            notification_settings=dict(
+                show_started_notification=True,
+                show_progress_bar=True,
+                show_completed_notification=True
+            ),
             enabled=True,
             logging_configuration=dict(
                 default_log_level=log.ERROR,
@@ -173,14 +178,14 @@ class ArcWelderPlugin(
         return full_path
 
     def send_notification_toast(
-        self, toast_type, title, message, auto_close, key=None, close_keys=[]
+        self, toast_type, title, message, auto_hide, key=None, close_keys=[]
     ):
         data = {
             "message_type": "toast",
             "toast_type": toast_type,
             "title": title,
             "message": message,
-            "auto_close": auto_close,
+            "auto_hide": auto_hide,
             "key": key,
             "close_keys": close_keys,
         }
@@ -206,6 +211,12 @@ class ArcWelderPlugin(
         points_compressed,
         arcs_created,
     ):
+        if percent_progress < 100.0 and not self._show_progress_bar:
+            return
+
+        suppress_popup = False
+        if percent_progress == 100.0 and not self._show_completed_notification:
+            suppress_popup = True
         data = {
             "message_type": "preprocessing-progress",
             "percent_progress": percent_progress,
@@ -217,6 +228,7 @@ class ArcWelderPlugin(
             "arcs_created": arcs_created,
             "source_filename": self.preprocessing_job_source_file_name,
             "target_filename": self.preprocessing_job_target_file_name,
+            "suppress_popup": suppress_popup
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
         # sleep for just a bit to allow the plugin message time to be sent and for cancel messages to arrive
@@ -313,6 +325,18 @@ class ArcWelderPlugin(
             target_prefix = self.settings_default["target_prefix"]
         return target_prefix
 
+    @property
+    def _show_started_notification(self):
+        return self._settings.get(["notification_settings", "show_started_notification"])
+
+    @property
+    def _show_progress_bar(self):
+        return self._settings.get(["notification_settings", "show_progress_bar"])
+
+    @property
+    def _show_completed_notification(self):
+        return self._settings.get(["notification_settings", "show_completed_notification"])
+
     def get_storage_path_and_name(self, storage_path, add_prefix):
         path, name = self._file_manager.split_path(FileDestinations.LOCAL, storage_path)
         if add_prefix:
@@ -350,7 +374,7 @@ class ArcWelderPlugin(
                 "Cannot preprocess gcode while a print is in progress because print quality may be affected.", False,
                 key="unable_to_process", close_keys=["unable_to_process"]
             )
-            return
+            return file_object
         if hasattr(file_object, "arc_welder"):
             return file_object
 
@@ -359,6 +383,11 @@ class ArcWelderPlugin(
         ):
             return file_object
         elif not allow_overwrite:
+            self.send_notification_toast(
+                "error", "Arc-Welder: Unable to Process",
+                "The uploaded gcode does not allow overwrite, perhaps due to another pre-processor.", False,
+                key="unable_to_process", close_keys=["unable_to_process"]
+            )
             logger.info(
                 "Received a new gcode file for processing, but allow_overwrite is set to false.  FileName: %s.",
                 file_object.filename
@@ -375,7 +404,17 @@ class ArcWelderPlugin(
         self.preprocessing_job_source_file_name = file_object.filename
         self.preprocessing_job_target_file_name = new_name
         arc_converter_args = self.get_preprocessor_arguments(file_object.path)
-        self.send_preprocessing_start_message()
+
+        if self._show_started_notification:
+            # A bit of a hack.  Need to rethink the start notification.
+            if self._show_progress_bar:
+                self.send_preprocessing_start_message()
+            else:
+                message = "Arc Welder is processing '{0}'.  Please wait...".format(arc_converter_args["source_file_path"])
+                self.send_notification_toast(
+                    "info", "Pre-Processing Gcode", message, True, "preprocessing_start", ["preprocessing_start"]
+                )
+
         logger.info("Starting pre-processing with the following arguments:\n\tsource_file_path: "
                     "%s\n\ttarget_file_path: %s\n\tresolution_mm: %.3f\n\tg90_g91_influences_extruder: %r"
                     "\n\tlog_level: %d",
