@@ -1,0 +1,84 @@
+<!--###############################################################################
+# Arc Welder: Anti-Stutter
+#
+# A plugin for OctoPrint that converts G0/G1 commands into G2/G3 commands where possible and ensures that the tool
+# paths don't deviate by more than a predefined resolution.  This compresses the gcode file sice, and reduces reduces
+# the number of gcodes per second sent to a 3D printer that supports arc commands (G2 G3)
+#
+# Copyright (C) 2020  Brad Hochgesang
+# #################################################################################
+# This program is free software:
+# you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see the following:
+# https://github.com/FormerLurker/ArcWelderPlugin/blob/master/LICENSE
+#
+# You can contact the author either through the git-hub repository, or at the
+# following email address: FormerLurker@pm.me
+##################################################################################-->
+<script type="text/html" id="arc_welder_settings_about">
+    <h4>Support My Efforts</h4>
+    <p>
+        If you like this plugin or any of the others I've designed or contributed to (Octolapse), please consider supporting my efforts by sponsoring me on <a href="https://www.patreon.com/bePatron?u=9588101" target="_blank" title="Become a patron"><i class="fa fa-patreon"></i>Patreon</a>, <a href="https://github.com/FormerLurker" target="_blank" title="FormerLurker&#146;s Github Page"><i class="fa fa-github">&nbsp;Github</i></a>, or buy me a beer with <a href="https://paypal.me/formerlurker" target="_blank" title="Donate via PayPal"><i class="fa fa-paypal"></i>&nbsp;PayPal</a>.  I'd also appreciate if you subscribed to my <a href="https://youtube.com/c/FormerLurker" target="_blank" title="FormerLurker&#146;s YouTube Channel"><i class="fa fa-youtube"></i>&nbsp;YouTube</a> channel.  I would love to spend even more time working on open source projects, and you can help make that happen!
+    </p>
+    <hr/>
+    <h4>The Stuttering Problem</h4>
+    <p>
+        Some users of OctoPrint have noticed a difference in print quality when printing local files.  These differences often disappear when printing from the printer's SD card.  Typically this issue can be solved, but debugging can be a challenge.  Everything from the printer's firmware configuration to the USB cable itself can contribute, and the solutions are often technically challenging, especially for newcomers.
+    </p>
+    <p>
+        When printing locally, OctoPrint will stream each gcode via serial communication to your printer.  OctoPrint uses an approach to communication known as <i>Serial Ping-Pong</i>, where is sends a command and waits for the printer to respond (usually with an 'OK' command) before sending the next command.  This is by far the most reliable and universally compatible method of streaming gcode to a 3D printer.  However, it is not nearly as fast as reading gcode from an SD card that is attached directly to your printer.  It is quite possible to have the <strong>exact same</strong> stuttering issue while printing directly from your printer's SD card, but it is more likely to occur while streaming gcode using the <i>Serial Ping-Pong</i> method.  Please note that this is a somewhat oversimplified explanation, and there are a lot of other factors that come into play.
+    </p>
+    <p>
+        Regardless of what specifically is causing the issue for a given user, there is one universal symptom: Stuttering.  This is caused when the printer's buffer runs out, forcing the printer to halt and wait for the next command.  When the buffer runs out while printing, the printer's firmware must decelerate until it stops, wait to receive another command, and then re-accelerate.  This is not good for print quality and could potentially leave blobs and/or other artifacts.
+    </p>
+    <p>
+        If you look at a rendering of a single layer of a typical .gcode file, you might notice places in the print that have many short segments clustered together.  Generally (but not always) these areas are curved or otherwise organic shapes.  Since most slicers approximate curves with many straight lines, this can cause a whole lot of tiny line segments all tightly clustered.  It is exactly in these places where suttering is most likely to occur.
+    </p>
+    <h4>Why Print Locally?</h4>
+    <p>
+        <strong>Question:</strong> If printing from the SD card generally (but not always) solves this stuttering issue, why would anyone stream gcode?<br/>
+        <strong>Answer:</strong> Streaming locally is convenient AND allows plugins to alter the gcode stream in real-time.  This is a <strong>huge</strong> advantage, and many plugins, including <i>Octolapse</i>, another plugin I've written, requires gcode streaming in order to function.  Printing from SD basically means that you are forfeiting many of the best features OctoPrint has to offer.
+    </p>
+    <h4>The Solution?</h4>
+    <p>
+        As you probably guessed, the <i>Anti-Stutter</i> plugin was designed to mitigate the stuttering issue.  It does this by compressing many gcodes into one exactly where stuttering is likely to occur.  This is possible because of two infrequently used gcode commands:  G2 and G3.
+    </p>
+    <p>
+        G2 (clockwise arc) and G3 (counterclockwise arc) are supported on many printers, but aren't supported by many slicers.  This is because the most commonly used 3D modeling files do not actually contain any curves.  For this reason most slicer designers and programmers don't see much benefit in implementing them.  In my opinion there are two big reasons that these commands should be more widely used:  they reduce file size <i>and</i> reduce the number of gcodes per second that a printer must receive to prevent a buffer underrun (which causes stuttering).
+    </p>
+    <p>
+        The <i>Anti-Stutter</i> plugin takes advantage of another fact about 3D printers in order to accurately generate G2 and G3 commands: they have a finite resolution.  Because of this, it is possible to convert a series of short segments that approximate a curve into an arc without noticeably changing to the final printed part.  If you know the resolution of your printer (mine is 50 microns or 0.05mm), you can enter it into the <i>Anti-Stutter</i> plugin, and it will guarantee (hopefully) that none of the generated paths are outside of that resolution.
+    </p>
+    <p>
+        To use the plugin, make sure it is enabled and upload a new gcode file.  <i>Anti-Stutter</i> will then pre-process the file, and will try to convert as many segments into arcs as possible without altering the toolpaths beyond your printer's resolution.  You can set the plugin to modify the original file, or to output a new file (it will have a prefix that you can control).  You will notice that the final file size, provided it contains curved features, will be smaller than the original.
+    </p>
+    <h4>Limitations</h4>
+    <p>
+        Not all printers support arc commands, and many people have disabled arc commands to save a small amount of memory.  If your firmware does not support these commands, then <i>Anti-Stutter</i> will not help you.  It's sometimes possible to change your printer's firmware to support these commands, but many flavors of firmware don't support arc commands for all printers, especially delta printers.
+    </p>
+    <p>
+        Some firmware is compiled with options that will prevent the arc commands from working as expected in all instances.  In particular, Marlin has an option called <i>MM_PER_ARC_SEGMENT</i> that defaults to 1mm, which is a very conservative default value that few people have changed (G2 and G3 is not commonly used, afterall).  This means any arc segments shorter than 1mm will be converted into straight lines.  A 1mm curve that is printed as a straight line is very obvious.  I recommend reducing this value to 0.1mm, though I will have a better recommendation once I'm able to play with it a bit more.
+    </p>
+    <p>
+        Auto bed leveling isn't always supported fully when using G2/G3.  Prusa firmware specifically states (though I'm not sure if this is still true) that Auto-Bed Leveling is only implemented at the endpoints of an arc, which could cause problems if there are very long arcs in your print.  Hopefully this will be solved at some point.
+    </p>
+    <h4>Final Thoughts</h4>
+    <p>
+        If you have experienced stuttering, I want to hear how the <i>Anti-Stutter</i> plugin has worked for you!  Please send me the following:
+        <ul>
+            <li>A picture of your part printed directly from your printer's SD card.</li>
+            <li>A picture of your part printed locally from OctoPrint.</li>
+            <li>A picture of your part printed locally from Octoprint after compressing it with the <i>Anti-Stutter</i> plugin.</li>
+        </ul>
+        I would also love to hear any feedback you have, since I'm always trying to improve my plugins.
+    </p>
+
+</script>

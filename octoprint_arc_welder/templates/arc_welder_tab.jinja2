@@ -1,0 +1,105 @@
+<!--###############################################################################
+# Arc Welder: Anti-Stutter
+#
+# A plugin for OctoPrint that converts G0/G1 commands into G2/G3 commands where possible and ensures that the tool
+# paths don't deviate by more than a predefined resolution.  This compresses the gcode file sice, and reduces reduces
+# the number of gcodes per second sent to a 3D printer that supports arc commands (G2 G3)
+#
+# Copyright (C) 2020  Brad Hochgesang
+# #################################################################################
+# This program is free software:
+# you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see the following:
+# https://github.com/FormerLurker/ArcWelderPlugin/blob/master/LICENSE
+#
+# You can contact the author either through the git-hub repository, or at the
+# following email address: FormerLurker@pm.me
+##################################################################################-->
+<div id="tab_plugin_arc_welder_controls" class="form-horizontal">
+    <H4>Current Run Configuration</H4>
+    <div data-bind="visible: plugin_settings.enabled">
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>Pre-Processing:</strong>
+            </div>
+            <div class="span8">
+                Enabled - Newly uploaded gcode files will be pre-processed
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>Resolution In MM:</strong>
+            </div>
+            <div class="span8">
+                <span data-bind="text: plugin_settings.resolution_mm"></span>mm
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>Output File:</strong>
+            </div>
+            <div class="span8">
+                <span data-bind="visible: plugin_settings.overwrite_source_file">Uploaded gcode files will be overwritten</span>
+                <span data-bind="visible: !plugin_settings.overwrite_source_file()">A new file with a prefix of <strong><span data-bind="text: plugin_settings.target_prefix"></span></strong> will be added after pre-processing is completed</span>
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>G90 Influences Extruder:</strong>
+            </div>
+            <div class="span8">
+                <span data-bind="visible: plugin_settings.use_octoprint_settings"><span data-bind="text: settings.settings.feature.g90InfluencesExtruder"></span> (using octoprint settings)</span>
+                <span data-bind="visible: !plugin_settings.use_octoprint_settings()"><span data-bind="text: plugin_settings.g90_g91_influences_extruder"></span></span>
+            </div>
+        </div>
+    </div>
+    <div data-bind="visible: !plugin_settings.enabled()">
+        <dl class="row-fluid">
+            <div class="span4 text-right"><strong>Pre-Processing:</strong></div>
+            <div class="span8">
+                Disabled - No pre-processing will be performed
+            </div>
+        </dl>
+    </div>
+    <div class="row-fluid">
+        <div class="span12 text-right">
+            <button class="btn btn-primary" data-bind="click: function() {AntiStutter.openAntiStutterSettings('settings');}"
+                title="Open Anti-Stutter settings">
+            Edit Settings
+        </button>
+        </div>
+    </div>
+    <div class="row-fluid">
+            <div class="span7">
+                <small>
+                    <a href="javascript:void(0)" data-bind="click: function() {AntiStutter.openAntiStutterSettings('about');}" title="About Anti-Stutter"><i class="fa fa-info-circle"></i>&nbsp;About</a>
+                    &nbsp;|&nbsp;
+                    <a href="https://github.com/FormerLurker" target="_blank" title="FormerLurker&#146;s Github Page"><i class="fa fa-github">&nbsp;Github</i></a>
+                    &nbsp;|&nbsp;
+                    <a href="https://youtube.com/c/FormerLurker" target="_blank" title="FormerLurker&#146;s YouTube Channel"><i class="fa fa-youtube"></i>&nbsp;YouTube</a>
+                    &nbsp;|&nbsp;
+                    <a href="https://paypal.me/formerlurker" target="_blank" title="Donate via PayPal"><i class="fa fa-paypal"></i>&nbsp;PayPal</a>
+                    &nbsp;|&nbsp;
+                    <a href="https://www.patreon.com/bePatron?u=9588101" target="_blank" title="Become a patron"><i class="fa fa-patreon"></i>&nbsp;Patreon</a>
+                </small>
+            </div>
+            <div class="span5 text-right muted">
+                <a target="_blank" data-bind="visible: github_link() != null, attr: { href: github_link}">
+                     Anti-Stutter&nbsp;<i data-bind="text:version_text"></i>
+                </a>
+                <span data-bind="visible: github_link() == null" >
+                    <small>
+                        Anti-Stutter&nbsp;<i data-bind="text:version_text"></i>
+                    </small>
+                </span>
+            </div>
+        </div>
+</div>

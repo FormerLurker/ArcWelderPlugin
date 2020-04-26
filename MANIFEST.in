@@ -1,0 +1,3 @@
+include README.md
+recursive-include octoprint_arc_welder/templates *
+recursive-include octoprint_arc_welder/static *
