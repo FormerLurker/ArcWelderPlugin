@@ -26,23 +26,23 @@
 PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 {
 	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i}",
-		"percent_complete",
+		u8"percent_complete",
 		progress.percent_complete,
-		"seconds_elapsed",
+		u8"seconds_elapsed",
 		progress.seconds_elapsed,
-		"seconds_remaining",
+		u8"seconds_remaining",
 		progress.seconds_remaining,
-		"gcodes_processed",
+		u8"gcodes_processed",
 		progress.gcodes_processed,
-		"lines_processed",
+		u8"lines_processed",
 		progress.lines_processed,
-		"points_compressed",
+		u8"points_compressed",
 		progress.points_compressed,
-		"arcs_created",
+		u8"arcs_created",
 		progress.arcs_created,
-		"source_file_size",
+		u8"source_file_size",
 		progress.source_file_size,
-		"target_file_size",
+		u8"target_file_size",
 		progress.target_file_size
 	);
 	return py_progress;

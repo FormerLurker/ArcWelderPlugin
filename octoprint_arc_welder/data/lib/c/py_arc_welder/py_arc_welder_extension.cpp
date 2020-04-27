@@ -202,13 +202,13 @@ extern "C"
 
 		PyObject* p_results = Py_BuildValue(
 			"{s:i,s:i,s:s,s:O}",
-			"success",
+			u8"success",
 			results.success,
-			"cancelled",
+			u8"cancelled",
 			results.cancelled,
-			"message",
+			u8"message",
 			results.message,
-			"progress",
+			u8"progress",
 			p_progress
 		);
 		return p_results;
