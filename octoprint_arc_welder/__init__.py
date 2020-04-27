@@ -207,35 +207,6 @@ class ArcWelderPlugin(
         self._plugin_manager.send_plugin_message(self._identifier, data)
         # return true to continue, false to terminate
 
-    def send_preprocessing_start_message(self):
-        data = {
-            "message_type": "preprocessing-start",
-            "source_filename": self.preprocessing_job_source_file_path,
-            "target_filename": self.preprocessing_job_target_file_name,
-            "preprocessing_job_guid": self.preprocessing_job_guid
-        }
-        self._plugin_manager.send_plugin_message(self._identifier, data)
-
-    def send_preprocessing_failed_message(self, message):
-        data = {
-            "message_type": "preprocessing-failed",
-            "source_filename": self.preprocessing_job_source_file_path,
-            "target_filename": self.preprocessing_job_target_file_name,
-            "preprocessing_job_guid": self.preprocessing_job_guid,
-            "message": message
-        }
-        self._plugin_manager.send_plugin_message(self._identifier, data)
-
-    def send_preprocessing_cancelled_message(self, message):
-        data = {
-            "message_type": "preprocessing-failed",
-            "source_filename": self.preprocessing_job_source_file_path,
-            "target_filename": self.preprocessing_job_target_file_name,
-            "preprocessing_job_guid": self.preprocessing_job_guid,
-            "message": message
-        }
-        self._plugin_manager.send_plugin_message(self._identifier, data)
-
     def send_pre_processing_progress_message(self, progress):
 
         if progress["percent_complete"] >= 100.0 or self._show_progress_bar:
@@ -439,7 +410,13 @@ class ArcWelderPlugin(
         if self._show_started_notification:
             # A bit of a hack.  Need to rethink the start notification.
             if self._show_progress_bar:
-                self.send_preprocessing_start_message()
+                data = {
+                    "message_type": "preprocessing-start",
+                    "source_filename": self.preprocessing_job_source_file_path,
+                    "target_filename": self.preprocessing_job_target_file_name,
+                    "preprocessing_job_guid": self.preprocessing_job_guid
+                }
+                self._plugin_manager.send_plugin_message(self._identifier, data)
             else:
                 message = "Arc Welder is processing '{0}'.  Please wait...".format(
                     preprocessor_args["source_file_path"])
