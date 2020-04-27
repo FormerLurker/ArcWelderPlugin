@@ -39,3 +39,7 @@
 .progress-bar.failed {
     background: red;
 }
+
+.ui-pnotify.arc_welder {
+    width:400px!important;
+}

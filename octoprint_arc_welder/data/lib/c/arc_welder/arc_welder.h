@@ -36,8 +36,60 @@
 #include "array_list.h"
 #include "unwritten_command.h"
 #include "logger.h"
+
+struct arc_welder_progress {
+	arc_welder_progress() {
+		percent_complete = 0.0;
+		seconds_elapsed = 0.0;
+		seconds_remaining = 0.0;
+		gcodes_processed = 0;
+		lines_processed = 0;
+		points_compressed = 0;
+		arcs_created = 0;
+		source_file_size = 0;
+		target_file_size = 0;
+	}
+	double percent_complete;
+	double seconds_elapsed;
+	double seconds_remaining;
+	int gcodes_processed;
+	int lines_processed;
+	int points_compressed;
+	int arcs_created;
+	long source_file_size;
+	long target_file_size;
+
+	std::string str() {
+		std::stringstream stream;
+		stream << std::fixed << std::setprecision(2);
+		double compression_ratio = 0;
+		if (target_file_size > 0)
+			compression_ratio = (static_cast<float>(source_file_size) / static_cast<float>(target_file_size) * 100.0f);
+		stream << percent_complete << "% complete in " << seconds_elapsed << " seconds with " << seconds_remaining << " seconds remaining.";
+		stream << " Gcodes Processed: " << gcodes_processed;
+		stream << ", Current Line: " << lines_processed;
+		stream << ", Points Compressed: " << points_compressed;
+		stream << ", ArcsCreated: " << arcs_created;
+		stream << ", Compression: " << compression_ratio << "% ";
+		return stream.str();
+	}
+};
+
 // define the progress callback type 
-typedef bool(*progress_callback)(double percentComplete, double seconds_elapsed, double estimatedSecondsRemaining, int gcodesProcessed, int linesProcessed, int points_compressed, int arcs_created);
+typedef bool(*progress_callback)(arc_welder_progress);
+
+struct arc_welder_results {
+	arc_welder_results() : progress()
+	{
+		success = false;
+		cancelled = false;
+		message = "";
+	}
+	bool success;
+	bool cancelled;
+	std::string message;
+	arc_welder_progress progress;
+};
 
 class arc_welder
 {
@@ -47,10 +99,10 @@ public:
 	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback);
 	void set_logger_type(int logger_type);
 	virtual ~arc_welder();
-	void process();
+	arc_welder_results process();
 	double notification_period_seconds;
 protected:
-	virtual bool on_progress_(double percentComplete, double seconds_elapsed, double estimatedSecondsRemaining, int gcodesProcessed, int linesProcessed, int points_compressed, int arcs_created);
+	virtual bool on_progress_(arc_welder_progress progress);
 private:
 	void reset();
 	static gcode_position_args get_args_(bool g90_g91_influences_extruder, int buffer_size);

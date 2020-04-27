@@ -173,8 +173,10 @@ double arc_welder::get_time_elapsed(double start_clock, double end_clock)
 	return static_cast<double>(end_clock - start_clock) / CLOCKS_PER_SEC;
 }
 
-void arc_welder::process()
+arc_welder_results arc_welder::process()
 {
+	arc_welder_results results;
+
 	verbose_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, VERBOSE);
 	debug_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, DEBUG);
 	info_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, INFO);
@@ -239,14 +241,20 @@ void arc_welder::process()
 				{
 					if ((lines_processed_ % read_lines_before_clock_check) == 0 && next_update_time < clock())
 					{
-						long file_position = static_cast<long>(gcodeFile.tellg());
+						arc_welder_progress progress;
+						progress.gcodes_processed = gcodes_processed_;
+						progress.lines_processed = lines_processed_;
+						progress.points_compressed = points_compressed_;
+						progress.arcs_created = arcs_created_;
+						progress.target_file_size = static_cast<long>(output_file_.tellp());
+						progress.source_file_size = static_cast<long>(gcodeFile.tellg());
 						// ToDo: tellg does not do what I think it does, but why?
-						long bytesRemaining = file_size_ - file_position;
-						double percentProgress = static_cast<double>(file_position) / static_cast<double>(file_size_) * 100.0;
-						double secondsElapsed = get_time_elapsed(start_clock, clock());
-						double bytesPerSecond = static_cast<double>(file_position) / secondsElapsed;
-						double secondsToComplete = bytesRemaining / bytesPerSecond;
-						continue_processing = on_progress_(percentProgress, secondsElapsed, secondsToComplete, gcodes_processed_, lines_processed_, points_compressed_, arcs_created_);
+						long bytesRemaining = file_size_ - progress.source_file_size;
+						progress.percent_complete = static_cast<double>(progress.source_file_size) / static_cast<double>(file_size_) * 100.0;
+						progress.seconds_elapsed = get_time_elapsed(start_clock, clock());
+						double bytesPerSecond = static_cast<double>(progress.source_file_size) / progress.seconds_elapsed;
+						progress.seconds_remaining = bytesRemaining / bytesPerSecond;
+						continue_processing = on_progress_(progress);
 						next_update_time = get_next_update_time();
 					}
 				}
@@ -259,34 +267,48 @@ void arc_welder::process()
 			write_unwritten_gcodes_to_file();
 
 			output_file_.close();
+			results.success = continue_processing;
+			results.cancelled = !continue_processing;
+			results.progress.target_file_size = get_file_size(target_path_);
+			
 		}
 		else
 		{
-			p_logger_->log_exception(logger_type_, "Unable to open the output file for writing.");
+			results.success = false;
+			results.message = "Unable to open the target file for writing.";
+			p_logger_->log_exception(logger_type_, results.message);
 		}
 		gcodeFile.close();
 	}
 	else
 	{
-		p_logger_->log_exception(logger_type_, "Unable to open the gcode file for processing.");
+		results.success = false;
+		results.message = "Unable to open the input file for processing.";
+		p_logger_->log_exception(logger_type_, results.message);
 	}
 
+	
 	const clock_t end_clock = clock();
 	const double total_seconds = static_cast<double>(end_clock - start_clock) / CLOCKS_PER_SEC;
-	on_progress_(100, total_seconds, 0, gcodes_processed_, lines_processed_, points_compressed_, arcs_created_);
+	results.progress.seconds_elapsed = total_seconds;
+	results.progress.gcodes_processed = gcodes_processed_;
+	results.progress.lines_processed = lines_processed_;
+	results.progress.points_compressed = points_compressed_;
+	results.progress.arcs_created = arcs_created_;
+	results.progress.source_file_size = file_size_;
+	return results;
 }
 
-bool arc_welder::on_progress_(double percentComplete, double seconds_elapsed, double estimatedSecondsRemaining, int gcodesProcessed, int linesProcessed, int points_compressed, int arcs_created)
+bool arc_welder::on_progress_(arc_welder_progress progress)
 {
 	if (progress_callback_ != NULL)
 	{
-		return progress_callback_(percentComplete, seconds_elapsed, estimatedSecondsRemaining, gcodesProcessed, linesProcessed, points_compressed, arcs_created);
+		return progress_callback_(progress);
 	}
 	std::stringstream stream;
 	if (debug_logging_enabled_)
 	{
-		stream << percentComplete << "% complete in " << seconds_elapsed << " seconds with " << estimatedSecondsRemaining << " seconds remaining.  Gcodes Processed:" << gcodesProcessed << ", Current Line:" << linesProcessed << ", Points Compressed:" << points_compressed << ", ArcsCreated:" << arcs_created;
-		p_logger_->log(logger_type_, DEBUG, stream.str());
+		p_logger_->log(logger_type_, DEBUG, progress.str());
 	}
 
 	return true;

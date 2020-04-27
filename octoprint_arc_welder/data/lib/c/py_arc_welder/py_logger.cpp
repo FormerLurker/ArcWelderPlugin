@@ -199,6 +199,11 @@ void py_logger::log(const int logger_type, const int log_level, const std::strin
 		case CRITICAL:
 			pyFunctionName = py_critical_function_name;
 			break;
+		default:
+			std::cout << "An unknown log level of '" << log_level << " 'was supplied for the message: " << message.c_str() << "\r\n";
+			PyErr_Format(PyExc_ValueError,
+				"An unknown log level was supplied for the message %s.", message.c_str());
+			return;
 		}
 	}
 	PyObject* pyMessage = gcode_arc_converter::PyUnicode_SafeFromString(message);
@@ -220,15 +225,19 @@ void py_logger::log(const int logger_type, const int log_level, const std::strin
 		{
 			std::cout << "Logging.arc_welder_log - null was returned from the specified logger.\r\n";
 			PyErr_SetString(PyExc_ValueError, "Logging.arc_welder_log - null was returned from the specified logger.");
+			return;
 		}
 		else
 		{
 			std::cout << "Logging.arc_welder_log - null was returned from the specified logger and an error was detected.\r\n";
+			std::cout << "\tLog Level: " << log_level <<", Logger Type: " << logger_type << ", Message: " << message.c_str() << "\r\n";
+			
 			// I'm not sure what else to do here since I can't log the error.  I will print it 
 			// so that it shows up in the console, but I can't log it, and there is no way to 
 			// return an error.
 			PyErr_Print();
 			PyErr_Clear();
+			return;
 		}
 	}
 	else

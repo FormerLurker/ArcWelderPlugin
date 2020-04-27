@@ -70,7 +70,7 @@ $(function () {
             icon: 'fa fa-cog fa-spin',
             width: self.popup_width.toString() + "px",
             confirm: {
-                confirm: false, // TODO:  SEE IF THIS USER IS AN ADMIN AND GET CANCEL WORKING...
+                confirm: true, // TODO:  SEE IF THIS USER IS AN ADMIN AND GET CANCEL WORKING...
                 buttons: [{
                     text: 'Cancel',
                     click: cancel_callback
@@ -277,6 +277,22 @@ $(function () {
         return ("0" + minutes).slice(-2) + ":" + ("0" + seconds).slice(-2);
     };
 
+    var byte = 1024;
+    ArcWelder.toFileSizeString = function (bytes, precision) {
+        precision = precision || 0;
+
+        if (Math.abs(bytes) < byte) {
+            return bytes + ' B';
+        }
+        var units = ['kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+        var u = -1;
+        do {
+            bytes /= byte;
+            ++u;
+        } while (Math.abs(bytes) >= byte && u < units.length - 1);
+        return bytes.toFixed(precision) + ' ' + units[u];
+    };
+
     ArcWelder.ArcWelderViewModel = function (parameters) {
 
         var self = this;
@@ -314,6 +330,13 @@ $(function () {
             self.git_version(self.plugin_settings.git_version());
         };
 
+        self.close_preprocessing_popup = function(){
+            if (self.pre_processing_progress != null) {
+                self.pre_processing_progress.close();
+            }
+            self.preprocessing_job_guid = null;
+            self.pre_processing_progress = null;
+        };
         // Handle Plugin Messages from Server
         self.onDataUpdaterPluginMessage = function (plugin, data) {
             if (plugin !== "arc_welder") {
@@ -331,7 +354,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    ArcWelder.displayPopupForKey(options, data.key, data, data.close_keys);
+                    ArcWelder.displayPopupForKey(options, data.key, data.close_keys);
                     break;
                 case "preprocessing-start":
                     if (self.pre_processing_progress != null) {
@@ -341,45 +364,57 @@ $(function () {
                     self.preprocessing_job_guid = data.preprocessing_job_guid;
                     self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
                     break;
-                case "preprocessing-progress":
-                    // TODO: CHANGE THIS TO A PROGRESS INDICATOR
-                    var percent_finished = data.percent_progress;
-                    var seconds_elapsed = data.seconds_elapsed;
-                    var seconds_to_complete = data.seconds_to_complete;
-                    var gcodes_processed = data.gcodes_processed;
-                    var lines_processed = data.lines_processed;
-                    var arcs_created = data.arcs_created;
-                    var points_compressed = data.points_compressed;
-
-                    if (!data.suppress_popup && self.pre_processing_progress == null && percent_finished != 100) {
-                        console.log("The pre-processing progress bar is missing, creating the progress bar.");
-                        console.log("Creating progress bar");
-                        var subtitle = "<strong>Processing:</strong> " + data.source_filename;
-                        self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
-                    }
-                    if (!data.suppress_popup && self.pre_processing_progress != null && data.percent_progress < 100.0) {
-                        var progress_text =
-                            "<div class='row-fluid'><span class='span6'><strong>Remaining:&nbsp;</strong>" + ArcWelder.ToTimer(seconds_to_complete) + "<br/> <strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
-                            + "<span class='span6'><strong>Elapsed:</strong>&nbsp;" + ArcWelder.ToTimer(seconds_elapsed) + "<br/><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
-                            //+ "  Line:" + lines_processed.toString()
-                            //+ "<div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
-                            //+ "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span><div/>";
-                        self.pre_processing_progress = self.pre_processing_progress.update(
-                            percent_finished, progress_text
-                        );
-
-                    }
-                    else if (data.percent_progress >= 100.0){
-                        if (self.pre_processing_progress != null) {
-                            self.pre_processing_progress.close();
+                case "preprocessing-failed":
+                    var options = {
+                        title: "Arc Welder - Failed",
+                        text: data.message,
+                        type: "error",
+                        hide: true,
+                        addclass: "arc_welder",
+                        desktop: {
+                            desktop: true
                         }
-                        self.pre_processing_progress = null;
-                        // Update the existing progress message
-                        if (data.suppress_popup)
-                            return;
-                        var progress_text =
-                            "<div>Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.</div><div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
-                            + "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
+                    };
+                    ArcWelder.displayPopupForKey(options, "preprocessing-failed", []);
+                    self.close_preprocessing_popup();
+                    break;
+                case "preprocessing-cancelled":
+                    var options = {
+                        title: "Arc Welder - Cancelled",
+                        text: data.message,
+                        type: "info",
+                        hide: true,
+                        addclass: "arc_welder",
+                        desktop: {
+                            desktop: true
+                        }
+                    };
+                    ArcWelder.displayPopupForKey(options, "preprocessing-cancelled", []);
+                    self.close_preprocessing_popup();
+                    break;
+                case "preprocessing-success":
+                    self.close_preprocessing_popup();
+                    var progress = data.results.progress;
+                    var seconds_elapsed = progress.seconds_elapsed;
+                    var arcs_created = progress.arcs_created;
+                    var points_compressed = progress.points_compressed;
+                    var source_file_size = progress.source_file_size;
+                    var target_file_size = progress.target_file_size;
+                    var compression_ratio = 0;
+                    if (target_file_size > 0)
+                        compression_ratio = source_file_size / target_file_size;
+                    var space_saved_percent = 0;
+                    if (source_file_size > 0)
+                        space_saved_percent = (1.0 - (target_file_size / source_file_size)) * 100.0;
+
+                    var space_saved_string = ArcWelder.toFileSizeString(source_file_size - target_file_size, 1);
+                    var source_size_string = ArcWelder.toFileSizeString(source_file_size, 1);
+                    var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
+
+                    var progress_text =
+                            "<div>Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.</div><div class='row-fluid'><span class='span5'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
+                            + "<span class='span7'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>"
+                            + "<div class='row-fluid'><div class='span5'><strong>Compression</strong><br/> Ratio:" + compression_ratio.toFixed(1) + " - " + space_saved_percent.toFixed(1) + "%</div><div class='span7'><strong>Space</strong><br/>"+ source_size_string + " - " + space_saved_string + " = " + target_size_string + "</div></div>";
                         var options = {
                             title: "Arc Welder Preprocessing Complete",
                             text: progress_text,
@@ -388,7 +423,7 @@ $(function () {
                             addclass: "arc_welder",
 
                         };
-                        ArcWelder.displayPopupForKey(options, "preprocessing", ["preprocessing"]);
+                        ArcWelder.displayPopupForKey(options, "preprocessing-success");
                         progress_text =
                             "Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.  " + arcs_created.toString() + " arcs were created and "
                             + points_compressed.toString() + " points were compressed.";
@@ -402,7 +437,38 @@ $(function () {
                                 fallback: false
                             }
                         };
-                        ArcWelder.displayPopupForKey(options, "preprocessing-desktop", ["preprocessing-desktop"]);
+                        ArcWelder.displayPopupForKey(options, "preprocessing-success-desktop", []);
+                    break;
+                case "preprocessing-complete":
+                    self.close_preprocessing_popup();
+                    break;
+                case "preprocessing-progress":
+                    // TODO: CHANGE THIS TO A PROGRESS INDICATOR
+                    var percent_finished = data.percent_complete;
+                    var seconds_elapsed = data.seconds_elapsed;
+                    var seconds_remaining = data.seconds_remaining;
+                    var gcodes_processed = data.gcodes_processed;
+                    var lines_processed = data.lines_processed;
+                    var arcs_created = data.arcs_created;
+                    var points_compressed = data.points_compressed;
+                    self.preprocessing_job_guid = data.preprocessing_job_guid;
+                    if (!data.suppress_popup && self.pre_processing_progress == null && percent_finished < 100) {
+                        console.log("The pre-processing progress bar is missing, creating the progress bar.");
+                        console.log("Creating progress bar");
+                        var subtitle = "<strong>Processing:</strong> " + data.source_filename;
+                        self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
+                    }
+                    if (!data.suppress_popup && self.pre_processing_progress != null && percent_finished < 100.0) {
+                        var progress_text =
+                            "<div class='row-fluid'><span class='span6'><strong>Remaining:&nbsp;</strong>" + ArcWelder.ToTimer(seconds_remaining) + "<br/> <strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
+                            + "<span class='span6'><strong>Elapsed:</strong>&nbsp;" + ArcWelder.ToTimer(seconds_elapsed) + "<br/><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
+                            //+ "  Line:" + lines_processed.toString()
+                            //+ "<div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
+                            //+ "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span><div/>";
+                        self.pre_processing_progress = self.pre_processing_progress.update(
+                            percent_finished, progress_text
+                        );
+
                     }
                     break;
                 default:
@@ -430,10 +496,8 @@ $(function () {
                 contentType: "application/json",
                 data: JSON.stringify(data),
                 dataType: "json",
-                success: function (result) {
-                    if (self.pre_processing_progress != null) {
-                        self.pre_processing_progress.close();
-                    }
+                success: function() {
+                    self.close_preprocessing_popup();
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
                     var message = "Could not cancel preprocessing.  Status: " + textStatus + ".  Error: " + errorThrown;

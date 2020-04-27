@@ -191,12 +191,27 @@ extern "C"
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 
 		py_arc_welder arc_welder_obj(args.source_file_path, args.target_file_path, p_py_logger, args.resolution_mm, args.g90_g91_influences_extruder, 50, py_progress_callback);
-		arc_welder_obj.process();
+		arc_welder_results results = arc_welder_obj.process();
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 		Py_XDECREF(py_progress_callback);
-		// For now just return py_none
-		return PyTuple_Pack(1, Py_None);
+		// return the arguments
+		PyObject* p_progress = py_arc_welder::build_py_progress(results.progress);
+		if (p_progress == NULL)
+			p_progress = Py_None;
+
+		PyObject* p_results = Py_BuildValue(
+			"{s:i,s:i,s:s,s:O}",
+			"success",
+			results.success,
+			"cancelled",
+			results.cancelled,
+			"message",
+			results.message,
+			"progress",
+			p_progress
+		);
+		return p_results;
 	}
 }
 

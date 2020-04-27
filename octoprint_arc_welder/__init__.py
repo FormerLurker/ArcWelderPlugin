@@ -29,6 +29,7 @@ from __future__ import unicode_literals
 
 import time
 import uuid
+import threading
 from distutils.version import LooseVersion
 from flask import request, jsonify
 import os
@@ -39,19 +40,19 @@ from octoprint.server.util.tornado import LargeResponseHandler
 from octoprint.server import util, app
 from octoprint.filemanager import FileDestinations
 from octoprint.server.util.flask import restricted_access
-
+from octoprint.events import Events
 import octoprint_arc_welder.log as log
+import octoprint_arc_welder.preprocessor as preprocessor
+# stupid python 2/python 3 compatibility imports
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 logging_configurator = log.LoggingConfigurator("arc_welder", "arc_welder.", "octoprint_arc_welder.")
 root_logger = logging_configurator.get_root_logger()
 # so that we can
 logger = logging_configurator.get_logger("__init__")
-# this must be AFTER the logger is created.
-import PyArcWelder as converter
-# if sys.version_info > (3, 0):
-#    import faulthandler
-#    faulthandler.enable()
-#    logger.info("Faulthandler enabled.")
 from ._version import get_versions
 
 __version__ = get_versions()["version"]
@@ -65,6 +66,7 @@ class ArcWelderPlugin(
     octoprint.plugin.SettingsPlugin,
     octoprint.plugin.AssetPlugin,
     octoprint.plugin.BlueprintPlugin,
+    octoprint.plugin.EventHandlerPlugin
 ):
 
     if LooseVersion(octoprint.server.VERSION) >= LooseVersion("1.4"):
@@ -79,9 +81,10 @@ class ArcWelderPlugin(
     def __init__(self):
         super(ArcWelderPlugin, self).__init__()
         self.preprocessing_job_guid = None
-        self.preprocessing_job_source_file_name = ""
+        self.preprocessing_job_source_file_path = ""
         self.preprocessing_job_target_file_name = ""
         self.is_cancelled = False
+        self._processing_queue = queue.Queue()
         self.settings_default = dict(
             use_octoprint_settings=True,
             g90_g91_influences_extruder=False,
@@ -102,11 +105,25 @@ class ArcWelderPlugin(
             version=__version__,
             git_version=__git_version__,
         )
+        # start the preprocessor worker
+        self._preprocessor_worker = preprocessor.PreProcessorWorker(
+            self._processing_queue,
+            self._get_is_printing,
+            self.save_preprocessed_file,
+            self.preprocessing_started,
+            self.send_pre_processing_progress_message,
+            self.preprocessing_cancelled,
+            self.preprocessing_failed,
+            self.preprocessing_success,
+            self.preprocessing_completed,
+        )
 
     def on_after_startup(self):
         logging_configurator.configure_loggers(
             self._log_file_path, self._logging_configuration
         )
+        self._preprocessor_worker.daemon = True
+        self._preprocessor_worker.start()
         logger.info("Startup Complete.")
 
     # Events
@@ -147,8 +164,6 @@ class ArcWelderPlugin(
             logger.info("Cancelling Preprocessing for /cancelPreprocessing.")
             self.preprocessing_job_guid = None
             self.is_cancelled = True
-
-            self.send_pre_processing_progress_message(100, 0, 0, 0, 0, 0, 0)
             return jsonify({"success": True})
 
     @octoprint.plugin.BlueprintPlugin.route("/clearLog", methods=["POST"])
@@ -195,42 +210,55 @@ class ArcWelderPlugin(
     def send_preprocessing_start_message(self):
         data = {
             "message_type": "preprocessing-start",
-            "preprocessing_job_guid": self.preprocessing_job_guid,
-            "source_filename": self.preprocessing_job_source_file_name,
+            "source_filename": self.preprocessing_job_source_file_path,
             "target_filename": self.preprocessing_job_target_file_name,
+            "preprocessing_job_guid": self.preprocessing_job_guid
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
-    def send_pre_processing_progress_message(
-        self,
-        percent_progress,
-        seconds_elapsed,
-        seconds_to_complete,
-        gcodes_processed,
-        lines_processed,
-        points_compressed,
-        arcs_created,
-    ):
-        if percent_progress < 100.0 and not self._show_progress_bar:
-            return
-
-        suppress_popup = False
-        if percent_progress == 100.0 and not self._show_completed_notification:
-            suppress_popup = True
+    def send_preprocessing_failed_message(self, message):
         data = {
-            "message_type": "preprocessing-progress",
-            "percent_progress": percent_progress,
-            "seconds_elapsed": seconds_elapsed,
-            "seconds_to_complete": seconds_to_complete,
-            "gcodes_processed": gcodes_processed,
-            "lines_processed": lines_processed,
-            "points_compressed": points_compressed,
-            "arcs_created": arcs_created,
-            "source_filename": self.preprocessing_job_source_file_name,
+            "message_type": "preprocessing-failed",
+            "source_filename": self.preprocessing_job_source_file_path,
             "target_filename": self.preprocessing_job_target_file_name,
-            "suppress_popup": suppress_popup
+            "preprocessing_job_guid": self.preprocessing_job_guid,
+            "message": message
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
+
+    def send_preprocessing_cancelled_message(self, message):
+        data = {
+            "message_type": "preprocessing-failed",
+            "source_filename": self.preprocessing_job_source_file_path,
+            "target_filename": self.preprocessing_job_target_file_name,
+            "preprocessing_job_guid": self.preprocessing_job_guid,
+            "message": message
+        }
+        self._plugin_manager.send_plugin_message(self._identifier, data)
+
+    def send_pre_processing_progress_message(self, progress):
+
+        if progress["percent_complete"] >= 100.0 or self._show_progress_bar:
+            suppress_popup = False
+            if progress["percent_complete"] == 100.0 and not self._show_completed_notification:
+                suppress_popup = True
+            data = {
+                "message_type": "preprocessing-progress",
+                "percent_complete": progress["percent_complete"],
+                "seconds_elapsed": progress["seconds_elapsed"],
+                "seconds_remaining": progress["seconds_remaining"],
+                "gcodes_processed": progress["gcodes_processed"],
+                "lines_processed": progress["lines_processed"],
+                "points_compressed": progress["points_compressed"],
+                "arcs_created": progress["arcs_created"],
+                "source_file_size": progress["source_file_size"],
+                "target_file_size": progress["target_file_size"],
+                "source_filename": self.preprocessing_job_source_file_path,
+                "target_filename": self.preprocessing_job_target_file_name,
+                "suppress_popup": suppress_popup,
+                "preprocessing_job_guid": self.preprocessing_job_guid
+            }
+            self._plugin_manager.send_plugin_message(self._identifier, data)
         # sleep for just a bit to allow the plugin message time to be sent and for cancel messages to arrive
         # the real answer for this is to figure out how to allow threading in the C++ code
         return not self.is_cancelled
@@ -244,7 +272,10 @@ class ArcWelderPlugin(
             css=["css/arc_welder.css"],
         )
 
+    def _get_is_printing(self):
+        return self._printer.is_printing()
     # Properties
+
     @property
     def _log_file_path(self):
         return self._settings.get_plugin_logfile_path()
@@ -357,108 +388,151 @@ class ArcWelderPlugin(
             "log_level": self._gcode_conversion_log_level
         }
 
-    # hooks
-    def preprocessor(
-        self,
-        path,
-        file_object,
-        links,
-        printer_profile,
-        allow_overwrite,
-        *args,
-        **kwargs
-    ):
-        if self._printer.is_printing():
-            self.send_notification_toast(
-                "error", "Arc-Welder: Unable to Process",
-                "Cannot preprocess gcode while a print is in progress because print quality may be affected.", False,
-                key="unable_to_process", close_keys=["unable_to_process"]
-            )
-            return file_object
-        if hasattr(file_object, "arc_welder"):
-            return file_object
+    def save_preprocessed_file(self, preprocessor_args, path):
+        # get the file name and path
+        original_path = path
+        new_path, new_name = self.get_storage_path_and_name(
+            original_path, not self._overwrite_source_file
+        )
+        if self._overwrite_source_file:
+            logger.info("Arc compression complete, overwriting source file.")
+        else:
+            logger.info("Arc compression complete, creating a new gcode file: %s", new_name)
+        #if self._overwrite_source_file:
+        #    # first delete the original file if it exists
+        #    if self._file_manager.file_exists(original_path):
+        #        self._file_manager.remove_file(original_path)
 
-        if not self._enabled or not octoprint.filemanager.valid_file_type(
-            path, type="gcode"
-        ):
-            return file_object
-        elif not allow_overwrite:
-            self.send_notification_toast(
-                "error", "Arc-Welder: Unable to Process",
-                "The uploaded gcode does not allow overwrite, perhaps due to another pre-processor.", False,
-                key="unable_to_process", close_keys=["unable_to_process"]
-            )
-            logger.info(
-                "Received a new gcode file for processing, but allow_overwrite is set to false.  FileName: %s.",
-                file_object.filename
-            )
-            return file_object
+        # TODO:  Look through the analysis queue, and stop analysis if the file is being analyzed.
 
-        logger.info("Received a new gcode file for processing.  FileName: %s.", file_object.filename)
+        # Create the new file object
+        new_file_object = octoprint.filemanager.util.DiskFileWrapper(
+            new_name, preprocessor_args["target_file_path"], move=True
+        )
 
-        self.is_cancelled = False
-        self.preprocessing_job_guid = str(uuid.uuid4())
+        self._file_manager.add_file(
+            FileDestinations.LOCAL,
+            new_path,
+            new_file_object,
+            allow_overwrite=True,
+            display=new_name,
+        )
+        self._file_manager.set_additional_metadata(
+            FileDestinations.LOCAL, new_path, "arc_welder", True, overwrite=True, merge=False
+        )
+
+    def preprocessing_started(self, path, preprocessor_args):
         new_path, new_name = self.get_storage_path_and_name(
             path, not self._overwrite_source_file
         )
-        self.preprocessing_job_source_file_name = file_object.filename
+        self.preprocessing_job_guid = str(uuid.uuid4())
+        self.preprocessing_job_source_file_path = path
         self.preprocessing_job_target_file_name = new_name
-        arc_converter_args = self.get_preprocessor_arguments(file_object.path)
+
+        logger.info(
+            "Starting pre-processing with the following arguments:\n\tsource_file_path: "
+            "%s\n\ttarget_file_path: %s\n\tresolution_mm: %.3f\n\tg90_g91_influences_extruder: %r"
+            "\n\tlog_level: %d",
+            preprocessor_args["source_file_path"], preprocessor_args["target_file_path"],
+            preprocessor_args["resolution_mm"], preprocessor_args["g90_g91_influences_extruder"],
+            preprocessor_args["log_level"]
+        )
 
         if self._show_started_notification:
             # A bit of a hack.  Need to rethink the start notification.
             if self._show_progress_bar:
                 self.send_preprocessing_start_message()
             else:
-                message = "Arc Welder is processing '{0}'.  Please wait...".format(arc_converter_args["source_file_path"])
+                message = "Arc Welder is processing '{0}'.  Please wait...".format(
+                    preprocessor_args["source_file_path"])
                 self.send_notification_toast(
                     "info", "Pre-Processing Gcode", message, True, "preprocessing_start", ["preprocessing_start"]
                 )
 
-        logger.info("Starting pre-processing with the following arguments:\n\tsource_file_path: "
-                    "%s\n\ttarget_file_path: %s\n\tresolution_mm: %.3f\n\tg90_g91_influences_extruder: %r"
-                    "\n\tlog_level: %d",
-                    arc_converter_args["source_file_path"], arc_converter_args["target_file_path"],
-                    arc_converter_args["resolution_mm"], arc_converter_args["g90_g91_influences_extruder"],
-                    arc_converter_args["log_level"])
+    def preprocessing_cancelled(self, path, preprocessor_args):
+        message = "Preprocessing has been cancelled for '{0}'.".format(path)
+        data = {
+            "message_type": "preprocessing-cancelled",
+            "source_filename": self.preprocessing_job_source_file_path,
+            "target_filename": self.preprocessing_job_target_file_name,
+            "preprocessing_job_guid": self.preprocessing_job_guid,
+            "message": message
+        }
+        self._plugin_manager.send_plugin_message(self._identifier, data)
 
-        # this will contain metadata results from the ConvertFile call
-        result = None
-        try:
-            result = converter.ConvertFile(arc_converter_args)
-        except Exception as e:
-            self.send_notification_toast(
-                "error",
-                "Arc Welder Preprocessing Failed",
-                "An error occurred while preprocessing {0}.  Check plugin_arc_welder.log for details.",
-                False,
-            )
-            logger.exception("Unable to convert the gcode file.")
-            raise e
-        #finally:
-            #self.send_pre_processing_progress_message(200, 0, 0, 0, 0, 0, 0)
+    def preprocessing_success(self, results, path, preprocessor_args):
+        message = "Preprocessing has been cancelled for '{0}'.".format(path)
+        data = {
+            "message_type": "preprocessing-success",
+            "results": results,
+            "source_filename": self.preprocessing_job_source_file_path,
+            "target_filename": self.preprocessing_job_target_file_name,
+            "preprocessing_job_guid": self.preprocessing_job_guid,
+            "message": message
+        }
+        self._plugin_manager.send_plugin_message(self._identifier, data)
 
-        if self._overwrite_source_file:
-            logger.info("Arc compression complete, overwriting source file.")
-            # return the modified file
-            return octoprint.filemanager.util.DiskFileWrapper(
-                path, arc_converter_args["target_file_path"], move=True
-            )
-        else:
-            logger.info("Arc compression complete, creating a new gcode file: %s", new_name)
-            new_file_object = octoprint.filemanager.util.DiskFileWrapper(
-                new_name, arc_converter_args["target_file_path"], move=True
-            )
-            setattr(new_file_object, "arc_welder", True)
-            self._file_manager.add_file(
-                FileDestinations.LOCAL,
-                new_path,
-                new_file_object,
-                allow_overwrite=True,
-                display=new_name,
-            )
-            # return the original object
-            return file_object
+    def preprocessing_completed(self):
+        data = {
+            "message_type": "preprocessing-complete"
+        }
+        self.preprocessing_job_guid = None
+        self.preprocessing_job_source_file_path = None
+        self.preprocessing_job_target_file_name = None
+        self._plugin_manager.send_plugin_message(self._identifier, data)
+
+    def preprocessing_failed(self, message):
+        data = {
+            "message_type": "preprocessing-failed",
+            "source_filename": self.preprocessing_job_source_file_path,
+            "target_filename": self.preprocessing_job_target_file_name,
+            "preprocessing_job_guid": self.preprocessing_job_guid,
+            "message": message
+        }
+        self._plugin_manager.send_plugin_message(self._identifier, data)
+
+
+    def on_event(self, event, payload):
+        if not self._enabled:
+            return
+
+        if event == Events.FILE_ADDED:
+            storage = payload["storage"]
+            path = payload["path"]
+            name = payload["name"]
+            type = payload["type"]
+
+            if path == self.preprocessing_job_source_file_path or name == self.preprocessing_job_target_file_name:
+                return
+
+            if not octoprint.filemanager.valid_file_type(
+                    path, type="gcode"
+            ):
+                return
+
+            if not storage == FileDestinations.LOCAL:
+                return
+
+            metadata = self._file_manager.get_metadata(storage, path)
+            if "arc_welder" in metadata:
+                return
+
+            if self._printer.is_printing():
+                self.send_notification_toast(
+                    "error", "Arc-Welder: Unable to Process",
+                    "Cannot preprocess gcode while a print is in progress because print quality may be affected.  The "
+                    "gcode will be processed as soon as the print has completed.",
+                    False,
+                    key="unable_to_process", close_keys=["unable_to_process"]
+                )
+                return
+
+            logger.info("Received a new gcode file for processing.  FileName: %s.", name)
+
+            self.is_cancelled = False
+            path_on_disk = self._file_manager.path_on_disk(storage, path)
+            preprocessor_args = self.get_preprocessor_arguments(path_on_disk)
+            self._processing_queue.put((path, preprocessor_args))
 
     def register_custom_routes(self, server_routes, *args, **kwargs):
         # version specific permission validator
@@ -553,7 +627,6 @@ def __plugin_load__():
     global __plugin_hooks__
     __plugin_hooks__ = {
         "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
-        "octoprint.filemanager.preprocessor": __plugin_implementation__.preprocessor,
         "octoprint.server.http.routes": __plugin_implementation__.register_custom_routes
     }
 

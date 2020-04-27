@@ -23,26 +23,65 @@
 #include "py_arc_welder.h"
 
 
-bool py_arc_welder::on_progress_(double percent_complete, double seconds_elapsed, double estimated_seconds_remaining, int gcodes_processed, int current_line, int points_compressed, int arcs_created)
+PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 {
-	PyObject* funcArgs = Py_BuildValue("(d,d,d,i,i,i,i)", percent_complete, seconds_elapsed, estimated_seconds_remaining, gcodes_processed, current_line, points_compressed, arcs_created);
-	if (funcArgs == NULL)
-	{
-		return false;
-	}
-	
-	PyGILState_STATE gstate = PyGILState_Ensure();
-	PyObject* pContinueProcessing = PyObject_CallObject(py_progress_callback_, funcArgs);
-	Py_DECREF(funcArgs);
-	bool continue_processing = PyLong_AsLong(pContinueProcessing) > 0;
-	Py_DECREF(pContinueProcessing);
-	PyGILState_Release(gstate);
+	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i}",
+		"percent_complete",
+		progress.percent_complete,
+		"seconds_elapsed",
+		progress.seconds_elapsed,
+		"seconds_remaining",
+		progress.seconds_remaining,
+		"gcodes_processed",
+		progress.gcodes_processed,
+		"lines_processed",
+		progress.lines_processed,
+		"points_compressed",
+		progress.points_compressed,
+		"arcs_created",
+		progress.arcs_created,
+		"source_file_size",
+		progress.source_file_size,
+		"target_file_size",
+		progress.target_file_size
+	);
+	return py_progress;
+}
 
-	if (pContinueProcessing == NULL || pContinueProcessing == Py_None)
+bool py_arc_welder::on_progress_(arc_welder_progress progress)
+{
+	PyObject* py_dict = py_arc_welder::build_py_progress(progress);
+	if (py_dict == NULL)
+		return NULL;
+	PyObject* func_args = Py_BuildValue("(O)", py_dict);
+	if (func_args == NULL)
 	{
-		// no return value was supply, assume true
-		
+		Py_DECREF(py_dict);
 		return true;
 	}
+		
+	PyGILState_STATE gstate = PyGILState_Ensure();
+	PyObject* pContinueProcessing = PyObject_CallObject(py_progress_callback_, func_args);
+	Py_DECREF(func_args);
+	Py_DECREF(py_dict);
+	bool continue_processing;
+	if (pContinueProcessing == NULL)
+	{
+		// no return value was supply, assume true, but without decrefing pContinueProcessing
+		continue_processing = true;
+	}
+	else 
+	{
+		if (pContinueProcessing == Py_None)
+		{
+			continue_processing = true;
+		}
+		else
+		{
+			continue_processing = PyLong_AsLong(pContinueProcessing) > 0;
+		}
+		Py_DECREF(pContinueProcessing);
+	}
+	PyGILState_Release(gstate);
 	return continue_processing;
 }
