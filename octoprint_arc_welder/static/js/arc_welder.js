@@ -67,6 +67,7 @@ $(function () {
         self.loader = new PNotify({
             title: title,
             text: '<div class="progress-sub-title"></div><div class="progress progress-striped active" style="margin:0"><div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',
+            addclass: "arc_welder",
             icon: 'fa fa-cog fa-spin',
             width: self.popup_width.toString() + "px",
             confirm: {
