@@ -1,4 +1,5 @@
 *.pyc
+*.pyd
 *.swp
 .idea
 *.iml
