@@ -58,7 +58,7 @@ class PreProcessorWorker(threading.Thread):
         completed_callback
     ):
         super(PreProcessorWorker, self).__init__()
-        self._idle_sleep_seconds = 5  # wait at most 5 seconds for a rendering job from the queue
+        self._idle_sleep_seconds = 2.5 # wait at most 2.5 seconds for a rendering job from the queue
         self._task_queue = task_queue
         self._is_printing_callback = is_printing_callback
         self._save_callback = save_callback
