@@ -87,8 +87,6 @@ class PreProcessorWorker(threading.Thread):
                     continue
 
                 path, processor_args = self._task_queue.get(False)
-
-                self._start_callback(path, processor_args)
                 success = False
                 try:
                     if not os.path.exists(processor_args["source_file_path"]):
