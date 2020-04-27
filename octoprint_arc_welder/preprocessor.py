@@ -27,7 +27,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 import threading
-import six
+import octoprint_arc_welder.utilities as utilities
 import octoprint_arc_welder.log as log
 import time
 import os
@@ -41,26 +41,6 @@ logging_configurator = log.LoggingConfigurator("arc_welder", "arc_welder.", "oct
 root_logger = logging_configurator.get_root_logger()
 # so that we can
 logger = logging_configurator.get_logger(__name__)
-
-
-# helpers for dealing with bytes (string) values delivered by the converter
-# socks.js doesn't like mixed encoding
-def conditional_encode(s, encoding='utf-8', errors='strict'):
-    if isinstance(s, dict):
-        return dict_encode(s)
-    try:
-        if isinstance(s,str):
-            return unicode(s, errors='ignore', encoding='utf-8')
-    except NameError:  # Python 3
-        if isinstance(s,bytes):
-            return str(s, errors='ignore', encoding='utf-8')
-    return s
-
-
-
-def dict_encode(dict):
-    return {conditional_encode(k): conditional_encode(v) for k, v in six.iteritems(dict)}
-
 
 class PreProcessorWorker(threading.Thread):
     """Watch for rendering jobs via a rendering queue.  Extract jobs from the queue, and spawn a rendering thread,
@@ -132,13 +112,46 @@ class PreProcessorWorker(threading.Thread):
                     processor_args["source_file_path"], processor_args["target_file_path"],
                     processor_args["resolution_mm"], processor_args["g90_g91_influences_extruder"],
                     processor_args["log_level"])
-        results = dict_encode(converter.ConvertFile(processor_args))
-        if results["cancelled"]:
+        # Set the progress callback.
+        processor_args["on_progress_received"] = self._progress_received
+        # Convert the file via the C++ extension
+        try:
+            results = converter.ConvertFile(processor_args)
+        except Exception as e:
+            # It would be better to catch only specific errors here, but we will log them.  Any
+            # unhandled errors that occur would shut down the worker thread until reboot.
+            # Since exceptions are always logged, so this is reasonably safe.
+
+            # Log the exception
+            logger.exception(
+                "An unexpected exception occurred while preprocessing %s.", processor_args["source_file_path"]
+            )
+            # create results that will be sent back to the client for notification of failure.
+            results = {
+                "cancelled": False,
+                "success": False,
+                "message": "An unexpected exception occurred while preprocessing the gcode file at {0}.  Please see "
+                           "plugin_arc_welder.log for more details.".format(processor_args["source_file_path"])
+            }
+        # the progress payload will all be in bytes (str for python 2) format.
+        # Make sure everything is in unicode (str for python3) because mixed encoding
+        # messes with things.
+        encoded_results = utilities.dict_encode(results)
+        if encoded_results["cancelled"]:
+            logger.info("Preprocessing of %s has been cancelled.", processor_args["source_file_path"])
             self._cancel_callback(path, processor_args)
-        elif results["success"]:
+        elif encoded_results["success"]:
             # Save the produced gcode file
-            self._save_callback(processor_args, path)
-            self._success_callback(results, path, processor_args)
+            self._success_callback(encoded_results, path, processor_args)
         else:
-            self._failed_callback(results["message"])
+            self._failed_callback(encoded_results["message"])
+
+    def _progress_received(self, progress):
+        # the progress payload will all be in bytes (str for python 2) format.
+        # Make sure everything is in unicode (str for python3) because mixed encoding
+        # messes with things.
+        encoded_progresss = utilities.dict_encode(progress)
+        logger.verbose("Progress Received: %s", encoded_progresss)
+        return self._progress_callback(encoded_progresss)
+
 

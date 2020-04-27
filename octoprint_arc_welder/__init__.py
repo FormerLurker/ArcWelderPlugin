@@ -111,7 +111,7 @@ class ArcWelderPlugin(
             self._get_is_printing,
             self.save_preprocessed_file,
             self.preprocessing_started,
-            self.send_pre_processing_progress_message,
+            self.preprocessing_progress,
             self.preprocessing_cancelled,
             self.preprocessing_failed,
             self.preprocessing_success,
@@ -206,31 +206,6 @@ class ArcWelderPlugin(
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
         # return true to continue, false to terminate
-
-    def send_pre_processing_progress_message(self, progress):
-
-        if progress["percent_complete"] >= 100.0 or self._show_progress_bar:
-            suppress_popup = False
-            if progress["percent_complete"] == 100.0 and not self._show_completed_notification:
-                suppress_popup = True
-            data = {
-                "message_type": "preprocessing-progress",
-                "percent_complete": progress["percent_complete"],
-                "seconds_elapsed": progress["seconds_elapsed"],
-                "seconds_remaining": progress["seconds_remaining"],
-                "gcodes_processed": progress["gcodes_processed"],
-                "lines_processed": progress["lines_processed"],
-                "points_compressed": progress["points_compressed"],
-                "arcs_created": progress["arcs_created"],
-                "source_file_size": progress["source_file_size"],
-                "target_file_size": progress["target_file_size"],
-                "source_filename": self.preprocessing_job_source_file_path,
-                "target_filename": self.preprocessing_job_target_file_name,
-                "suppress_popup": suppress_popup,
-                "preprocessing_job_guid": self.preprocessing_job_guid
-            }
-            self._plugin_manager.send_plugin_message(self._identifier, data)
-        return not self.is_cancelled
 
     # ~~ AssetPlugin mixin
     def get_assets(self):
@@ -353,27 +328,22 @@ class ArcWelderPlugin(
             "target_file_path": target_file_path,
             "resolution_mm": self._resolution_mm,
             "g90_g91_influences_extruder": self._g90_g91_influences_extruder,
-            "on_progress_received": self.send_pre_processing_progress_message,
             "log_level": self._gcode_conversion_log_level
         }
 
-    def save_preprocessed_file(self, preprocessor_args, path):
+    def save_preprocessed_file(self, path, preprocessor_args):
         # get the file name and path
-        original_path = path
         new_path, new_name = self.get_storage_path_and_name(
-            original_path, not self._overwrite_source_file
+            path, not self._overwrite_source_file
         )
         if self._overwrite_source_file:
-            logger.info("Arc compression complete, overwriting source file.")
+            logger.info("Overwriting source file at %s with the processed file.", path)
         else:
             logger.info("Arc compression complete, creating a new gcode file: %s", new_name)
-        #if self._overwrite_source_file:
-        #    # first delete the original file if it exists
-        #    if self._file_manager.file_exists(original_path):
-        #        self._file_manager.remove_file(original_path)
 
-        # TODO:  Look through the analysis queue, and stop analysis if the file is being analyzed.
 
+        # TODO:  Look through the analysis queue, and stop analysis if the file is being analyzed.  Perhaps we need
+        # to wait?
         # Create the new file object
         new_file_object = octoprint.filemanager.util.DiskFileWrapper(
             new_name, preprocessor_args["target_file_path"], move=True
@@ -424,6 +394,31 @@ class ArcWelderPlugin(
                     "info", "Pre-Processing Gcode", message, True, "preprocessing_start", ["preprocessing_start"]
                 )
 
+    def preprocessing_progress(self, progress):
+        if progress["percent_complete"] >= 100.0 or self._show_progress_bar:
+            suppress_popup = False
+            if progress["percent_complete"] == 100.0 and not self._show_completed_notification:
+                suppress_popup = True
+            data = {
+                "message_type": "preprocessing-progress",
+                "percent_complete": progress["percent_complete"],
+                "seconds_elapsed": progress["seconds_elapsed"],
+                "seconds_remaining": progress["seconds_remaining"],
+                "gcodes_processed": progress["gcodes_processed"],
+                "lines_processed": progress["lines_processed"],
+                "points_compressed": progress["points_compressed"],
+                "arcs_created": progress["arcs_created"],
+                "source_file_size": progress["source_file_size"],
+                "target_file_size": progress["target_file_size"],
+                "source_filename": self.preprocessing_job_source_file_path,
+                "target_filename": self.preprocessing_job_target_file_name,
+                "suppress_popup": suppress_popup,
+                "preprocessing_job_guid": self.preprocessing_job_guid
+            }
+            self._plugin_manager.send_plugin_message(self._identifier, data)
+        # return true if processing should continue.  This is set by the cancelled blueprint plugin.
+        return not self.is_cancelled
+
     def preprocessing_cancelled(self, path, preprocessor_args):
         message = "Preprocessing has been cancelled for '{0}'.".format(path)
         data = {
@@ -436,17 +431,17 @@ class ArcWelderPlugin(
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def preprocessing_success(self, results, path, preprocessor_args):
-
-        message = "Preprocessing has been cancelled for '{0}'.".format(path)
+        # save the newly created file.  This must be done before
+        # exiting this callback because the target file isn't
+        # guaranteed to exist later.
+        self.save_preprocessed_file(path, preprocessor_args)
         data = {
             "message_type": "preprocessing-success",
             "results": results,
             "source_filename": self.preprocessing_job_source_file_path,
             "target_filename": self.preprocessing_job_target_file_name,
             "preprocessing_job_guid": self.preprocessing_job_guid,
-            "message": message
         }
-        logger.verbose("Sending Success Message: %s", data)
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def preprocessing_completed(self):
@@ -467,7 +462,6 @@ class ArcWelderPlugin(
             "message": message
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
-
 
     def on_event(self, event, payload):
         if not self._enabled:
