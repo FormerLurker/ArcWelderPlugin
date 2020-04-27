@@ -259,8 +259,6 @@ class ArcWelderPlugin(
                 "preprocessing_job_guid": self.preprocessing_job_guid
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)
-        # sleep for just a bit to allow the plugin message time to be sent and for cancel messages to arrive
-        # the real answer for this is to figure out how to allow threading in the C++ code
         return not self.is_cancelled
 
     # ~~ AssetPlugin mixin
