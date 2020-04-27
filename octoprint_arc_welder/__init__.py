@@ -459,6 +459,7 @@ class ArcWelderPlugin(
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def preprocessing_success(self, results, path, preprocessor_args):
+
         message = "Preprocessing has been cancelled for '{0}'.".format(path)
         data = {
             "message_type": "preprocessing-success",
@@ -468,6 +469,7 @@ class ArcWelderPlugin(
             "preprocessing_job_guid": self.preprocessing_job_guid,
             "message": message
         }
+        logger.verbose("Sending Success Message: %s", data)
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def preprocessing_completed(self):
