@@ -22,7 +22,6 @@
 
 #pragma once
 #include <string>
-
 class utilities{
 public:
 	static bool is_zero(double x);
@@ -32,7 +31,7 @@ public:
 	static bool greater_than_or_equal(double x, double y);
 	static bool less_than(double x, double y);
 	static bool less_than_or_equal(double x, double y);
-
+	
 	// custom tolerance functions
 	static bool is_zero(double x, double tolerance);
 	static bool is_equal(double x, double y, double tolerance);
@@ -49,6 +48,7 @@ public:
 	static std::string rtrim(const std::string& s);
 	static std::string trim(const std::string& s);
 	static std::istream& safe_get_line(std::istream& is, std::string& t);
+	
 protected:
 	static const std::string WHITESPACE_;
 private:

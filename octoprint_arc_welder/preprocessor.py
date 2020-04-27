@@ -27,6 +27,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 import threading
+import six
 import octoprint_arc_welder.log as log
 import time
 import os
@@ -40,6 +41,25 @@ logging_configurator = log.LoggingConfigurator("arc_welder", "arc_welder.", "oct
 root_logger = logging_configurator.get_root_logger()
 # so that we can
 logger = logging_configurator.get_logger(__name__)
+
+
+# helpers for dealing with bytes (string) values delivered by the converter
+# socks.js doesn't like mixed encoding
+def conditional_encode(s, encoding='utf-8', errors='strict'):
+    if isinstance(s, dict):
+        return dict_encode(s)
+    try:
+        if isinstance(s,str):
+            return unicode(s, errors='ignore', encoding='utf-8')
+    except NameError:  # Python 3
+        if isinstance(s,bytes):
+            return str(s, errors='ignore', encoding='utf-8')
+    return s
+
+
+
+def dict_encode(dict):
+    return {conditional_encode(k): conditional_encode(v) for k, v in six.iteritems(dict)}
 
 
 class PreProcessorWorker(threading.Thread):
@@ -112,7 +132,7 @@ class PreProcessorWorker(threading.Thread):
                     processor_args["source_file_path"], processor_args["target_file_path"],
                     processor_args["resolution_mm"], processor_args["g90_g91_influences_extruder"],
                     processor_args["log_level"])
-        results = converter.ConvertFile(processor_args)
+        results = dict_encode(converter.ConvertFile(processor_args))
         if results["cancelled"]:
             self._cancel_callback(path, processor_args)
         elif results["success"]:
