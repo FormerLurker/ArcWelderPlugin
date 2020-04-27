@@ -215,10 +215,11 @@ class LoggingConfigurator(object):
             if logging_settings is not None:
                 current_logger = self._root_logger.getChild(logger_name)
                 found_enabled_logger = None
-                for enabled_logger in logging_settings["enabled_loggers"]:
-                    if enabled_logger["name"] == logger_full_name:
-                        found_enabled_logger = enabled_logger
-                        break
+                if "enabled_loggers" in logging_settings:
+                    for enabled_logger in logging_settings["enabled_loggers"]:
+                        if enabled_logger["name"] == logger_full_name:
+                            found_enabled_logger = enabled_logger
+                            break
 
                 if found_enabled_logger is None or current_logger.level > logging.ERROR:
                     current_logger.setLevel(logging.ERROR)
