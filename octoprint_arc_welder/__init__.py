@@ -49,6 +49,11 @@ try:
 except ImportError:
     import Queue as queue
 
+try:
+    import urllib.parse as urllibparse
+except ImportError:
+    import urllib as urllibparse
+
 logging_configurator = log.LoggingConfigurator("arc_welder", "arc_welder.", "octoprint_arc_welder.")
 root_logger = logging_configurator.get_root_logger()
 # so that we can
@@ -97,6 +102,7 @@ class ArcWelderPlugin(
                 show_completed_notification=True
             ),
             feature_settings=dict(
+                auto_pre_processing_enabled=True,
                 show_file_manager_buttons=True
             ),
             enabled=True,
@@ -190,10 +196,14 @@ class ArcWelderPlugin(
     @restricted_access
     def process_request(self):
         with ArcWelderPlugin.admin_permission.require(http_exception=403):
-            request_values = request.get_json()
-            path = request_values["path"]
-            self.add_file_to_preprocessor_queue(path)
-            return jsonify({"success": True})
+            if self._enabled:
+                request_values = request.get_json()
+                path = request_values["path"]
+                # decode the path
+                path = urllibparse.unquote(path)
+                self.add_file_to_preprocessor_queue(path)
+                return jsonify({"success": True})
+            return jsonify({"success": False, "message": "Arc Welder is Disabled."})
 
     # Callback Handler for /downloadFile
     # uses the ArcWelderLargeResponseHandler
@@ -266,6 +276,10 @@ class ArcWelderPlugin(
         if enabled is None:
             enabled = self.settings_default["enabled"]
         return enabled
+
+    @property
+    def _auto_pre_processing_enabled(self):
+        return self._settings.get(["feature_settings", "auto_pre_processing_enabled"])
 
     @property
     def _use_octoprint_settings(self):
@@ -478,7 +492,7 @@ class ArcWelderPlugin(
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def on_event(self, event, payload):
-        if not self._enabled:
+        if not self._enabled or not self._auto_pre_processing_enabled:
             return
 
         if event == Events.FILE_ADDED:

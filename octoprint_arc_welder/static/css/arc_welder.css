@@ -23,23 +23,28 @@
 # You can contact the author either through the git-hub repository, or at the
 # following email address: FormerLurker@pm.me
 ###################################################################################*/
-.progress-bar-container{
+.arc-welder.progress-bar-container{
     width:100%;
     display: inline-flex;
     flex-grow: 1;
 }
 
-.progress-bar {
+.arc-welder.progress-bar {
     height: 100%;
     background: green;
     color: white;
     text-align: center;
 }
 
-.progress-bar.failed {
+.arc-welder.progress-bar.failed {
     background: red;
 }
 
-.ui-pnotify.arc_welder {
+div.ui-pnotify.arc-welder {
     width:400px!important;
 }
+
+.arc-welder .control-label{
+    padding-right: 10px;
+}
+

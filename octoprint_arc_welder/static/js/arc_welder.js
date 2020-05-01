@@ -66,8 +66,8 @@ $(function () {
         // create the pnotify loader
         self.loader = new PNotify({
             title: title,
-            text: '<div class="progress-sub-title"></div><div class="progress progress-striped active" style="margin:0"><div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',
-            addclass: "arc_welder",
+            text: '<div class="progress-sub-title"></div><div class="progress progress-striped active" style="margin:0"><div class="arc-welder progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',
+            addclass: "arc-welder",
             icon: 'fa fa-cog fa-spin',
             width: self.popup_width.toString() + "px",
             confirm: {
@@ -197,7 +197,7 @@ $(function () {
             text: text,
             icon: 'fa fa-question',
             hide: false,
-            addclass: "arc_welder",
+            addclass: "arc-welder",
             confirm: {
                 confirm: true,
             },
@@ -345,7 +345,7 @@ $(function () {
 
         };
 
-        self.close_preprocessing_popup = function(){
+        self.closePreprocessingPopup = function(){
             if (self.pre_processing_progress != null) {
                 self.pre_processing_progress.close();
             }
@@ -365,7 +365,7 @@ $(function () {
                         text: data.message,
                         type: data.toast_type,
                         hide: data.auto_hide,
-                        addclass: "arc_welder",
+                        addclass: "arc-welder",
                         desktop: {
                             desktop: true
                         }
@@ -386,13 +386,13 @@ $(function () {
                         text: data.message,
                         type: "error",
                         hide: true,
-                        addclass: "arc_welder",
+                        addclass: "arc-welder",
                         desktop: {
                             desktop: true
                         }
                     };
                     ArcWelder.displayPopupForKey(options, "preprocessing-failed", []);
-                    self.close_preprocessing_popup();
+                    self.closePreprocessingPopup();
                     break;
                 case "preprocessing-cancelled":
                     var options = {
@@ -400,16 +400,16 @@ $(function () {
                         text: data.message,
                         type: "info",
                         hide: true,
-                        addclass: "arc_welder",
+                        addclass: "arc-welder",
                         desktop: {
                             desktop: true
                         }
                     };
                     ArcWelder.displayPopupForKey(options, "preprocessing-cancelled", []);
-                    self.close_preprocessing_popup();
+                    self.closePreprocessingPopup();
                     break;
                 case "preprocessing-success":
-                    self.close_preprocessing_popup();
+                    self.closePreprocessingPopup();
                     var progress = data.results.progress;
                     var seconds_elapsed = progress.seconds_elapsed;
                     var arcs_created = progress.arcs_created;
@@ -435,7 +435,7 @@ $(function () {
                             text: progress_text,
                             type: "success",
                             hide: false,
-                            addclass: "arc_welder",
+                            addclass: "arc-welder",
 
                         };
                         ArcWelder.displayPopupForKey(options, "preprocessing-success");
@@ -455,7 +455,7 @@ $(function () {
                         ArcWelder.displayPopupForKey(options, "preprocessing-success-desktop", []);
                     break;
                 case "preprocessing-complete":
-                    self.close_preprocessing_popup();
+                    self.closePreprocessingPopup();
                     break;
                 case "preprocessing-progress":
                     // TODO: CHANGE THIS TO A PROGRESS INDICATOR
@@ -506,7 +506,7 @@ $(function () {
                         text: "An unknown message was received.  This popup should have been removed prior to release.",
                         type: "error",
                         hide: false,
-                        addclass: "arc_welder",
+                        addclass: "arc-welder",
                         desktop: {
                             desktop: true
                         }
@@ -526,7 +526,7 @@ $(function () {
                 data: JSON.stringify(data),
                 dataType: "json",
                 success: function() {
-                    self.close_preprocessing_popup();
+                    self.closePreprocessingPopup();
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
                     var message = "Could not cancel preprocessing.  Status: " + textStatus + ".  Error: " + errorThrown;
@@ -535,7 +535,7 @@ $(function () {
                         text: message,
                         type: 'error',
                         hide: false,
-                        addclass: "arc_welder",
+                        addclass: "arc-welder",
                         desktop: {
                             desktop: true
                         }
@@ -550,8 +550,7 @@ $(function () {
             $("#files div.gcode_files div.entry .action-buttons div.btn-mini.arc-welder").remove();
         };
 
-        self.getEntryId = function(file)
-        {
+        self.getEntryId = function(file){
             return "gcode_file_" + md5(file.origin + ":" + file.path);
         };
 
@@ -598,7 +597,6 @@ $(function () {
                         <i class="fa fa-compress"></i>\
                     </div>\
                 ');
-                $button.data("arc-welder", file.path);
                 // Add an on click event if the button is not disabled
                 if (!button_disabled)
                 {
@@ -630,6 +628,36 @@ $(function () {
                 contentType: "application/json",
                 data: JSON.stringify(data),
                 dataType: "json",
+                success: function(results) {
+                    if (results.success)
+                    {
+                        var options = {
+                            title: 'Arc Welder File Queued',
+                            text: "The file '" + path + "' has been queued for processing.",
+                            type: 'info',
+                            hide: true,
+                            addclass: "arc-welder",
+                            desktop: {
+                                desktop: true
+                            }
+                        };
+                        ArcWelder.displayPopupForKey(options,"process-error", ["process-error"]);
+                    }
+                    else
+                    {
+                        var options = {
+                            title: 'Arc Welder Error',
+                            text: results.message,
+                            type: 'error',
+                            hide: false,
+                            addclass: "arc-welder",
+                            desktop: {
+                                desktop: true
+                            }
+                        };
+                        ArcWelder.displayPopupForKey(options,"process-error", ["process-error"]);
+                    }
+                },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
                     var message = "Could not pre-process '"+ path +"'.  Check plugin_arc_welder.log for details.";
                     var options = {
@@ -637,7 +665,7 @@ $(function () {
                         text: message,
                         type: 'error',
                         hide: false,
-                        addclass: "arc_welder",
+                        addclass: "arc-welder",
                         desktop: {
                             desktop: true
                         }

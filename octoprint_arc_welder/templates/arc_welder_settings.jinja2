@@ -23,7 +23,7 @@
 # You can contact the author either through the git-hub repository, or at the
 # following email address: FormerLurker@pm.me
 ##################################################################################-->
-<div id="arc_welder_settings">
+<div id="arc_welder_settings" class="arc-welder">
     <h4>Anti Stutter Plugin Settings</h4>
     <div id="arc_welder_settings_nav" class="row-fluid">
         <div class="span12">
@@ -44,12 +44,15 @@
             </ul>
             <div class="tab-content">
                 <div id="arc_welder_settings_tab" class="tab-pane active">
+                    <div class="alert alert-warning"
+                         data-bind="visible: !plugin_settings().feature_settings.auto_pre_processing_enabled() && !plugin_settings().feature_settings.show_file_manager_buttons()">
+                        <span>All pre-processing functions have been disabled.  Either enable <strong>Automatically Pre-Process Uploaded Files</strong> or <strong>Add Process Button to File Manager</strong> within the plugin settings under <strong>Features and Notifications</strong></span>
+                    </div>
                     <form class="form-horizontal" onsubmit="return false;">
                         <fieldset>
                             <legend>Preprocessor Settings</legend>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_enabled"><strong>Arc Welder Preprocessing
-                                    Enabled</strong></label>
+                                <label class="control-label" for="arc_welder_enabled"><strong>Arc Welder Enabled</strong></label>
                                 <div class="controls">
                                     <input class="input-text" type="checkbox" id="arc_welder_enabled"
                                            data-bind="checked: plugin_settings().enabled">
@@ -105,7 +108,13 @@
                         </fieldset>
                         <fieldset>
                             <legend>Features and Notifications</legend>
-
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_feature_settings_auto_pre_processing_enabled"><strong>Automatically Pre-Process Uploaded Files</strong></label>
+                                <div class="controls">
+                                    <input class="input-text" type="checkbox" id="arc_welder_feature_settings_auto_pre_processing_enabled"
+                                           data-bind="checked: plugin_settings().feature_settings.auto_pre_processing_enabled">
+                                </div>
+                            </div>
                             <div class="control-group">
                                 <label class="control-label" for="arc_welder_feature_settings_show_file_manager_buttons"><strong>Add Process Button to File Manager</strong></label>
                                 <div class="controls">
