@@ -46,10 +46,11 @@ int main(int argc, char* argv[])
 
 	// Initialize the Python interpreter.  Required.
 	Py_Initialize();
-	std::cout << "Initializing threads...";
+	// We are not using threads, do not enable.
+	/*std::cout << "Initializing threads...";
 	if (!PyEval_ThreadsInitialized()) {
 		PyEval_InitThreads();
-	}
+	}*/
 	// Optionally import the module; alternatively, import can be deferred until the embedded script imports it.
 	PyImport_ImportModule("PyArcWelder");
 	PyMem_RawFree(program);
@@ -62,9 +63,12 @@ int main(int argc, char* argv[])
 {
 	Py_SetProgramName(argv[0]);
 	Py_Initialize();
+	// We are not using threads, do not enable.
+	/* std::cout << "Initializing threads...";
 	if (!PyEval_ThreadsInitialized()) {
 		PyEval_InitThreads();
 	}
+	*/
 	initPyArcWelder();
 	return 0;
 
@@ -122,13 +126,13 @@ PyInit_PyArcWelder(void)
 extern "C" void initPyArcWelder(void)
 #endif
 {
-	std::cout << "Initializing PyArcWelder V0.1.0rc1.dev0 - Copyright (C) 2019  Brad Hochgesang...";
+	std::cout << "Initializing PyArcWelder V0.1.0rc1.dev0 - Copyright (C) 2019  Brad Hochgesang.";
 
 #if PY_MAJOR_VERSION >= 3
-	std::cout << "Python 3+ Detected...";
+	std::cout << " Python 3+ Detected...";
 	PyObject* module = PyModule_Create(&moduledef);
 #else
-	std::cout << "Python 2 Detected...";
+	std::cout << " Python 2 Detected...";
 	PyObject* module = Py_InitModule("PyArcWelder", PyArcWelderMethods);
 #endif
 
@@ -150,7 +154,7 @@ extern "C" void initPyArcWelder(void)
 	std::string message = "PyArcWelder V0.1.0rc1.dev0 imported - Copyright (C) 2019  Brad Hochgesang...";
 	p_py_logger->log(GCODE_CONVERSION, INFO, message);
 	p_py_logger->set_log_level_by_value(DEBUG);
-	std::cout << "complete\r\n";
+	std::cout << " Initialization Complete\r\n";
 
 #if PY_MAJOR_VERSION >= 3
 	return module;

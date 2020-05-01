@@ -60,7 +60,6 @@ void py_logger::initialize_loggers()
 
 	// Create a logging configurator
 	PyGILState_STATE gstate = PyGILState_Ensure();
-	std::cout << "Creating arguments for LoggingConfigurator creation.\r\n";
 	PyObject* funcArgs = Py_BuildValue("(s,s,s)", "arc_welder", "arc_welder.", "octoprint_arc_welder.");
 	if (funcArgs == NULL)
 	{
@@ -68,7 +67,7 @@ void py_logger::initialize_loggers()
 		PyErr_SetString(PyExc_ImportError, "Could not create LoggingConfigurator arguments.");
 		return;
 	}
-	std::cout << "Creating LoggingConfigurator...";
+	
 	py_logging_configurator = PyObject_CallObject(py_logging_configurator_name, funcArgs);
 	std::cout << "Complete.\r\n";
 	Py_DECREF(funcArgs);
@@ -98,8 +97,6 @@ void py_logger::initialize_loggers()
 	py_critical_function_name = gcode_arc_converter::PyString_SafeFromString("critical");
 	py_get_effective_level_function_name = gcode_arc_converter::PyString_SafeFromString("getEffectiveLevel");
 	loggers_created_ = true;
-	std::cout << "Logger created successfully.\r\n";
-
 }
 
 void py_logger::set_internal_log_levels(bool check_real_time)

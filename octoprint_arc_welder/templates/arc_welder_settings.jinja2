@@ -104,7 +104,16 @@
                             </div>
                         </fieldset>
                         <fieldset>
-                            <legend>Notifications</legend>
+                            <legend>Features and Notifications</legend>
+
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_feature_settings_show_file_manager_buttons"><strong>Add Process Button to File Manager</strong></label>
+                                <div class="controls">
+                                    <input class="input-text" type="checkbox" id="arc_welder_feature_settings_show_file_manager_buttons"
+                                           data-bind="checked: plugin_settings().feature_settings.show_file_manager_buttons">
+                                </div>
+                            </div>
+
                             <div class="control-group">
                                 <label class="control-label" for="arc_welder_show_started_notification"><strong>Show Pre-Processing Started Notification</strong></label>
                                 <div class="controls">

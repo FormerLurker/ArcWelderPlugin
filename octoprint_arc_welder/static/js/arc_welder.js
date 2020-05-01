@@ -26,7 +26,7 @@
 $(function () {
     // ArcWelder Global
     ArcWelder = {};
-    ArcWelder.progressBar = function (cancel_callback, initial_text, title, subtitle) {
+    ArcWelder.progressBar = function (cancel_callback, initial_text, title, subtitle, show_cancel) {
         var self = this;
         self.notice = null;
         self.$progress = null;
@@ -71,7 +71,7 @@ $(function () {
             icon: 'fa fa-cog fa-spin',
             width: self.popup_width.toString() + "px",
             confirm: {
-                confirm: true, // TODO:  SEE IF THIS USER IS AN ADMIN AND GET CANCEL WORKING...
+                confirm: show_cancel,
                 buttons: [{
                     text: 'Cancel',
                     click: cancel_callback
@@ -295,15 +295,21 @@ $(function () {
     };
 
     ArcWelder.ArcWelderViewModel = function (parameters) {
-
         var self = this;
-
+        // variable to hold the settings view model.
         self.settings = parameters[0];
+        // variables to hold info from external viewmodels
+        self.login_state = parameters[1];
+        self.files = parameters[2];
+        self.printer_state = parameters[3];
+
         self.plugin_settings = null;
         self.preprocessing_job_guid = null;
         self.pre_processing_progress = null;
         self.version = ko.observable();
         self.git_version = ko.observable();
+
+        self.current_files = null;
 
         self.github_link = ko.pureComputed(function(){
             var git_version = self.git_version();
@@ -317,6 +323,7 @@ $(function () {
             // This is a release, link to the tag
             return 'https://github.com/FormerLurker/ArcWelderPlugin/releases/tag/v' + self.version();
         });
+
         self.version_text = ko.pureComputed(function () {
             if (self.version() && self.version() !== "unknown") {
                 return "v" + self.version();
@@ -331,6 +338,13 @@ $(function () {
             self.git_version(self.plugin_settings.git_version());
         };
 
+        self.onStartupComplete = function() {
+            self.current_files = ko.computed( function() {
+                self.addProcessButtonToFileManager(self.files.listHelper.paginatedItems(), self.printer_state.isPrinting());
+            }, this);
+
+        };
+
         self.close_preprocessing_popup = function(){
             if (self.pre_processing_progress != null) {
                 self.pre_processing_progress.close();
@@ -338,6 +352,7 @@ $(function () {
             self.preprocessing_job_guid = null;
             self.pre_processing_progress = null;
         };
+
         // Handle Plugin Messages from Server
         self.onDataUpdaterPluginMessage = function (plugin, data) {
             if (plugin !== "arc_welder") {
@@ -363,7 +378,7 @@ $(function () {
                     }
                     var subtitle = "<strong>Processing:</strong> " + data.source_filename;
                     self.preprocessing_job_guid = data.preprocessing_job_guid;
-                    self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
+                    self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle,self.login_state.isAdmin());
                     break;
                 case "preprocessing-failed":
                     var options = {
@@ -407,7 +422,6 @@ $(function () {
                     var space_saved_percent = 0;
                     if (source_file_size > 0)
                         space_saved_percent = (1.0 - (target_file_size / source_file_size)) * 100.0;
-
                     var space_saved_string = ArcWelder.toFileSizeString(source_file_size - target_file_size, 1);
                     var source_size_string = ArcWelder.toFileSizeString(source_file_size, 1);
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
@@ -448,29 +462,43 @@ $(function () {
                     var percent_finished = data.percent_complete;
                     var seconds_elapsed = data.seconds_elapsed;
                     var seconds_remaining = data.seconds_remaining;
-                    var gcodes_processed = data.gcodes_processed;
-                    var lines_processed = data.lines_processed;
                     var arcs_created = data.arcs_created;
                     var points_compressed = data.points_compressed;
+                    var source_file_size = data.source_file_size;
+                    var target_file_size = data.target_file_size;
+                    var compression_ratio = 0;
+                    if (target_file_size > 0)
+                        compression_ratio = source_file_size / target_file_size;
+                    var space_saved_percent = 0;
+                    if (source_file_size > 0)
+                        space_saved_percent = (1.0 - (target_file_size / source_file_size)) * 100.0;
+                    var space_saved_string = ArcWelder.toFileSizeString(source_file_size - target_file_size, 1);
+                    var source_size_string = ArcWelder.toFileSizeString(source_file_size, 1);
+                    var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
+
                     self.preprocessing_job_guid = data.preprocessing_job_guid;
-                    if (!data.suppress_popup && self.pre_processing_progress == null && percent_finished < 100) {
+                    if (self.pre_processing_progress == null){
                         console.log("The pre-processing progress bar is missing, creating the progress bar.");
                         console.log("Creating progress bar");
                         var subtitle = "<strong>Processing:</strong> " + data.source_filename;
-                        self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle);
+                        self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle, self.login_state.isAdmin());
                     }
-                    if (!data.suppress_popup && self.pre_processing_progress != null && percent_finished < 100.0) {
-                        var progress_text =
-                            "<div class='row-fluid'><span class='span6'><strong>Remaining:&nbsp;</strong>" + ArcWelder.ToTimer(seconds_remaining) + "<br/> <strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
-                            + "<span class='span6'><strong>Elapsed:</strong>&nbsp;" + ArcWelder.ToTimer(seconds_elapsed) + "<br/><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>";
-                            //+ "  Line:" + lines_processed.toString()
-                            //+ "<div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
-                            //+ "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span><div/>";
-                        self.pre_processing_progress = self.pre_processing_progress.update(
-                            percent_finished, progress_text
-                        );
 
-                    }
+                    var progress_text =
+                          "<div class='row-fluid'>"
+                        + "<span class='span5'><strong>Remaining:&nbsp;</strong>" + ArcWelder.ToTimer(seconds_remaining) + "<br/> <strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
+                        + "<span class='span7'><strong>Elapsed:</strong>&nbsp;" + ArcWelder.ToTimer(seconds_elapsed) + "<br/><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span>"
+                        + "<div/>"
+                        + "<div class='row-fluid'>"
+                        + "<div class='span5'><strong>Compression</strong><br/> Ratio:" + compression_ratio.toFixed(1) + " - " + space_saved_percent.toFixed(1) + "%</div>"
+                        + "<div class='span7'><strong>Space</strong><br/>"+ source_size_string + " - " + space_saved_string + " = " + target_size_string + "</div>"
+                        + "</div>";
+                        //+ "  Line:" + lines_processed.toString()
+                        //+ "<div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
+                        //+ "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span><div/>";
+                    self.pre_processing_progress = self.pre_processing_progress.update(
+                        percent_finished, progress_text
+                    );
                     break;
                 default:
                     var options = {
@@ -518,7 +546,110 @@ $(function () {
             });
         };
 
+        self.removeEditButtons = function() {
+            $("#files div.gcode_files div.entry .action-buttons div.btn-mini.arc-welder").remove();
+        };
 
+        self.getEntryId = function(file)
+        {
+            return "gcode_file_" + md5(file.origin + ":" + file.path);
+        };
+
+        self.addProcessButtonToFileManager = function(current_page, is_printing) {
+            self.removeEditButtons();
+            if (!self.plugin_settings.feature_settings.show_file_manager_buttons())
+                return;
+            console.log("Adding Buttons");
+            for(var file_index=0; file_index < current_page.length; file_index++)
+            {
+                // Get the current file
+                var file = current_page[file_index];
+                console.log("Adding Buttons for file with hash: " + file.hash);
+                // Only process machine code
+                if (file.type !== "machinecode")
+                    continue;
+                // Construct the ID of the file;
+                var current_file_id = self.getEntryId(file);
+                // Get the element
+                var file_element = $("#" + current_file_id);
+                if (file_element.length !== 1)
+                    continue;
+
+                var button_disabled = false;
+                var title = "Weld Arcs";
+                if (is_printing)
+                {
+                    button_disabled = true;
+                    title = "Cannot weld arcs during a print, this would impact performance.";
+                }
+                else if (file.origin !== "local")
+                {
+                    button_disabled = true;
+                    title = "Cannot weld arcs for files stored on your printer's SD card.";
+                }
+                else if (file.arc_welder)
+                {
+                    button_disabled = true;
+                    title = "This file has already been processed by Arc Welder.";
+                }
+                // Create the button
+                var $button = $('\
+                    <div class="btn btn-mini arc-welder ' + (button_disabled ? "disabled" : "") +'" title="' + title + '">\
+                        <i class="fa fa-compress"></i>\
+                    </div>\
+                ');
+                $button.data("arc-welder", file.path);
+                // Add an on click event if the button is not disabled
+                if (!button_disabled)
+                {
+                    var data = {path: file.path};
+                    $button.click(data, function(e) {
+                        self.processButtonClicked(e);
+                    });
+                }
+
+                // Add the button to the file manager
+                $(file_element).find("a.btn-mini").after($button);
+            }
+
+        };
+
+        self.processButtonClicked = function(event) {
+            // Get the path
+            var path = event.data.path;
+            console.log("Button Clicked: " + path);
+            // disable the element
+            $(event.target).addClass("disabled");
+            // Request that the file be processed
+            var data = { "path": encodeURI(path)};
+            $.ajax({
+                url: "./plugin/arc_welder/process",
+                type: "POST",
+                tryCount: 0,
+                retryLimit: 3,
+                contentType: "application/json",
+                data: JSON.stringify(data),
+                dataType: "json",
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    var message = "Could not pre-process '"+ path +"'.  Check plugin_arc_welder.log for details.";
+                    var options = {
+                        title: 'Arc Welder Error',
+                        text: message,
+                        type: 'error',
+                        hide: false,
+                        addclass: "arc_welder",
+                        desktop: {
+                            desktop: true
+                        }
+                    };
+                    ArcWelder.displayPopupForKey(options,"process-error", ["process-error"]);
+                    // Enable the button so the user can try again
+                    $(event.target).removeClass("disabled");
+                    return false;
+                }
+            });
+
+        }
     };
 
     ArcWelder.openArcWelderSettings = function(tab_name) {
@@ -530,9 +661,10 @@ $(function () {
             $(query).click();
         }
     };
+
     OCTOPRINT_VIEWMODELS.push([
         ArcWelder.ArcWelderViewModel,
-        ["settingsViewModel"],
+        ["settingsViewModel", "loginStateViewModel", "filesViewModel", "printerStateViewModel"],
         ["#tab_plugin_arc_welder_controls"]
     ]);
 });

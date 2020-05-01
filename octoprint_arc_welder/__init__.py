@@ -96,6 +96,9 @@ class ArcWelderPlugin(
                 show_progress_bar=True,
                 show_completed_notification=True
             ),
+            feature_settings=dict(
+                show_file_manager_buttons=True
+            ),
             enabled=True,
             logging_configuration=dict(
                 default_log_level=log.ERROR,
@@ -106,7 +109,14 @@ class ArcWelderPlugin(
             git_version=__git_version__,
         )
         # start the preprocessor worker
+        self._preprocessor_worker = None
+
+    def on_after_startup(self):
+        logging_configurator.configure_loggers(
+            self._log_file_path, self._logging_configuration
+        )
         self._preprocessor_worker = preprocessor.PreProcessorWorker(
+            self.get_plugin_data_folder(),
             self._processing_queue,
             self._get_is_printing,
             self.save_preprocessed_file,
@@ -116,11 +126,6 @@ class ArcWelderPlugin(
             self.preprocessing_failed,
             self.preprocessing_success,
             self.preprocessing_completed,
-        )
-
-    def on_after_startup(self):
-        logging_configurator.configure_loggers(
-            self._log_file_path, self._logging_configuration
         )
         self._preprocessor_worker.daemon = True
         self._preprocessor_worker.start()
@@ -178,6 +183,16 @@ class ArcWelderPlugin(
                 logger.info("Rolling over most recent log.")
 
             logging_configurator.do_rollover(clear_all=clear_all)
+            return jsonify({"success": True})
+
+    # Preprocess from file sidebar
+    @octoprint.plugin.BlueprintPlugin.route("/process", methods=["POST"])
+    @restricted_access
+    def process_request(self):
+        with ArcWelderPlugin.admin_permission.require(http_exception=403):
+            request_values = request.get_json()
+            path = request_values["path"]
+            self.add_file_to_preprocessor_queue(path)
             return jsonify({"success": True})
 
     # Callback Handler for /downloadFile
@@ -322,10 +337,8 @@ class ArcWelderPlugin(
         return new_path, new_name
 
     def get_preprocessor_arguments(self, source_path_on_disk):
-        target_file_path = os.path.join(self.get_plugin_data_folder(), "temp.gcode")
         return {
-            "source_file_path": source_path_on_disk,
-            "target_file_path": target_file_path,
+            "path": source_path_on_disk,
             "resolution_mm": self._resolution_mm,
             "g90_g91_influences_extruder": self._g90_g91_influences_extruder,
             "log_level": self._gcode_conversion_log_level
@@ -369,11 +382,14 @@ class ArcWelderPlugin(
         self.preprocessing_job_target_file_name = new_name
 
         logger.info(
-            "Starting pre-processing with the following arguments:\n\tsource_file_path: "
-            "%s\n\ttarget_file_path: %s\n\tresolution_mm: %.3f\n\tg90_g91_influences_extruder: %r"
+            "Starting pre-processing with the following arguments:"
+            "\n\tsource_file_path: %s"
+            "\n\tresolution_mm: %.3f"
+            "\n\tg90_g91_influences_extruder: %r"
             "\n\tlog_level: %d",
-            preprocessor_args["source_file_path"], preprocessor_args["target_file_path"],
-            preprocessor_args["resolution_mm"], preprocessor_args["g90_g91_influences_extruder"],
+            preprocessor_args["path"],
+            preprocessor_args["resolution_mm"],
+            preprocessor_args["g90_g91_influences_extruder"],
             preprocessor_args["log_level"]
         )
 
@@ -389,16 +405,14 @@ class ArcWelderPlugin(
                 self._plugin_manager.send_plugin_message(self._identifier, data)
             else:
                 message = "Arc Welder is processing '{0}'.  Please wait...".format(
-                    preprocessor_args["source_file_path"])
+                    self.preprocessing_job_source_file_path
+                )
                 self.send_notification_toast(
                     "info", "Pre-Processing Gcode", message, True, "preprocessing_start", ["preprocessing_start"]
                 )
 
     def preprocessing_progress(self, progress):
-        if progress["percent_complete"] >= 100.0 or self._show_progress_bar:
-            suppress_popup = False
-            if progress["percent_complete"] == 100.0 and not self._show_completed_notification:
-                suppress_popup = True
+        if self._show_progress_bar:
             data = {
                 "message_type": "preprocessing-progress",
                 "percent_complete": progress["percent_complete"],
@@ -412,7 +426,6 @@ class ArcWelderPlugin(
                 "target_file_size": progress["target_file_size"],
                 "source_filename": self.preprocessing_job_source_file_path,
                 "target_filename": self.preprocessing_job_target_file_name,
-                "suppress_popup": suppress_popup,
                 "preprocessing_job_guid": self.preprocessing_job_guid
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)
@@ -435,14 +448,15 @@ class ArcWelderPlugin(
         # exiting this callback because the target file isn't
         # guaranteed to exist later.
         self.save_preprocessed_file(path, preprocessor_args)
-        data = {
-            "message_type": "preprocessing-success",
-            "results": results,
-            "source_filename": self.preprocessing_job_source_file_path,
-            "target_filename": self.preprocessing_job_target_file_name,
-            "preprocessing_job_guid": self.preprocessing_job_guid,
-        }
-        self._plugin_manager.send_plugin_message(self._identifier, data)
+        if self._show_completed_notification:
+            data = {
+                "message_type": "preprocessing-success",
+                "results": results,
+                "source_filename": self.preprocessing_job_source_file_path,
+                "target_filename": self.preprocessing_job_target_file_name,
+                "preprocessing_job_guid": self.preprocessing_job_guid,
+            }
+            self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def preprocessing_completed(self):
         data = {
@@ -471,7 +485,6 @@ class ArcWelderPlugin(
             storage = payload["storage"]
             path = payload["path"]
             name = payload["name"]
-            type = payload["type"]
 
             if path == self.preprocessing_job_source_file_path or name == self.preprocessing_job_target_file_name:
                 return
@@ -488,22 +501,27 @@ class ArcWelderPlugin(
             if "arc_welder" in metadata:
                 return
 
-            if self._printer.is_printing():
-                self.send_notification_toast(
-                    "error", "Arc-Welder: Unable to Process",
-                    "Cannot preprocess gcode while a print is in progress because print quality may be affected.  The "
-                    "gcode will be processed as soon as the print has completed.",
-                    False,
-                    key="unable_to_process", close_keys=["unable_to_process"]
-                )
-                return
+            self.add_file_to_preprocessor_queue(path)
 
-            logger.info("Received a new gcode file for processing.  FileName: %s.", name)
+    def add_file_to_preprocessor_queue(self, path):
+        # get the file by path
+        # file = self._file_manager.get_file(FileDestinations.LOCAL, path)
+        if self._printer.is_printing():
+            self.send_notification_toast(
+                "error", "Arc-Welder: Unable to Process",
+                "Cannot preprocess gcode while a print is in progress because print quality may be affected.  The "
+                "gcode will be processed as soon as the print has completed.",
+                False,
+                key="unable_to_process", close_keys=["unable_to_process"]
+            )
+            return
 
-            self.is_cancelled = False
-            path_on_disk = self._file_manager.path_on_disk(storage, path)
-            preprocessor_args = self.get_preprocessor_arguments(path_on_disk)
-            self._processing_queue.put((path, preprocessor_args))
+        logger.info("Received a new gcode file for processing.  FileName: %s.", path)
+
+        self.is_cancelled = False
+        path_on_disk = self._file_manager.path_on_disk(FileDestinations.LOCAL, path)
+        preprocessor_args = self.get_preprocessor_arguments(path_on_disk)
+        self._processing_queue.put((path, preprocessor_args))
 
     def register_custom_routes(self, server_routes, *args, **kwargs):
         # version specific permission validator

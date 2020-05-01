@@ -321,6 +321,9 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 
 	position* p_cur_pos = p_source_position_->get_current_position_ptr();
 	position* p_pre_pos = p_source_position_->get_previous_position_ptr();
+	extruder extruder_current = p_cur_pos->get_current_extruder();
+	extruder previous_extruder = p_pre_pos->get_current_extruder();
+	point p(p_cur_pos->x, p_cur_pos->y, p_cur_pos->z, extruder_current.e_relative);
 	//std::cout << lines_processed_ << " - " << cmd.gcode << ", CurrentEAbsolute: " << cur_extruder.e <<", ExtrusionLength: " << cur_extruder.extrusion_length << ", Retraction Length: " << cur_extruder.retraction_length << ", IsExtruding: " << cur_extruder.is_extruding << ", IsRetracting: " << cur_extruder.is_retracting << ".\n";
 
 	int lines_written = 0;
@@ -329,8 +332,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 	bool arc_added = false;
 	bool clear_shapes = false;
 	
-	extruder extruder_current = p_cur_pos->get_current_extruder();
-	point p(p_cur_pos->x, p_cur_pos->y, p_cur_pos->z, extruder_current.e_relative);
+	
 
 	// We need to make sure the printer is using absolute xyz, is extruding, and the extruder axis mode is the same as that of the previous position
 	// TODO: Handle relative XYZ axis.  This is possible, but maybe not so important.
@@ -341,8 +343,8 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 			!p_cur_pos->is_relative &&
 			(
 				!waiting_for_arc_ ||
-				(p_pre_pos->get_current_extruder().is_extruding && extruder_current.is_extruding) ||
-				(p_pre_pos->get_current_extruder().is_retracting && extruder_current.is_retracting)
+				(previous_extruder.is_extruding && extruder_current.is_extruding) ||
+				(previous_extruder.is_retracting && extruder_current.is_retracting)
 			) &&
 			p_cur_pos->is_extruder_relative == p_pre_pos->is_extruder_relative &&
 			(!waiting_for_arc_ || p_pre_pos->f == p_cur_pos->f) &&
@@ -358,13 +360,13 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 			}
 			write_unwritten_gcodes_to_file();
 			// add the previous point as the starting point for the current arc
-			point previous_p(p_pre_pos->x, p_pre_pos->y, p_pre_pos->z, p_pre_pos->get_current_extruder().e_relative);
+			point previous_p(p_pre_pos->x, p_pre_pos->y, p_pre_pos->z, previous_extruder.e_relative);
 			// Don't add any extrusion, or you will over extrude!
 			//std::cout << "Trying to add first point (" << p.x << "," << p.y << "," << p.z << ")...";
 			current_arc_.try_add_point(previous_p, 0);
 		}
 		
-		double e_relative = p_cur_pos->get_current_extruder().e_relative;
+		double e_relative = extruder_current.e_relative;
 		int num_points = current_arc_.get_num_segments();
 		arc_added = current_arc_.try_add_point(p, e_relative);
 		if (arc_added)
@@ -413,15 +415,15 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 			}
 			else if (
 				waiting_for_arc_ && !( 
-					(p_pre_pos->get_current_extruder().is_extruding && extruder_current.is_extruding) ||
-					(p_pre_pos->get_current_extruder().is_retracting && extruder_current.is_retracting)
+					(previous_extruder.is_extruding && extruder_current.is_extruding) ||
+					(previous_extruder.is_retracting && extruder_current.is_retracting)
 				)
 			)
 			{
 				std::string message = "Extruding or retracting state changed, cannot add point to current arc: " + cmd.gcode;
 				if (verbose_logging_enabled_)
 				{
-					extruder previous_extruder = p_pre_pos->get_current_extruder();
+					
 					message.append(
 						" - Verbose Info\n\tCurrent Position Info - Absolute E:" + utilities::to_string(extruder_current.e) +
 						", Offset E:" + utilities::to_string(extruder_current.get_offset_e()) +
@@ -499,20 +501,19 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 				{
 					unwritten_commands_.pop_back();
 				}
-				// get the current absolute e coordinate of the previous position (the current position is not included in 
-				// the arc) so we can make any adjustments that are necessary.
+				// get the feedrate for the previous position 
 				double current_f = p_pre_pos->f;
 				
 				// IMPORTANT NOTE: p_cur_pos and p_pre_pos will NOT be usable beyond this point.
 				p_pre_pos = NULL;
 				p_cur_pos = NULL;
 				// Undo the previous updates that will be turned into the arc, including the current position
+				// (so not num_segments - 1, but num_segments)
 				for (int index = 0; index < current_arc_.get_num_segments(); index++)
 				{
 					undo_commands_.push_back(p_source_position_->get_current_position_ptr()->command);
 					p_source_position_->undo_update();
 				}
-				//position * p_undo_positions = p_source_position_->undo_update(current_arc_.get_num_segments());
 				
 				// Set the current feedrate if it is different, else set to 0 to indicate that no feedrate should be included
 				if(p_source_position_->get_current_position_ptr()->f == current_f)
@@ -580,6 +581,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 					parsed_command cmd = undo_commands_.pop_back();
 					p_source_position_->update(undo_commands_[index], lines_processed_, gcodes_processed_, -1);
 				}
+				// Clear the undo commands (there should be one left)
 				undo_commands_.clear();
 				// Now clear the arc and flag the processor as not waiting for an arc
 				waiting_for_arc_ = false;
