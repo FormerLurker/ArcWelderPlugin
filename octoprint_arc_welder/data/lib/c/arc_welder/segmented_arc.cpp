@@ -213,23 +213,6 @@ bool segmented_arc::does_circle_fit_points(circle c, point p, double pd)
 		}
 	}
 	
-	/*
-	// Check the midpoints of the segments in the points_ to make sure they fit our circle.
-	 for (int index = 0; index < points_.count() - 1; index++)
-	{
-		// Make sure the length from the center of our circle to the test point is 
-		// at or below our max distance.
-		point midpoint = point::get_midpoint(points_[index], points_[index + 1]);
-		distance_from_center = utilities::get_cartesian_distance(midpoint.x, midpoint.y, c.center.x, c.center.y);
-		difference_from_radius = abs(distance_from_center - c.radius);
-		// Test allowing more play for the midpoints.
-		if (utilities::greater_than(difference_from_radius, resolution_mm_))
-		{
-			//std::cout << " failed - midpoints do not lie on circle.\n";
-			return false;
-		}
-	}
-	*/
 	// Check the point perpendicular from the segment to the circle's center, if any such point exists
 	for (int index = 0; index < points_.count() - 1; index++)
 	{
@@ -263,14 +246,7 @@ bool segmented_arc::does_circle_fit_points(circle c, point p, double pd)
 	// get the current arc and compare the total length to the original length
 	arc a;
 	return try_get_arc(c, p, pd, a );
-	/*
-	if (!a.is_arc || utilities::greater_than(abs(a.length - (original_shape_length_ + pd)), resolution_mm_*2))
-	{
-		//std::cout << " failed - final lengths do not match.\n";
-		return false;
-	}
-	return true;
-	*/
+	
 }
 
 bool segmented_arc::try_get_arc(arc & target_arc)
@@ -284,71 +260,12 @@ bool segmented_arc::try_get_arc(circle& c, point endpoint, double additional_dis
 	int mid_point_index = ((points_.count() - 1) / 2) + 1;
 	return arc::try_create_arc(c, points_[0], points_[mid_point_index], endpoint, original_shape_length_ + additional_distance, resolution_mm_, target_arc);
 }
-/*
-
-std::string segmented_arc::get_shape_gcode_absolute(double f, double e_abs_start)
-{
-
-	s_stream_.clear();
-	s_stream_.str("");
-	arc c;
-	try_get_arc(c);
-	
-	double new_extrusion;
-	// get the original ratio of filament extruded to length, but not for retractions
-	if (utilities::greater_than(e_relative_, 0))
-	{
-		double extrusion_per_mm = e_relative_ / original_shape_length_;
-		new_extrusion = c.length * extrusion_per_mm;
-	}
-	else
-	{
-		new_extrusion = e_relative_;
-	}
-	
-	
-	double i = c.center.x - c.start_point.x;
-	double j = c.center.y - c.start_point.y;
-	if (utilities::less_than(c.angle_radians, 0))
-	{
-		s_stream_ << "G2";
-	}
-	else
-	{
-		s_stream_ << "G3";
-	}
-	s_stream_ << std::setprecision(3);
-	s_stream_ << " X" << c.end_point.x << " Y" << c.end_point.y << " I" << i << " J" << j;
-	// Do not output for travel movements
-	if (e_relative_ != 0)
-	{
-		s_stream_ << std::setprecision(5);
-		s_stream_ << " E" << e_abs_start + new_extrusion;
-	}
-	
-	if (utilities::greater_than(f, 0))
-	{
-		s_stream_ << std::setprecision(0) << " F" << f;
-	}
-	return s_stream_.str();
-}*/
 
 std::string segmented_arc::get_shape_gcode_absolute(double f, double e_abs_start)
 {
 	arc c;
 	try_get_arc(c);
 
-	double new_extrusion;
-	// get the original ratio of filament extruded to length, but not for retractions
-	if (utilities::greater_than(e_relative_, 0))
-	{
-		double extrusion_per_mm = e_relative_ / original_shape_length_;
-		new_extrusion = c.length * extrusion_per_mm;
-	}
-	else
-	{
-		new_extrusion = e_relative_;
-	}
 	double i = c.center.x - c.start_point.x;
 	double j = c.center.y - c.start_point.y;
 	// Here is where the performance part kicks in (these are expensive calls) that makes things a bit ugly.
@@ -358,7 +275,7 @@ std::string segmented_arc::get_shape_gcode_absolute(double f, double e_abs_start
 		// G2
 		if (e_relative_ != 0)
 		{
-			double e = e_abs_start + new_extrusion;
+			double e = e_abs_start + e_relative_;
 			// Add E param
 			if (utilities::greater_than_or_equal(f, 1))
 			{
@@ -392,7 +309,7 @@ std::string segmented_arc::get_shape_gcode_absolute(double f, double e_abs_start
 		// G3
 		if (e_relative_ != 0)
 		{
-			double e = e_abs_start + new_extrusion;
+			double e = e_abs_start + e_relative_;
 			// Add E param
 			if (utilities::greater_than_or_equal(f, 1))
 			{

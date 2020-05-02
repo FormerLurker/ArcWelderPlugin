@@ -43,7 +43,6 @@ arc_welder::arc_welder(std::string source_path, std::string target_path, logger 
 	logger_type_ = 0;
 	progress_callback_ = NULL;
 	verbose_output_ = false;
-	absolute_e_offset_total_ = 0;
 	source_path_ = source_path;
 	target_path_ = target_path;
 	resolution_mm_ = resolution_mm;
@@ -57,7 +56,6 @@ arc_welder::arc_welder(std::string source_path, std::string target_path, logger 
 	arcs_created_ = 0;
 	waiting_for_line_ = false;
 	waiting_for_arc_ = false;
-	absolute_e_offset_ = 0;
 	gcode_position_args_.set_num_extruders(8);
 	for (int index = 0; index < 8; index++)
 	{
@@ -69,19 +67,6 @@ arc_welder::arc_welder(std::string source_path, std::string target_path, logger 
 
 	// We don't care about the printer settings, except for g91 influences extruder.
 	p_source_position_ = new gcode_position(gcode_position_args_); 
-	
-	// Create a list of commands that will need rewritten absolute e values
-	std::vector<std::string> absolute_e_rewrite_command_names;
-	absolute_e_rewrite_command_names.push_back("G0");
-	absolute_e_rewrite_command_names.push_back("G1");
-	absolute_e_rewrite_command_names.push_back("G2");
-	absolute_e_rewrite_command_names.push_back("G3");
-	//absolute_e_rewrite_command_names.push_back("G92");
-	
-	for (unsigned int index = 0; index < absolute_e_rewrite_command_names.size(); index++)
-	{
-		absolute_e_rewrite_commands_.insert(absolute_e_rewrite_command_names[index]);
-	}
 }
 
 arc_welder::arc_welder(std::string source_path, std::string target_path, logger* log, double resolution_mm, bool g90_g91_influences_extruder, int buffer_size)
@@ -149,7 +134,6 @@ void arc_welder::reset()
 	arcs_created_ = 0;
 	waiting_for_line_ = false;
 	waiting_for_arc_ = false;
-	absolute_e_offset_ = 0;
 }
 
 long arc_welder::get_file_size(const std::string& file_path)
@@ -332,8 +316,6 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 	bool arc_added = false;
 	bool clear_shapes = false;
 	
-	
-
 	// We need to make sure the printer is using absolute xyz, is extruding, and the extruder axis mode is the same as that of the previous position
 	// TODO: Handle relative XYZ axis.  This is possible, but maybe not so important.
 	if (
@@ -354,6 +336,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 		
 		if (!waiting_for_arc_)
 		{
+			previous_feedrate_ = p_pre_pos->f;
 			if (debug_logging_enabled_)
 			{
 				p_logger_->log(logger_type_, DEBUG, "Starting new arc from Gcode:" + cmd.gcode);
@@ -501,22 +484,17 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 				{
 					unwritten_commands_.pop_back();
 				}
-				// get the feedrate for the previous position 
+				// get the feedrate for the previous position (the last command that was turned into an arc)
 				double current_f = p_pre_pos->f;
 				
+				// Undo the current command, since it isn't included in the arc
+				p_source_position_->undo_update();
 				// IMPORTANT NOTE: p_cur_pos and p_pre_pos will NOT be usable beyond this point.
 				p_pre_pos = NULL;
 				p_cur_pos = NULL;
-				// Undo the previous updates that will be turned into the arc, including the current position
-				// (so not num_segments - 1, but num_segments)
-				for (int index = 0; index < current_arc_.get_num_segments(); index++)
-				{
-					undo_commands_.push_back(p_source_position_->get_current_position_ptr()->command);
-					p_source_position_->undo_update();
-				}
-				
+
 				// Set the current feedrate if it is different, else set to 0 to indicate that no feedrate should be included
-				if(p_source_position_->get_current_position_ptr()->f == current_f)
+				if(previous_feedrate_ > 0 && previous_feedrate_ == current_f)
 				{
 					current_f = 0;
 				}
@@ -529,60 +507,16 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 					p_logger_->log(logger_type_, DEBUG, "Arc created with " + std::to_string(current_arc_.get_num_segments()) + " segments: " + gcode);
 				}
 
-				// parse the arc gcode
-				parsed_command new_command;
-				bool parsed = parser_.try_parse_gcode(gcode.c_str(), new_command);
-				if (!parsed)
-				{
-					if (error_logging_enabled_)
-					{
-						p_logger_->log_exception(logger_type_, "Unable to parse arc command!  Fatal Error.");
-					}
-					throw std::exception();
-				}
-				// update the position processor and add the command to the unwritten commands list
-				p_source_position_->update(new_command, lines_processed_, gcodes_processed_, -1);
-				unwritten_commands_.push_back(unwritten_command(p_source_position_->get_current_position_ptr()));
+				// Get and alter the current position so we can add it to the unwritten commands list
+				parsed_command arc_command = parser_.parse_gcode(gcode.c_str());
+				unwritten_commands_.push_back(
+					unwritten_command(arc_command, p_source_position_->get_current_position_ptr()->is_extruder_relative)
+				);
 				
 				// write all unwritten commands (if we don't do this we'll mess up absolute e by adding an offset to the arc)
 				// including the most recent arc command BEFORE updating the absolute e offset
 				write_unwritten_gcodes_to_file();
-
-				// If the e values are not equal, use G91 to adjust the current absolute e position
-				double difference = 0;
-				double new_e_rel_relative = p_source_position_->get_current_position().get_current_extruder().e_relative;
-				double old_e_relative = current_arc_.get_shape_e_relative();
-
-				// See if any offset needs to be applied for absolute E coordinates
-				if (
-					!utilities::is_equal(new_e_rel_relative, old_e_relative))
-				{
-					// Calculate the difference between the original absolute e and 
-					// change made by G2/G3
-					difference = new_e_rel_relative - old_e_relative;
-					// Adjust the absolute E offset based on the difference
-					// We need to do this AFTER writing the modified gcode(arc), since the 
-					// difference is based on that.
-					absolute_e_offset_ += difference;
-					if (debug_logging_enabled_)
-					{
-						p_logger_->log(logger_type_, DEBUG, "Adjusting absolute extrusion by " + utilities::to_string(difference) + "mm.  New Offset: " + utilities::to_string(difference));
-					}
-				}
 				
-				
-				// Undo the arc update and re-apply the original commands to the position processor so that subsequent 
-				// gcodes in the file are interpreted properly.  Do NOT add the most recent command
-				// since it will be reprocessed
-				p_source_position_->undo_update();
-				
-				for (int index = current_arc_.get_num_segments() - 1; index > 0; index--)
-				{
-					parsed_command cmd = undo_commands_.pop_back();
-					p_source_position_->update(undo_commands_[index], lines_processed_, gcodes_processed_, -1);
-				}
-				// Clear the undo commands (there should be one left)
-				undo_commands_.clear();
 				// Now clear the arc and flag the processor as not waiting for an arc
 				waiting_for_arc_ = false;
 				current_arc_.clear();
@@ -636,23 +570,6 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 	{
 		write_unwritten_gcodes_to_file();
 	}
-	if (cmd.command == "G92")
-	{
-		// See if there is an E parameter
-		for (unsigned int parameter_index = 0; parameter_index < cmd.parameters.size(); parameter_index++)
-		{
-			parsed_command_parameter param = cmd.parameters[parameter_index];
-			if (param.name == "E")
-			{
-				absolute_e_offset_ = 0;
-				if (debug_logging_enabled_)
-				{
-					p_logger_->log(logger_type_, DEBUG, "G92 found that set E axis, resetting absolute offset.");
-				}
-			}
-		}
-	}
-	
 	return lines_written;
 }
 
@@ -702,44 +619,7 @@ int arc_welder::write_unwritten_gcodes_to_file()
 	{
 		// The the current unwritten position and remove it from the list
 		unwritten_command p = unwritten_commands_.pop_front();
-		bool has_e_coordinate = false;
-		std::string additional_comment = "";
-		double old_e = p.offset_e;
-		double new_e = old_e;
-		if (!p.is_extruder_relative && utilities::greater_than(abs(absolute_e_offset_), 0.0) &&
-			absolute_e_rewrite_commands_.find(p.command.command) != absolute_e_rewrite_commands_.end()
-		){
-			// handle any absolute extrusion shift
-			// There is an offset, and we are in absolute E.  Rewrite the gcode
-			parsed_command new_command = p.command;
-			new_command.parameters.clear();
-			has_e_coordinate = false;
-			for (unsigned int index = 0; index < p.command.parameters.size(); index++)
-			{
-				parsed_command_parameter p_cur_param = p.command.parameters[index];
-				if (p_cur_param.name == "E")
-				{
-					has_e_coordinate = true;
-					if (p_cur_param.value_type == 'U')
-					{
-						p_cur_param.value_type = 'F';
-					}
-					new_e = p.offset_e + absolute_e_offset_;
-					p_cur_param.double_value = new_e;
-					
-				}
-				new_command.parameters.push_back(p_cur_param);
-			}
-
-			
-			if (has_e_coordinate)
-			{
-				p.command = new_command;
-			}
-		}
-		
-		write_gcode_to_file(p.to_string(has_e_coordinate, additional_comment));
-		
+		write_gcode_to_file(p.command.to_string());
 	}
 	
 	return size;

@@ -130,16 +130,13 @@ private:
 	bool waiting_for_line_;
 	bool waiting_for_arc_;
 	array_list<unwritten_command> unwritten_commands_;
-	array_list<parsed_command> undo_commands_;
 	segmented_arc current_arc_;
 	std::ofstream output_file_;
 	
 	// We don't care about the printer settings, except for g91 influences extruder.
 	gcode_position * p_source_position_;
-	double absolute_e_offset_;
-	std::set<std::string> absolute_e_rewrite_commands_;
+	double previous_feedrate_ = -1;
 	gcode_parser parser_;
-	double absolute_e_offset_total_;
 	bool verbose_output_;
 	int logger_type_;
 	logger* p_logger_;
