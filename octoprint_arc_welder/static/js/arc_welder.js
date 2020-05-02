@@ -430,9 +430,18 @@ $(function () {
                     var space_saved_string = ArcWelder.toFileSizeString(source_file_size - target_file_size, 1);
                     var source_size_string = ArcWelder.toFileSizeString(source_file_size, 1);
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
-
+                    var file_name_html = "";
+                    if (data.source_filename == data.target_filename)
+                    {
+                        file_name_html = "<div><strong>File:</strong> " + data.source_filename + "<div>";
+                    }
+                    else
+                    {
+                        file_name_html = "<div><strong>Source File:</strong> " + data.source_filename + "<div>" +
+                            "<div><strong>Target File:</strong> " + data.target_filename + "<div>";
+                    }
                     var progress_text =
-                            "<div></div><strong>File:</strong> " + data.source_filename + "<div><strong>Time:</strong> " + ArcWelder.ToTimer(seconds_elapsed) + "</div><div class='row-fluid'><span class='span5'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
+                            file_name_html + "<div><strong>Time:</strong> " + ArcWelder.ToTimer(seconds_elapsed) + "</div><div class='row-fluid'><span class='span5'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                             + "<span class='span7'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>"
                             + "<div class='row-fluid'><div class='span5'><strong>Compression</strong><br/> Ratio:" + compression_ratio.toFixed(1) + " - " + space_saved_percent.toFixed(1) + "%</div><div class='span7'><strong>Space</strong><br/>"+ source_size_string + " - " + space_saved_string + " = " + target_size_string + "</div></div>";
                         var options = {
