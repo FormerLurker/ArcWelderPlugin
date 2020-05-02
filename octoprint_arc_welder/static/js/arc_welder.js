@@ -304,6 +304,15 @@ $(function () {
         return bytes.toFixed(precision) + ' ' + units[u];
     };
 
+    ArcWelder.FILE_PROCESSING_BOTH = "both";
+    ArcWelder.FILE_PROCESSING_AUTO = "auto-only";
+    ArcWelder.FILE_PROCESSING_MANUAL = "manual-only";
+    ArcWelder.FILE_PROCESSING_OPTIONS = [
+        {name:"Automatic and Manual Processing", value: ArcWelder.FILE_PROCESSING_BOTH},
+        {name:"Automatic Processing Only", value: ArcWelder.FILE_PROCESSING_AUTO},
+        {name:"Manual Processing Only", value: ArcWelder.FILE_PROCESSING_MANUAL}
+    ];
+
     ArcWelder.ArcWelderViewModel = function (parameters) {
         var self = this;
         // variable to hold the settings view model.
@@ -320,6 +329,18 @@ $(function () {
         self.git_version = ko.observable();
 
         self.current_files = null;
+
+        self.auto_pre_processing_enabled = ko.pureComputed(function(){
+            var file_processing_type = self.plugin_settings.feature_settings.file_processing();
+            return file_processing_type === ArcWelder.FILE_PROCESSING_AUTO ||
+                file_processing_type === ArcWelder.FILE_PROCESSING_BOTH;
+        });
+
+        self.manual_pre_processing_enabled = ko.pureComputed(function(){
+            var file_processing_type = self.plugin_settings.feature_settings.file_processing();
+            return file_processing_type === ArcWelder.FILE_PROCESSING_MANUAL ||
+                file_processing_type === ArcWelder.FILE_PROCESSING_BOTH;
+        });
 
         self.github_link = ko.pureComputed(function(){
             var git_version = self.git_version();
@@ -548,8 +569,7 @@ $(function () {
             self.cancelPreprocessingRequest(false);
         };
 
-        self.cancelPreprocessingRequest = function(cancel_all)
-        {
+        self.cancelPreprocessingRequest = function(cancel_all){
             var data = {
                 "cancel_all": cancel_all,
                 "preprocessing_job_guid": self.preprocessing_job_guid
@@ -593,7 +613,7 @@ $(function () {
 
         self.addProcessButtonToFileManager = function(current_page, is_printing) {
             self.removeEditButtons();
-            if (!self.plugin_settings.feature_settings.show_file_manager_buttons())
+            if (!self.manual_pre_processing_enabled())
                 return;
             console.log("Adding Buttons");
             for(var file_index=0; file_index < current_page.length; file_index++)

@@ -43,6 +43,7 @@ from octoprint.server.util.flask import restricted_access
 from octoprint.events import Events
 import octoprint_arc_welder.log as log
 import octoprint_arc_welder.preprocessor as preprocessor
+import octoprint_arc_welder.utilities as utilities
 # stupid python 2/python 3 compatibility imports
 try:
     import queue
@@ -83,6 +84,10 @@ class ArcWelderPlugin(
 
         admin_permission = flask_principal.Permission(flask_principal.RoleNeed("admin"))
 
+    FILE_PROCESSING_BOTH = "both"
+    FILE_PROCESSING_AUTO = "auto-only"
+    FILE_PROCESSING_MANUAL = "manual-only"
+
     def __init__(self):
         super(ArcWelderPlugin, self).__init__()
         self.preprocessing_job_guid = None
@@ -95,15 +100,15 @@ class ArcWelderPlugin(
             g90_g91_influences_extruder=False,
             resolution_mm=0.05,
             overwrite_source_file=False,
-            target_prefix="AS_",
+            target_prefix="",
+            target_postfix=".aw",
             notification_settings=dict(
                 show_started_notification=True,
                 show_progress_bar=True,
                 show_completed_notification=True
             ),
             feature_settings=dict(
-                auto_pre_processing_enabled=True,
-                show_file_manager_buttons=True
+                file_processing=ArcWelderPlugin.FILE_PROCESSING_BOTH
             ),
             enabled=True,
             logging_configuration=dict(
@@ -283,7 +288,9 @@ class ArcWelderPlugin(
 
     @property
     def _auto_pre_processing_enabled(self):
-        return self._settings.get(["feature_settings", "auto_pre_processing_enabled"])
+        return self._settings.get(["feature_settings", "file_processing"]) in [
+            ArcWelderPlugin.FILE_PROCESSING_BOTH, ArcWelderPlugin.FILE_PROCESSING_AUTO
+        ]
 
     @property
     def _use_octoprint_settings(self):
@@ -326,12 +333,19 @@ class ArcWelderPlugin(
     def _target_prefix(self):
         target_prefix = self._settings.get(["target_prefix"])
         if target_prefix is None:
-            target_prefix = ""
+            target_prefix = self.settings_default["target_prefix"]
         else:
             target_prefix = target_prefix.strip()
-        if len(target_prefix) == 0:
-            target_prefix = self.settings_default["target_prefix"]
         return target_prefix
+
+    @property
+    def _target_postfix(self):
+        target_postfix = self._settings.get(["target_postfix"])
+        if target_postfix is None:
+            target_postfix = self.settings_default["target_postfix"]
+        else:
+            target_postfix = target_postfix.strip()
+        return target_postfix
 
     @property
     def _show_started_notification(self):
@@ -345,10 +359,12 @@ class ArcWelderPlugin(
     def _show_completed_notification(self):
         return self._settings.get(["notification_settings", "show_completed_notification"])
 
-    def get_storage_path_and_name(self, storage_path, add_prefix):
+    def get_storage_path_and_name(self, storage_path, add_prefix_and_postfix):
         path, name = self._file_manager.split_path(FileDestinations.LOCAL, storage_path)
-        if add_prefix:
-            new_name = self._target_prefix + name
+        if add_prefix_and_postfix:
+            file_name = utilities.remove_extension_from_filename(name)
+            file_extension = utilities.get_extension_from_filename(name)
+            new_name = "{0}{1}{2}.{3}".format(self._target_prefix, file_name, self._target_postfix, file_extension)
         else:
             new_name = name
         new_path = self._file_manager.join_path(FileDestinations.LOCAL, path, new_name)

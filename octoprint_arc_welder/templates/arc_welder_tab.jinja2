@@ -35,59 +35,61 @@
                 Enabled
             </div>
         </div>
-        <div class="alert alert-warning"
-             data-bind="visible: !plugin_settings.feature_settings.auto_pre_processing_enabled() && !plugin_settings.feature_settings.show_file_manager_buttons()">
-            <span>All pre-processing functions have been disabled.  Either enable <strong>Automatically Pre-Process Uploaded Files</strong> or <strong>Add Process Button to File Manager</strong> within the plugin settings under <strong>Features and Notifications</strong></span>
-        </div>
-        <div data-bind="visible: plugin_settings.feature_settings.auto_pre_processing_enabled() || plugin_settings.feature_settings.show_file_manager_buttons()">
-            <div class="row-fluid">
-                <div class="span4 text-right">
-                    <strong>Auto Pre-Process Uploads:</strong>
-                </div>
-                <div class="span8">
-                    <span data-bind="visible: plugin_settings.feature_settings.auto_pre_processing_enabled">Enabled - Uploaded gcode files will be overwritten</span>
-                    <span data-bind="visible: !plugin_settings.feature_settings.auto_pre_processing_enabled()">Disabled - Uploaded files will not be automatically processed</span>
-                </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>Pre-Processing Types:</strong>
             </div>
-            <div class="row-fluid">
-                <div class="span4 text-right">
-                    <strong>File Manager Buttons:</strong>
-                </div>
-                <div class="span8">
-                    <span data-bind="visible: plugin_settings.feature_settings.show_file_manager_buttons">Enabled - Buttons will be added to the file manager for selective processing</span>
-                    <span data-bind="visible: !plugin_settings.feature_settings.show_file_manager_buttons()">Disabled - No buttons will be added to the file manager</span>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right">
-                    <strong>Resolution In MM:</strong>
-                </div>
-                <div class="span8">
-                    <span data-bind="text: plugin_settings.resolution_mm"></span>mm
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right">
-                    <strong>Output File:</strong>
-                </div>
-                <div class="span8">
-                    <span data-bind="visible: plugin_settings.overwrite_source_file">Gcode files will be overwritten after processing.</span>
-                    <span data-bind="visible: !plugin_settings.overwrite_source_file()">A new file with a prefix of <strong><span
-                            data-bind="text: plugin_settings.target_prefix"></span></strong> will be added after pre-processing is completed</span>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right">
-                    <strong>G90 Influences Extruder:</strong>
-                </div>
-                <div class="span8">
-                    <span data-bind="visible: plugin_settings.use_octoprint_settings"><span
-                            data-bind="text: settings.settings.feature.g90InfluencesExtruder"></span> (using octoprint settings)</span>
-                    <span data-bind="visible: !plugin_settings.use_octoprint_settings()"><span
-                            data-bind="text: plugin_settings.g90_g91_influences_extruder"></span></span>
-                </div>
+            <div class="span8">
+                <span data-bind="visible: auto_pre_processing_enabled() && !manual_pre_processing_enabled()">Automatic Processing Only</span>
+                <span data-bind="visible: !auto_pre_processing_enabled() && manual_pre_processing_enabled()">Manual Processing Only</span>
+                <span data-bind="visible: auto_pre_processing_enabled() && manual_pre_processing_enabled()">Automatic and Manual Processing Enabled</span>
             </div>
         </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>Resolution In MM:</strong>
+            </div>
+            <div class="span8">
+                <span data-bind="text: plugin_settings.resolution_mm"></span>mm
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>Output File:</strong>
+            </div>
+            <div class="span8">
+                <span data-bind="visible: plugin_settings.overwrite_source_file">Gcode files will be overwritten after processing.</span>
+                <div data-bind="visible: !plugin_settings.overwrite_source_file()">
+                    <span data-bind="visible: plugin_settings.target_postfix() != '' && plugin_settings.target_prefix() != ''">
+                        A new file with a prefix of '<strong><span
+                        data-bind="text: plugin_settings.target_prefix"></span></strong>' and a postfix of '<strong><span data-bind="text: plugin_settings.target_postfix"></span></strong>'  will be added after pre-processing is completed
+                    </span>
+                    <span data-bind="visible: plugin_settings.target_postfix() == '' && plugin_settings.target_prefix() != ''">
+                        A new file with a prefix of '<strong><span
+                        data-bind="text: plugin_settings.target_prefix"></span></strong>' will be added after pre-processing is completed
+                    </span>
+                    <span data-bind="visible: plugin_settings.target_postfix() != '' && plugin_settings.target_prefix() == ''">
+                        A new file with a postfix of '<strong><span data-bind="text: plugin_settings.target_postfix"></span></strong>'  will be added after pre-processing is completed
+                    </span>
+                    <span data-bind="visible: plugin_settings.target_postfix() == '' && plugin_settings.target_prefix() == ''" class="text-error">
+                        No postfix or prefix was entered, so the source file will be overwritten!  Edit the settings and add a prefix or postfix.
+                    </span>
+                </div>
+
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>G90 Influences Extruder:</strong>
+            </div>
+            <div class="span8">
+                <span data-bind="visible: plugin_settings.use_octoprint_settings"><span
+                        data-bind="text: settings.settings.feature.g90InfluencesExtruder"></span> (using octoprint settings)</span>
+                <span data-bind="visible: !plugin_settings.use_octoprint_settings()"><span
+                        data-bind="text: plugin_settings.g90_g91_influences_extruder"></span></span>
+            </div>
+        </div>
+
     </div>
     <div data-bind="visible: !plugin_settings.enabled()">
         <dl class="row-fluid">

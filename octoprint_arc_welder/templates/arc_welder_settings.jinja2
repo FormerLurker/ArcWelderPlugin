@@ -44,10 +44,6 @@
             </ul>
             <div class="tab-content">
                 <div id="arc_welder_settings_tab" class="tab-pane active">
-                    <div class="alert alert-warning"
-                         data-bind="visible: !plugin_settings().feature_settings.auto_pre_processing_enabled() && !plugin_settings().feature_settings.show_file_manager_buttons()">
-                        <span>All pre-processing functions have been disabled.  Either enable <strong>Automatically Pre-Process Uploaded Files</strong> or <strong>Add Process Button to File Manager</strong> within the plugin settings under <strong>Features and Notifications</strong></span>
-                    </div>
                     <form class="form-horizontal" onsubmit="return false;">
                         <fieldset>
                             <legend>Preprocessor Settings</legend>
@@ -65,6 +61,15 @@
                                     <input class="input-text" required="true" type="number" min="0.001" max="0.1"
                                            step="0.001" id="arc_welder_resolution_mm"
                                            data-bind="value: plugin_settings().resolution_mm">
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_file_processing"><strong>File Processing Type</strong></label>
+                                <div class="controls">
+                                    <select data-bind="options: ArcWelder.FILE_PROCESSING_OPTIONS,
+                                        optionsText: 'name',
+                                        optionsValue: 'value',
+                                        value: plugin_settings().feature_settings.file_processing"></select>
                                 </div>
                             </div>
                         </fieldset>
@@ -86,6 +91,16 @@
                                            id="arc_welder_target_prefix" data-bind="value: plugin_settings().target_prefix">
                                 </div>
                             </div>
+                            <div class="control-group" data-bind="visible: !plugin_settings().overwrite_source_file()">
+                                <label class="control-label" for="arc_welder_target_postfix"><strong>Target File
+                                    Postfix</strong></label>
+                                <div class="controls">
+                                    <input required="true" class="input-text input-block-level" type="text"
+                                           id="arc_welder_target_postfix" data-bind="value: plugin_settings().target_postfix">
+                                </div>
+                            </div>
+
+
                         </fieldset>
                         <fieldset>
                             <legend>Printer Settings</legend>
@@ -107,22 +122,7 @@
                             </div>
                         </fieldset>
                         <fieldset>
-                            <legend>Features and Notifications</legend>
-                            <div class="control-group">
-                                <label class="control-label" for="arc_welder_feature_settings_auto_pre_processing_enabled"><strong>Automatically Pre-Process Uploaded Files</strong></label>
-                                <div class="controls">
-                                    <input class="input-text" type="checkbox" id="arc_welder_feature_settings_auto_pre_processing_enabled"
-                                           data-bind="checked: plugin_settings().feature_settings.auto_pre_processing_enabled">
-                                </div>
-                            </div>
-                            <div class="control-group">
-                                <label class="control-label" for="arc_welder_feature_settings_show_file_manager_buttons"><strong>Add Process Button to File Manager</strong></label>
-                                <div class="controls">
-                                    <input class="input-text" type="checkbox" id="arc_welder_feature_settings_show_file_manager_buttons"
-                                           data-bind="checked: plugin_settings().feature_settings.show_file_manager_buttons">
-                                </div>
-                            </div>
-
+                            <legend>Notification Settings</legend>
                             <div class="control-group">
                                 <label class="control-label" for="arc_welder_show_started_notification"><strong>Show Pre-Processing Started Notification</strong></label>
                                 <div class="controls">

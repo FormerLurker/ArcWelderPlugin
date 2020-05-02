@@ -27,6 +27,24 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 import six
+import os
+import ntpath
+
+
+def remove_extension_from_filename(filename):
+    return os.path.splitext(filename)[0]
+
+
+def get_extension_from_filename(filename):
+    head, tail = ntpath.split(filename)
+    file_name = tail or ntpath.basename(head)
+    split_filename = os.path.splitext(file_name)
+    if len(split_filename) > 1:
+        extension = split_filename[1]
+        if len(split_filename) > 1:
+            return extension[1:]
+    return ""
+
 
 def dict_encode(d):
     # helpers for dealing with bytes (string) values delivered by the converter
