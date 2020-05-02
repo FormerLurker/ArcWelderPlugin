@@ -26,7 +26,7 @@
 $(function () {
     // ArcWelder Global
     ArcWelder = {};
-    ArcWelder.progressBar = function (cancel_callback, initial_text, title, subtitle, show_cancel) {
+    ArcWelder.progressBar = function (initial_text, title, subtitle, cancel_callback, option_button_text, on_option) {
         var self = this;
         self.notice = null;
         self.$progress = null;
@@ -62,7 +62,24 @@ $(function () {
             self.$progressText.html(progress_text);
             return self;
         };
-        self.loader = null;
+
+        self.buttons = [{
+            text: 'Close',
+            click: self.close
+        }];
+        if (cancel_callback){
+            self.buttons.push({
+                text: 'Cancel',
+                click: cancel_callback
+            });
+        }
+        if (option_button_text && on_option)
+        {
+            self.buttons.push({
+                text: option_button_text,
+                click: on_option
+            });
+        }
         // create the pnotify loader
         self.loader = new PNotify({
             title: title,
@@ -71,15 +88,8 @@ $(function () {
             icon: 'fa fa-cog fa-spin',
             width: self.popup_width.toString() + "px",
             confirm: {
-                confirm: show_cancel,
-                buttons: [{
-                    text: 'Cancel',
-                    click: cancel_callback
-                }, {
-                    text: 'Close',
-                    addClass: 'remove_button',
-                    click: cancel_callback
-                }]
+                confirm: true,
+                buttons: self.buttons
             },
             buttons: {
                 closer: true,
@@ -373,12 +383,7 @@ $(function () {
                     ArcWelder.displayPopupForKey(options, data.key, data.close_keys);
                     break;
                 case "preprocessing-start":
-                    if (self.pre_processing_progress != null) {
-                        self.pre_processing_progress.close();
-                    }
-                    var subtitle = "<strong>Processing:</strong> " + data.source_filename;
-                    self.preprocessing_job_guid = data.preprocessing_job_guid;
-                    self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle,self.login_state.isAdmin());
+                    self.createProgressPopup(data.preprocessing_job_guid, data.source_filename);
                     break;
                 case "preprocessing-failed":
                     var options = {
@@ -427,7 +432,7 @@ $(function () {
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
 
                     var progress_text =
-                            "<div>Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.</div><div class='row-fluid'><span class='span5'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
+                            "<div></div><strong>File:</strong> " + data.source_filename + "<div><strong>Time:</strong> " + ArcWelder.ToTimer(seconds_elapsed) + "</div><div class='row-fluid'><span class='span5'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                             + "<span class='span7'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>"
                             + "<div class='row-fluid'><div class='span5'><strong>Compression</strong><br/> Ratio:" + compression_ratio.toFixed(1) + " - " + space_saved_percent.toFixed(1) + "%</div><div class='span7'><strong>Space</strong><br/>"+ source_size_string + " - " + space_saved_string + " = " + target_size_string + "</div></div>";
                         var options = {
@@ -476,12 +481,8 @@ $(function () {
                     var source_size_string = ArcWelder.toFileSizeString(source_file_size, 1);
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
 
-                    self.preprocessing_job_guid = data.preprocessing_job_guid;
                     if (self.pre_processing_progress == null){
-                        console.log("The pre-processing progress bar is missing, creating the progress bar.");
-                        console.log("Creating progress bar");
-                        var subtitle = "<strong>Processing:</strong> " + data.source_filename;
-                        self.pre_processing_progress = ArcWelder.progressBar(self.cancelPreprocessing, "Initializing...", "Arc Welder Progress", subtitle, self.login_state.isAdmin());
+                        self.createProgressPopup(data.preprocessing_job_guid, data.source_filename);
                     }
 
                     var progress_text =
@@ -515,8 +516,35 @@ $(function () {
             }
         };
 
+        self.createProgressPopup = function(preprocessing_job_guid, source_filename) {
+            if (self.pre_processing_progress == null)
+                self.closePreprocessingPopup();
+            self.preprocessing_job_guid = preprocessing_job_guid;
+            var cancel_callback = null;
+            var cancel_all_callback = null;
+            if (self.login_state.isAdmin()){
+                cancel_callback = self.cancelPreprocessing;
+                cancel_all_callback = self.cancelAllPreprocessing;
+            }
+            var subtitle = "<strong>Processing:</strong> " + source_filename;
+            self.pre_processing_progress = ArcWelder.progressBar("Initializing...", "Arc Welder Progress",
+                subtitle, cancel_callback, "Cancel All", cancel_all_callback);
+        };
+
+        self.cancelAllPreprocessing = function() {
+            self.cancelPreprocessingRequest(true);
+        };
+
         self.cancelPreprocessing = function () {
-            var data = { "cancel": true, "preprocessing_job_guid": self.preprocessing_job_guid };
+            self.cancelPreprocessingRequest(false);
+        };
+
+        self.cancelPreprocessingRequest = function(cancel_all)
+        {
+            var data = {
+                "cancel_all": cancel_all,
+                "preprocessing_job_guid": self.preprocessing_job_guid
+            };
             $.ajax({
                 url: "./plugin/arc_welder/cancelPreprocessing",
                 type: "POST",
@@ -544,7 +572,7 @@ $(function () {
                     return false;
                 }
             });
-        };
+        }
 
         self.removeEditButtons = function() {
             $("#files div.gcode_files div.entry .action-buttons div.btn-mini.arc-welder").remove();

@@ -77,6 +77,12 @@ class PreProcessorWorker(threading.Thread):
         self._is_cancelled = False
         self.r_lock = threading.RLock()
 
+    def cancel_all(self):
+        while not self._task_queue.empty():
+            path, processor_args = self._task_queue.get(False)
+            logger.info("Preprocessing of %s has been cancelled.", processor_args["path"])
+            self._cancel_callback(path, processor_args)
+
     def is_processing(self):
         with self.r_lock:
             is_processing = (not self._task_queue.empty()) or self._is_processing

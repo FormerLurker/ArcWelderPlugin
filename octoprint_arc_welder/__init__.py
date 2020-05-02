@@ -165,7 +165,11 @@ class ArcWelderPlugin(
     def cancel_preprocessing_request(self):
         with ArcWelderPlugin.admin_permission.require(http_exception=403):
             request_values = request.get_json()
+            cancel_all = request_values["cancel_all"]
             preprocessing_job_guid = request_values["preprocessing_job_guid"]
+            if cancel_all:
+                self._preprocessor_worker.cancel_all()
+
             if self.preprocessing_job_guid is None or preprocessing_job_guid != str(
                 self.preprocessing_job_guid
             ):
@@ -495,10 +499,11 @@ class ArcWelderPlugin(
         if not self._enabled or not self._auto_pre_processing_enabled:
             return
 
-        if event == Events.FILE_ADDED:
-            storage = payload["storage"]
+        if event == Events.UPLOAD:
+            #storage = payload["storage"]
             path = payload["path"]
             name = payload["name"]
+            target = payload["target"]
 
             if path == self.preprocessing_job_source_file_path or name == self.preprocessing_job_target_file_name:
                 return
@@ -508,10 +513,10 @@ class ArcWelderPlugin(
             ):
                 return
 
-            if not storage == FileDestinations.LOCAL:
+            if not target == FileDestinations.LOCAL:
                 return
 
-            metadata = self._file_manager.get_metadata(storage, path)
+            metadata = self._file_manager.get_metadata(target, path)
             if "arc_welder" in metadata:
                 return
 
