@@ -122,7 +122,7 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 	else
 	{
 		// if we're here, we need to see if the new point can be included in the shape
-		point_added = try_add_point_internal(p, distance);
+		point_added = try_add_point_internal_(p, distance);
 	}
 	if (point_added)
 	{
@@ -152,7 +152,7 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 	return point_added;
 }
 
-bool segmented_arc::try_add_point_internal(point p, double pd)
+bool segmented_arc::try_add_point_internal_(point p, double pd)
 {
 	// If we don't have enough points (at least min_segments) return false
 	if (points_.count() < min_segments_ - 1)
@@ -172,7 +172,7 @@ bool segmented_arc::try_add_point_internal(point p, double pd)
 		bool circle_fits_points;
 
 		// the circle is new..  we have to test it now, which is expensive :(
-		circle_fits_points = does_circle_fit_points(test_circle, p, pd);
+		circle_fits_points = does_circle_fit_points_(test_circle, p, pd);
 		if (circle_fits_points)
 		{
 			arc_circle_ = test_circle;
@@ -190,7 +190,7 @@ bool segmented_arc::try_add_point_internal(point p, double pd)
 	
 }
 
-bool segmented_arc::does_circle_fit_points(circle c, point p, double pd)
+bool segmented_arc::does_circle_fit_points_(circle c, point p, double pd)
 {
 	// We know point 1 must fit (we used it to create the circle).  Check the other points
 	// Note:  We have not added the current point, but that's fine since it is guaranteed to fit too.
@@ -245,7 +245,7 @@ bool segmented_arc::does_circle_fit_points(circle c, point p, double pd)
 	
 	// get the current arc and compare the total length to the original length
 	arc a;
-	return try_get_arc(c, p, pd, a );
+	return try_get_arc_(c, p, pd, a );
 	
 }
 
@@ -255,13 +255,23 @@ bool segmented_arc::try_get_arc(arc & target_arc)
 	return arc::try_create_arc(arc_circle_, points_[0], points_[mid_point_index], points_[points_.count() - 1], original_shape_length_, resolution_mm_, target_arc);
 }
 
-bool segmented_arc::try_get_arc(circle& c, point endpoint, double additional_distance, arc &target_arc)
+bool segmented_arc::try_get_arc_(circle& c, point endpoint, double additional_distance, arc &target_arc)
 {
 	int mid_point_index = ((points_.count() - 1) / 2) + 1;
 	return arc::try_create_arc(c, points_[0], points_[mid_point_index], endpoint, original_shape_length_ + additional_distance, resolution_mm_, target_arc);
 }
 
-std::string segmented_arc::get_shape_gcode_absolute(double f, double e_abs_start)
+std::string segmented_arc::get_shape_gcode_absolute(double e, double f)
+{
+	return get_shape_gcode_(true, e, f);
+}
+std::string segmented_arc::get_shape_gcode_relative(double f)
+{
+	bool has_e = e_relative_ > 0;
+	return get_shape_gcode_(has_e, e_relative_, f);
+}
+
+std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
 {
 	arc c;
 	try_get_arc(c);
@@ -273,9 +283,8 @@ std::string segmented_arc::get_shape_gcode_absolute(double f, double e_abs_start
 	if (utilities::less_than(c.angle_radians, 0))
 	{
 		// G2
-		if (e_relative_ != 0)
+		if (has_e != 0)
 		{
-			double e = e_abs_start + e_relative_;
 			// Add E param
 			if (utilities::greater_than_or_equal(f, 1))
 			{
@@ -307,9 +316,8 @@ std::string segmented_arc::get_shape_gcode_absolute(double f, double e_abs_start
 	else
 	{
 		// G3
-		if (e_relative_ != 0)
+		if (has_e != 0)
 		{
-			double e = e_abs_start + e_relative_;
 			// Add E param
 			if (utilities::greater_than_or_equal(f, 1))
 			{
@@ -342,7 +350,3 @@ std::string segmented_arc::get_shape_gcode_absolute(double f, double e_abs_start
 
 }
 
-std::string segmented_arc::get_shape_gcode_relative(double f)
-{
-	return get_shape_gcode_absolute(f, 0.0);
-}

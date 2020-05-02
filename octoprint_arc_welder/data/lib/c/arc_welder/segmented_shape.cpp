@@ -282,7 +282,6 @@ bool arc::try_create_arc(circle c, point start_point, point mid_point, point end
 	// If the calculated length isn't within the resolution, exit
 	if (is_clockwise)
 		angle_radians *= -1.0f;
-
 	
 	target_arc.center.x = c.center.x;
 	target_arc.center.y = c.center.y;

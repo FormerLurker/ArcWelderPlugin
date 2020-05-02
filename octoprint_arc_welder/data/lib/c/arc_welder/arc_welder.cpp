@@ -56,6 +56,8 @@ arc_welder::arc_welder(std::string source_path, std::string target_path, logger 
 	arcs_created_ = 0;
 	waiting_for_line_ = false;
 	waiting_for_arc_ = false;
+	previous_feedrate_ = -1;
+	previous_is_extruder_relative_ = false;
 	gcode_position_args_.set_num_extruders(8);
 	for (int index = 0; index < 8; index++)
 	{
@@ -336,7 +338,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 		
 		if (!waiting_for_arc_)
 		{
-			previous_feedrate_ = p_pre_pos->f;
+			previous_is_extruder_relative_ = p_pre_pos->is_extruder_relative;
 			if (debug_logging_enabled_)
 			{
 				p_logger_->log(logger_type_, DEBUG, "Starting new arc from Gcode:" + cmd.gcode);
@@ -357,6 +359,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 			if (!waiting_for_arc_)
 			{
 				waiting_for_arc_ = true;
+				previous_feedrate_ = p_pre_pos->f;
 			}
 			else
 			{
@@ -491,16 +494,24 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 				p_source_position_->undo_update();
 				// IMPORTANT NOTE: p_cur_pos and p_pre_pos will NOT be usable beyond this point.
 				p_pre_pos = NULL;
-				p_cur_pos = NULL;
+				p_cur_pos = p_source_position_->get_current_position_ptr();
+				extruder_current = p_cur_pos->get_current_extruder();
 
 				// Set the current feedrate if it is different, else set to 0 to indicate that no feedrate should be included
-				if(previous_feedrate_ > 0 && previous_feedrate_ == current_f)
-				{
+				if(previous_feedrate_ > 0 && previous_feedrate_ == current_f){
 					current_f = 0;
 				}
 
 				// Craete the arc gcode
-				std::string gcode = get_arc_gcode(current_f, comment);
+				std::string gcode;
+				if (previous_is_extruder_relative_){
+					gcode = get_arc_gcode_relative(current_f, comment);
+				}
+					
+				else { 
+					gcode = get_arc_gcode_absolute(extruder_current.get_offset_e(), current_f, comment);
+				}
+				
 
 				if (debug_logging_enabled_)
 				{
@@ -510,7 +521,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 				// Get and alter the current position so we can add it to the unwritten commands list
 				parsed_command arc_command = parser_.parse_gcode(gcode.c_str());
 				unwritten_commands_.push_back(
-					unwritten_command(arc_command, p_source_position_->get_current_position_ptr()->is_extruder_relative)
+					unwritten_command(arc_command, p_cur_pos->is_extruder_relative)
 				);
 				
 				// write all unwritten commands (if we don't do this we'll mess up absolute e by adding an offset to the arc)
@@ -625,21 +636,13 @@ int arc_welder::write_unwritten_gcodes_to_file()
 	return size;
 }
 
-std::string arc_welder::get_arc_gcode(double f, const std::string comment)
+std::string arc_welder::get_arc_gcode_relative(double f, const std::string comment)
 {
 	// Write gcode to file
 	std::string gcode;
-	position* p_new_current_pos = p_source_position_->get_current_position_ptr();
+
+	gcode = current_arc_.get_shape_gcode_relative(f);
 	
-	if (p_new_current_pos->is_extruder_relative)
-	{
-		gcode = current_arc_.get_shape_gcode_relative(f);
-	}
-	else
-	{
-		// Make sure to add the absoulte e offset
-		gcode = current_arc_.get_shape_gcode_absolute(f, p_new_current_pos->get_current_extruder().get_offset_e());
-	}
 	if (comment.length() > 0)
 	{
 		gcode += ";" + comment;
@@ -647,3 +650,20 @@ std::string arc_welder::get_arc_gcode(double f, const std::string comment)
 	return gcode;
 	
 }
+
+std::string arc_welder::get_arc_gcode_absolute(double e, double f, const std::string comment)
+{
+	// Write gcode to file
+	std::string gcode;
+
+	gcode = current_arc_.get_shape_gcode_absolute(e, f);
+
+	if (comment.length() > 0)
+	{
+		gcode += ";" + comment;
+	}
+	return gcode;
+
+}
+
+

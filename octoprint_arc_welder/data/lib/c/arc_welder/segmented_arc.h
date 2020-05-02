@@ -37,19 +37,21 @@ public:
 	segmented_arc(int max_segments, double resolution_mm);
 	virtual ~segmented_arc();
 	virtual bool try_add_point(point p, double e_relative);
-	virtual std::string get_shape_gcode_absolute(double f, double e_abs_start);
-	virtual std::string get_shape_gcode_relative(double f);
+	std::string get_shape_gcode_absolute(double e, double f);
+	std::string get_shape_gcode_relative(double f);
+	
 	virtual bool is_shape();
 	point pop_front(double e_relative);
 	point pop_back(double e_relative);
 	bool try_get_arc(arc & target_arc);
 	// static gcode buffer
-	
+
 private:
 	char gcode_buffer_[GCODE_CHAR_BUFFER_SIZE];
-	bool try_add_point_internal(point p, double pd);
-	bool does_circle_fit_points(circle c, point p, double additional_distance);
-	bool try_get_arc(circle& c, point endpoint, double additional_distance, arc & target_arc);
+	bool try_add_point_internal_(point p, double pd);
+	bool does_circle_fit_points_(circle c, point p, double additional_distance);
+	bool try_get_arc_(circle& c, point endpoint, double additional_distance, arc & target_arc);
+	std::string get_shape_gcode_(bool has_e, double e, double f);
 	int min_segments_;
 	circle arc_circle_;
 	int test_count_ = 0;
