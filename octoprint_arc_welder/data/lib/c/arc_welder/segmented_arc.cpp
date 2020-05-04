@@ -263,11 +263,12 @@ bool segmented_arc::try_get_arc_(circle& c, point endpoint, double additional_di
 
 std::string segmented_arc::get_shape_gcode_absolute(double e, double f)
 {
-	return get_shape_gcode_(true, e, f);
+	bool has_e = e_relative_ != 0;
+	return get_shape_gcode_(has_e, e, f);
 }
 std::string segmented_arc::get_shape_gcode_relative(double f)
 {
-	bool has_e = e_relative_ > 0;
+	bool has_e = e_relative_ != 0;
 	return get_shape_gcode_(has_e, e_relative_, f);
 }
 

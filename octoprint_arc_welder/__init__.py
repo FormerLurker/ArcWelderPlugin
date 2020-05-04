@@ -619,6 +619,7 @@ class ArcWelderPlugin(
             pip="https://github.com/FormerLurker/ArcWelderPlugin/archive/{target_version}.zip",
             stable_branch=dict(branch="master", commitish=["master"], name="Stable"),
             release_compare='semantic_version',
+            python_checker=ArcWelderPlugin.get_latest,
             prerelease_branches=[
                 dict(
                     branch="rc/maintenance",
@@ -639,6 +640,15 @@ class ArcWelderPlugin(
         return dict(
             arc_welder=arc_welder_info
         )
+
+    @staticmethod
+    def get_latest(target, check, online=True):
+        current_version = check.get("current_version", __version__)
+
+        information = dict(local=dict(name=current_version, value=current_version),
+                           remote=dict(name=current_version, value=current_version))
+
+        return information, True
 
 
 __plugin_pythoncompat__ = ">=2.7,<4"
