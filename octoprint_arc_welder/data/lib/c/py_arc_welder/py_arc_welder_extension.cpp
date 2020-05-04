@@ -126,7 +126,7 @@ PyInit_PyArcWelder(void)
 extern "C" void initPyArcWelder(void)
 #endif
 {
-	std::cout << "Initializing PyArcWelder V0.1.0rc1.dev0 - Copyright (C) 2019  Brad Hochgesang.";
+	std::cout << "Initializing PyArcWelder V0.1.0rc1.dev2 - Copyright (C) 2019  Brad Hochgesang.";
 
 #if PY_MAJOR_VERSION >= 3
 	std::cout << " Python 3+ Detected...";
@@ -151,7 +151,7 @@ extern "C" void initPyArcWelder(void)
 	logger_levels.push_back(log_levels::DEBUG);
 	p_py_logger = new py_logger(logger_names, logger_levels);
 	p_py_logger->initialize_loggers();
-	std::string message = "PyArcWelder V0.1.0rc1.dev0 imported - Copyright (C) 2019  Brad Hochgesang...";
+	std::string message = "PyArcWelder V0.1.0rc1.dev2 imported - Copyright (C) 2019  Brad Hochgesang...";
 	p_py_logger->log(GCODE_CONVERSION, INFO, message);
 	p_py_logger->set_log_level_by_value(DEBUG);
 	std::cout << " Initialization Complete\r\n";
