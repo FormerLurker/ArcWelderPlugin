@@ -128,7 +128,6 @@ private:
 	long get_file_size(const std::string& file_path);
 	double get_time_elapsed(double start_clock, double end_clock);
 	double get_next_update_time() const;
-	bool waiting_for_line_;
 	bool waiting_for_arc_;
 	array_list<unwritten_command> unwritten_commands_;
 	segmented_arc current_arc_;

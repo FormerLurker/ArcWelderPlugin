@@ -54,7 +54,6 @@ arc_welder::arc_welder(std::string source_path, std::string target_path, logger 
 	last_gcode_line_written_ = 0;
 	points_compressed_ = 0;
 	arcs_created_ = 0;
-	waiting_for_line_ = false;
 	waiting_for_arc_ = false;
 	previous_feedrate_ = -1;
 	previous_is_extruder_relative_ = false;
@@ -134,7 +133,6 @@ void arc_welder::reset()
 	file_size_ = 0;
 	points_compressed_ = 0;
 	arcs_created_ = 0;
-	waiting_for_line_ = false;
 	waiting_for_arc_ = false;
 }
 
