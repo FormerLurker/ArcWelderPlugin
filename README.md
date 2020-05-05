@@ -1,4 +1,4 @@
-##Arc Welder: Anti-Stutter
+## Arc Welder: Anti-Stutter
 
 Converts G0/G1 commands to G2/G3 commands.  This can greatly compress some gcode files and can reduce the number of gcodes sent to your printer when streaming gcode from OctoPrint.  This can reduce stuttering as long as your firmware correctly implements G2/G3 (arc) commands and is configured properly.
 
@@ -45,7 +45,7 @@ Unfortunately **Arc Welder** currently does not use the logging settings from th
 * **Clear Log** - Erases all information in the most recent ```plugin_arc_welder.log``` file.  Useful for creating a clean log file for debugging/github issues.
 * **Clear All Logs** - Erases all arc welder log information.  Useful for recovering space and creating a clean log file for debugging/github issues.
 * **Download Log** - Downloads the most recent log file.
-* Modules to Log and Logging Level - IF you are asked to produce a log for debugging purposes, you will need to enable specific loggers.  For problems with the interface add the ```arc_welder.__init__``` module logger set to debug or verbose.  For issues with the gcode file itself, use the ```arc_welder.gcode_conversion``` module set to DEBUG or VERBOSE.  **Warning:** logging the gcode_conversion module in DEBUG or VERBOSE will likely increase processing time by 10-20x, and will produce a **huge** log file.  Only log if it is absolutely necessary.
+* **Modules to Log** and **Logging Level** - IF you are asked to produce a log for debugging purposes, you will need to enable specific loggers.  For problems with the interface add the ```arc_welder.__init__``` module logger set to debug or verbose.  For issues with the gcode file itself, use the ```arc_welder.gcode_conversion``` module set to DEBUG or VERBOSE.  **Warning:** logging the gcode_conversion module in DEBUG or VERBOSE will likely increase processing time by 10-20x, and will produce a **huge** log file.  Only log if it is absolutely necessary.
 * **Log to Console** - Prints the log to the console.  Only useful for running **Arc Welder** in a debugger really, so leave this disabled. 
 
 ## Troubleshooting
@@ -62,6 +62,7 @@ For people using Marlin 2.0, your results should generally be pretty good with t
 **2. My printer does not support G2/G3.**
 
 If you are running Marlin or a fork, make sure Arc Support is enabled by looking at configuration_adv.h and making sure the following line exists and is not commented out:
+
 ```#define ARC_SUPPORT                 // Disable this feature to save ~3226 bytes```
 
 Make sure you have enough memory to enable this feature if it is disabled.  You may have to disable some other feature to free up some memory.
