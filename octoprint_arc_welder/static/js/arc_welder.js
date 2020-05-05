@@ -352,7 +352,7 @@ $(function () {
                 return  'https://github.com/FormerLurker/ArcWelderPlugin/commit/' + git_version;
             }
             // This is a release, link to the tag
-            return 'https://github.com/FormerLurker/ArcWelderPlugin/releases/tag/v' + self.version();
+            return 'https://github.com/FormerLurker/ArcWelderPlugin/releases/tag/' + self.version();
         });
 
         self.version_text = ko.pureComputed(function () {
