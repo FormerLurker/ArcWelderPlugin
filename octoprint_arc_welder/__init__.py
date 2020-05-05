@@ -604,7 +604,7 @@ class ArcWelderPlugin(
             arc_welder=arc_welder_info
         )
 
-    def get_latest(self, target, check, online=True, full_data=False, custom_compare=None):
+    def get_latest(self, target, *args, online=True, **kwargs):
         # Custom software update 'get_latest' function.  Builds the check data based on the
         # current software update plugin settings and then calls the github_release version checker
         # that implements a custom compare function.
