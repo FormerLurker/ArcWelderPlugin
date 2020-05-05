@@ -41,9 +41,11 @@ from octoprint.server import util, app
 from octoprint.filemanager import FileDestinations
 from octoprint.server.util.flask import restricted_access
 from octoprint.events import Events
+from octoprint.plugins.softwareupdate.version_checks import github_release
 import octoprint_arc_welder.log as log
 import octoprint_arc_welder.preprocessor as preprocessor
 import octoprint_arc_welder.utilities as utilities
+import  octoprint_arc_welder_setuptools as arc_welder_setuptools
 # stupid python 2/python 3 compatibility imports
 try:
     import queue
@@ -589,6 +591,24 @@ class ArcWelderPlugin(
         # ~~ software update hook
 
     def get_update_information(self):
+        # moved most of the heavy lifting to get_latest, since I need to do a custom version compare.
+        # AND I want to use the most recent software update release channel settings.
+        arc_welder_info = dict(
+            displayName="Arc Welder: Anti-Stutter",
+            displayVersion=self._plugin_version,
+            type="python_checker",
+            python_checker=self
+        )
+
+        return dict(
+            arc_welder=arc_welder_info
+        )
+
+    def get_latest(self, target, check, online=True, full_data=False, custom_compare=None):
+        # Custom software update 'get_latest' function.  Builds the check data based on the
+        # current software update plugin settings and then calls the github_release version checker
+        # that implements a custom compare function.
+
         # get the checkout type from the software updater
         prerelease_channel = None
         is_prerelease = False
@@ -618,17 +638,16 @@ class ArcWelderPlugin(
             prerelease=is_prerelease,
             pip="https://github.com/FormerLurker/ArcWelderPlugin/archive/{target_version}.zip",
             stable_branch=dict(branch="master", commitish=["master"], name="Stable"),
-            release_compare='semantic_version',
-            #python_checker=ArcWelderPlugin.get_latest,
+            release_compare='custom',
             prerelease_branches=[
                 dict(
                     branch="rc/maintenance",
-                    commitish=["rc/maintenance"],  # maintenance RCs
+                    commitish=["master", "rc/maintenance"],  # maintenance RCs (include master)
                     name="Maintenance RCs"
                 ),
                 dict(
                     branch="rc/devel",
-                    commitish=["rc/maintenance", "rc/devel"],  # devel & maintenance RCs
+                    commitish=["master", "rc/maintenance", "rc/devel"],  # devel & maintenance RCs (include master)
                     name="Devel RCs"
                 )
             ],
@@ -636,19 +655,13 @@ class ArcWelderPlugin(
 
         if prerelease_channel is not None:
             arc_welder_info["prerelease_channel"] = prerelease_channel
-        # return the update config
-        return dict(
-            arc_welder=arc_welder_info
-        )
 
-    #@staticmethod
-    #def get_latest(target, check, online=True):
-    #    current_version = check.get("current_version", __version__)
-    #
-    #    information = dict(local=dict(name=current_version, value=current_version),
-    #                       remote=dict(name=current_version, value=current_version))
-    #
-    #    return information, True
+        return github_release.get_latest(
+            target,
+            arc_welder_info,
+            custom_compare=arc_welder_setuptools.custom_version_compare,
+            online=online
+        )
 
 
 __plugin_pythoncompat__ = ">=2.7,<4"
