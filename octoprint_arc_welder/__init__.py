@@ -607,7 +607,7 @@ class ArcWelderPlugin(
     def get_latest(self, target, *args, **kwargs):
         # Custom software update 'get_latest' function.  Builds the check data based on the
         # current software update plugin settings and then calls the github_release version checker
-        # that implements a custom compare function.
+        # that implements a custom compare function. 
 
         online = kwargs["online"]
         # get the checkout type from the software updater
