@@ -590,26 +590,30 @@ class ArcWelderPlugin(
 
         # ~~ software update hook
 
-    def get_update_information(self):
-        # moved most of the heavy lifting to get_latest, since I need to do a custom version compare.
-        # AND I want to use the most recent software update release channel settings.
-        arc_welder_info = dict(
-            displayName="Arc Welder: Anti-Stutter",
-            displayVersion=self._plugin_version,
-            type="python_checker",
-            python_checker=self
-        )
+    arc_welder_update_info = dict(
+        displayName="Arc Welder: Anti-Stutter",
+        # version check: github repository
+        type="github_release",
+        user="FormerLurker",
+        repo="ArcWelderPlugin",
+        pip="https://github.com/FormerLurker/ArcWelderPlugin/archive/{target_version}.zip",
+        stable_branch=dict(branch="master", commitish=["master"], name="Stable"),
+        release_compare='custom',
+        prerelease_branches=[
+            dict(
+                branch="rc/maintenance",
+                commitish=["master", "rc/maintenance"],  # maintenance RCs (include master)
+                name="Maintenance RCs"
+            ),
+            dict(
+                branch="rc/devel",
+                commitish=["master", "rc/maintenance", "rc/devel"],  # devel & maintenance RCs (include master)
+                name="Devel RCs"
+            )
+        ],
+    )
 
-        return dict(
-            arc_welder=arc_welder_info
-        )
-
-    def get_latest(self, target, *args, **kwargs):
-        # Custom software update 'get_latest' function.  Builds the check data based on the
-        # current software update plugin settings and then calls the github_release version checker
-        # that implements a custom compare function. 
-
-        online = kwargs["online"]
+    def get_release_info(self):
         # get the checkout type from the software updater
         prerelease_channel = None
         is_prerelease = False
@@ -627,42 +631,35 @@ class ArcWelderPlugin(
             elif prerelease_channel == "rc/devel":
                 is_prerelease = True
                 prerelease_channel = "rc/devel"
-
-        arc_welder_info = dict(
-            displayName="Arc Welder: Anti-Stutter",
-            displayVersion=self._plugin_version,
-            # version check: github repository
-            type="github_release",
-            user="FormerLurker",
-            repo="ArcWelderPlugin",
-            current=self._plugin_version,
-            prerelease=is_prerelease,
-            pip="https://github.com/FormerLurker/ArcWelderPlugin/archive/{target_version}.zip",
-            stable_branch=dict(branch="master", commitish=["master"], name="Stable"),
-            release_compare='custom',
-            prerelease_branches=[
-                dict(
-                    branch="rc/maintenance",
-                    commitish=["master", "rc/maintenance"],  # maintenance RCs (include master)
-                    name="Maintenance RCs"
-                ),
-                dict(
-                    branch="rc/devel",
-                    commitish=["master", "rc/maintenance", "rc/devel"],  # devel & maintenance RCs (include master)
-                    name="Devel RCs"
-                )
-            ],
-        )
-
+        ArcWelderPlugin.arc_welder_update_info["displayVersion"] = self._plugin_version
+        ArcWelderPlugin.arc_welder_update_info["current"] = self._plugin_version
+        ArcWelderPlugin.arc_welder_update_info["prerelease"] = is_prerelease
         if prerelease_channel is not None:
-            arc_welder_info["prerelease_channel"] = prerelease_channel
+            ArcWelderPlugin.arc_welder_update_info["prerelease_channel"] = prerelease_channel
 
-        return github_release.get_latest(
-            target,
-            arc_welder_info,
-            custom_compare=arc_welder_setuptools.custom_version_compare,
-            online=online
+        return dict(
+            octolapse=ArcWelderPlugin.arc_welder_update_info
         )
+
+    def get_update_information(self):
+        # moved most of the heavy lifting to get_latest, since I need to do a custom version compare.
+        # AND I want to use the most recent software update release channel settings.
+        return self.get_release_info()
+
+    # def get_latest(self, target, *args, **kwargs):
+    #     # Custom software update 'get_latest' function.  Builds the check data based on the
+    #     # current software update plugin settings and then calls the github_release version checker
+    #     # that implements a custom compare function.
+    #     online = False
+    #     if "online" in kwargs:
+    #         online = kwargs["online"]
+    #
+    #     return github_release.get_latest(
+    #         target,
+    #         self.get_release_info()["ard_welder"],
+    #         custom_compare=arc_welder_setuptools.custom_version_compare,
+    #         online=online
+    #     )
 
 
 __plugin_pythoncompat__ = ">=2.7,<4"

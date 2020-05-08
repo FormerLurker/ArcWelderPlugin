@@ -25,7 +25,8 @@
 # following email address: FormerLurker@pm.me
 ##################################################################################
 from setuptools import setup, Extension
-from distutils.command.build_ext import build_ext
+from setuptools.command.build_ext import build_ext
+#from distutils.command.build_ext import build_ext
 from distutils.ccompiler import CCompiler
 from distutils.unixccompiler import UnixCCompiler
 from distutils.msvccompiler import MSVCCompiler
