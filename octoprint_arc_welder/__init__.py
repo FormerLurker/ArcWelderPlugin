@@ -638,7 +638,7 @@ class ArcWelderPlugin(
             ArcWelderPlugin.arc_welder_update_info["prerelease_channel"] = prerelease_channel
 
         return dict(
-            arcx_welder=ArcWelderPlugin.arc_welder_update_info
+            arc_welder=ArcWelderPlugin.arc_welder_update_info
         )
 
     def get_update_information(self):
