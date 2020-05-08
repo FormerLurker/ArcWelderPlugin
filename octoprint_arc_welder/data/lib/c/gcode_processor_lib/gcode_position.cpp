@@ -24,7 +24,7 @@
 #include "utilities.h"
 #include <algorithm>
 #include <iterator>
-#include <math.h>
+#include <cmath>
 gcode_position_args::gcode_position_args(const gcode_position_args &pos_args)
 {
 	position_buffer_size = pos_args.position_buffer_size;

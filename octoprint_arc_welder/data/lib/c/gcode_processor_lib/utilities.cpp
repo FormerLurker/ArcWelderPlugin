@@ -20,7 +20,7 @@
 // FormerLurker@pm.me
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "utilities.h"
-#include <math.h>
+#include <cmath>
 #include <sstream>
 #include <iostream>
 
@@ -30,7 +30,7 @@ const std::string utilities::WHITESPACE_ = " \n\r\t\f\v";
 
 bool utilities::is_zero(double x)
 {
-	return abs(x) < ZERO_TOLERANCE;
+	return std::abs(x) < ZERO_TOLERANCE;
 }
 
 int utilities::round_up_to_int(double x)
@@ -40,7 +40,7 @@ int utilities::round_up_to_int(double x)
 
 bool utilities::is_equal(double x, double y)
 {
-	double abs_difference = abs(x - y);
+	double abs_difference = std::abs(x - y);
 	return abs_difference < ZERO_TOLERANCE;
 }
 
@@ -67,12 +67,12 @@ bool utilities::less_than_or_equal(double x, double y)
 // custom tolerance functions
 bool utilities::is_zero(double x, double tolerance)
 {
-	return abs(x) < tolerance;
+	return std::abs(x) < tolerance;
 }
 
 bool utilities::is_equal(double x, double y, double tolerance)
 {
-	double abs_difference = abs(x - y);
+	double abs_difference = std::abs(x - y);
 	return abs_difference < tolerance;
 }
 

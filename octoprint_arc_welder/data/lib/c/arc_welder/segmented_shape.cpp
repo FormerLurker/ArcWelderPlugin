@@ -24,8 +24,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "segmented_shape.h"
-
-#include <math.h>
+#include <cmath>
 #include <iostream>
 #pragma region Operators for Vector and Point
 point operator +(point lhs, const vector rhs) {
@@ -151,7 +150,7 @@ double distance_from_segment(segment s, point p)
 bool circle::is_point_on_circle(point p, double resolution_mm)
 {
 	// get the difference between the point and the circle's center.
-	double difference = abs(utilities::get_cartesian_distance(p.x, p.y, center.x, center.y) - radius);
+	double difference = std::abs(utilities::get_cartesian_distance(p.x, p.y, center.x, center.y) - radius);
 	return utilities::less_than(difference, resolution_mm, CIRCLE_FLOATING_POINT_TOLERANCE);
 }
 

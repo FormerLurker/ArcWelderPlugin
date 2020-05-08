@@ -29,8 +29,8 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include "math.h"
 #include <stdio.h>
+#include <cmath>
 
 segmented_arc::segmented_arc() : segmented_shape()
 {
