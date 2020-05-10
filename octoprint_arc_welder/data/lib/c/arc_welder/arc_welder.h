@@ -104,6 +104,7 @@ public:
 protected:
 	virtual bool on_progress_(arc_welder_progress progress);
 private:
+	void add_arcwelder_comment_to_target();
 	void reset();
 	static gcode_position_args get_args_(bool g90_g91_influences_extruder, int buffer_size);
 	progress_callback progress_callback_;

@@ -189,6 +189,7 @@ arc_welder_results arc_welder::process()
 	{
 		if (output_file_.is_open())
 		{
+			add_arcwelder_comment_to_target();
 			if (info_logging_enabled_)
 			{
 				stream.clear();
@@ -614,7 +615,6 @@ std::string arc_welder::create_g92_e(double absolute_e)
 int arc_welder::write_gcode_to_file(std::string gcode)
 {
 	output_file_ << utilities::trim(gcode) << "\n";
-	//std::cout << utilities::trim(gcode) << "\n";
 	return 1;
 }
 
@@ -662,6 +662,18 @@ std::string arc_welder::get_arc_gcode_absolute(double e, double f, const std::st
 	}
 	return gcode;
 
+}
+
+void arc_welder::add_arcwelder_comment_to_target()
+{
+	std::stringstream stream;
+	stream << std::fixed << std::setprecision(2);
+	stream <<	"; Postprocessed by [ArcWelder](https://github.com/FormerLurker/ArcWelderLib)\n";
+	stream << "; Copyright(C) 2020 - Brad Hochgesang\n";
+	stream << "; arc_welder_resolution_mm = " << resolution_mm_ << "\n";
+	stream << "; arc_welder_g90_influences_extruder = " << (gcode_position_args_.g90_influences_extruder ? "True" : "False") << "\n\n";
+	
+	output_file_ << stream.str();
 }
 
 
