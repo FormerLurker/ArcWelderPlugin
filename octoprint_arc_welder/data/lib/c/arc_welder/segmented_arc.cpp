@@ -69,6 +69,12 @@ point segmented_arc::pop_back(double e_relative)
 
 bool segmented_arc::is_shape()
 {
+	if (is_shape_)
+	{
+		arc a;
+		bool is_arc = try_get_arc(a);
+		return is_arc;
+	}
 	return is_shape_;
 }
 
