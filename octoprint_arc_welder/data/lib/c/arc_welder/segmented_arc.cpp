@@ -289,12 +289,12 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
 			if (utilities::greater_than_or_equal(f, 1))
 			{
 				// Add F param
-				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
+				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
 			}
 			else
 			{
 				// No F param
-				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
+				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
 			}
 		}
 		else
@@ -304,12 +304,12 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
 			if (utilities::greater_than_or_equal(f, 1))
 			{
 				// Add F param
-				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G2 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
+				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
 			}
 			else
 			{
 				// No F param
-				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G2 X%.3f Y%.3f I%.3f J%.3f", c.end_point.x, c.end_point.y, i, j);
+				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f", c.end_point.x, c.end_point.y, i, j);
 			}
 		}
 	}
@@ -322,12 +322,12 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
 			if (utilities::greater_than_or_equal(f, 1))
 			{
 				// Add F param
-				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
+				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
 			}
 			else
 			{
 				// No F param
-				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
+				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
 			}
 		}
 		else
@@ -337,12 +337,12 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
 			if (utilities::greater_than_or_equal(f, 1))
 			{
 				// Add F param
-				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G3 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
+				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
 			}
 			else
 			{
 				// No F param
-				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G3 X%.3f Y%.3f I%.3f J%.3f", c.end_point.x, c.end_point.y, i, j);
+				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f", c.end_point.x, c.end_point.y, i, j);
 			}
 		}
 	}
