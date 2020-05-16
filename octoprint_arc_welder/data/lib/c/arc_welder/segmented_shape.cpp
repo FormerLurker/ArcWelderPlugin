@@ -54,6 +54,14 @@ vector operator -(point& lhs, point& rhs) {
 	);
 }
 
+vector operator -(const point& lhs, const point& rhs) {
+	return vector(
+		lhs.x - rhs.x,
+		lhs.y - rhs.y,
+		lhs.z - rhs.z
+	);
+}
+
 vector operator *(vector lhs, const double& rhs) {
 	return vector(
 		lhs.x*rhs,
@@ -88,7 +96,7 @@ bool segment::get_closest_perpendicular_point(point p1, point p2, point c, point
 	double t = num / denom;
 
 	// We're considering this a failure if t == 0 or t==1 within our tolerance.  In that case we hit the endpoint, which is OK.
-	if (utilities::less_than_or_equal(t, 0, CIRCLE_FLOATING_POINT_TOLERANCE) || utilities::greater_than_or_equal(t, 1, CIRCLE_FLOATING_POINT_TOLERANCE))
+	if (utilities::less_than_or_equal(t, 0, CIRCLE_GENERATION_A_ZERO_TOLERANCE) || utilities::greater_than_or_equal(t, 1, CIRCLE_GENERATION_A_ZERO_TOLERANCE))
 		return false;
 
 	d.x = p1.x + t * (p2.x - p1.x);
@@ -151,10 +159,10 @@ bool circle::is_point_on_circle(point p, double resolution_mm)
 {
 	// get the difference between the point and the circle's center.
 	double difference = std::abs(utilities::get_cartesian_distance(p.x, p.y, center.x, center.y) - radius);
-	return utilities::less_than(difference, resolution_mm, CIRCLE_FLOATING_POINT_TOLERANCE);
+	return utilities::less_than(difference, resolution_mm, CIRCLE_GENERATION_A_ZERO_TOLERANCE);
 }
 
-bool circle::try_create_circle(point p1, point p2, point p3, circle& new_circle)
+bool circle::try_create_circle(point p1, point p2, point p3, double max_radius, circle& new_circle)
 {
 	double x1 = p1.x;
 	double y1 = p1.y;
@@ -165,11 +173,16 @@ bool circle::try_create_circle(point p1, point p2, point p3, circle& new_circle)
 
 	double a = x1 * (y2 - y3) - y1 * (x2 - x3) + x2 * y3 - x3 * y2;
 
-	if (utilities::is_zero(a, CIRCLE_FLOATING_POINT_TOLERANCE))
+	if (utilities::is_zero(a, CIRCLE_GENERATION_A_ZERO_TOLERANCE))
 	{
+#if _DEBUG
+		if (!utilities::is_zero(a, 0.000001))
+		{
+			std::cout << "This is an interesting point.  Colinear";
+		}
+#endif
 		return false;
 	}
-
 
 	double b = (x1 * x1 + y1 * y1) * (y3 - y2)
 		+ (x2 * x2 + y2 * y2) * (y1 - y3)
@@ -182,20 +195,31 @@ bool circle::try_create_circle(point p1, point p2, point p3, circle& new_circle)
 	double x = -b / (2.0 * a);
 	double y = -c / (2.0 * a);
 
+	double radius = utilities::get_cartesian_distance(x, y, x1, y1);
+	if (radius > max_radius)
+		return false;
 	new_circle.center.x = x;
 	new_circle.center.y = y;
 	new_circle.center.z = p1.z;
-	new_circle.radius = utilities::get_cartesian_distance(x, y, x1, y1);
+	new_circle.radius = radius;
 	return true;
 }
-double circle::get_radians(point p1, point p2)
+double circle::get_radians(const point& p1, const point& p2) const
 {
 	double distance_sq = pow(utilities::get_cartesian_distance(p1.x, p1.y, p2.x, p2.y), 2.0);
 	double two_r_sq = 2.0 * radius * radius;
 	return acos((two_r_sq - distance_sq) / two_r_sq);
 }
 
-point circle::get_closest_point(point p)
+double circle::get_polar_radians(const point& p1) const
+{
+	double polar_radians = atan2(p1.y - center.y, p1.x - center.x);
+	if (polar_radians < 0)
+		polar_radians = (2.0 * PI_DOUBLE) + polar_radians;
+	return polar_radians;
+}
+
+point circle::get_closest_point(const point& p) const
 {
 	vector v = p - center;
 	double mag = v.get_magnitude();
@@ -207,112 +231,102 @@ point circle::get_closest_point(point p)
 #pragma endregion Circle Functions
 
 #pragma region Arc Functions
-bool arc::try_create_arc(circle c, point start_point, point mid_point, point end_point, double approximate_length, double resolution, arc& target_arc)
+bool arc::try_create_arc(const circle& c, const point& start_point, const point& mid_point, const point& end_point, double approximate_length, double resolution, arc& target_arc)
 {
 	point p1 = c.get_closest_point(start_point);
 	point p2 = c.get_closest_point(mid_point);
 	point p3 = c.get_closest_point(end_point);
-	// Get the radians between p1 and p2 (short angle)
+	/*// Get the radians between p1 and p2 (short angle)
 	double p1_p2_rad = c.get_radians(p1, p2);
 	double p2_p3_rad = c.get_radians(p2, p3);
 	double p3_p1_rad = c.get_radians(p3, p1);
+	*/
 
-	bool found_angle = false;
+	double polar_start_theta = c.get_polar_radians(p1);
+	double polar_mid_theta = c.get_polar_radians(p2);
+	double polar_end_theta = c.get_polar_radians(p3);
+	
+	// variable to hold radians
 	double angle_radians = 0;
-	double angle_1, angle_2;
-	if (utilities::is_equal(p1_p2_rad + p2_p3_rad + p3_p1_rad, 2 * PI_DOUBLE, CIRCLE_FLOATING_POINT_TOLERANCE))
+	int direction = 0;  // 1 = counter clockwise, 2 = clockwise, 3 = unknown.
+	// Determine the direction of the arc
+	if (polar_end_theta > polar_start_theta)
 	{
-		found_angle = true;
-		angle_1 = p1_p2_rad;
-		angle_2 = p2_p3_rad;
-	}
-	else if (utilities::is_equal(p1_p2_rad + p2_p3_rad + (2 * PI_DOUBLE - p3_p1_rad), 2 * PI_DOUBLE, CIRCLE_FLOATING_POINT_TOLERANCE))
-	{
-		found_angle = true;
-		angle_1 = p2_p3_rad;
-		angle_2 = p1_p2_rad;
-	}
-	else 
-	{
-		double p1_p2_rad_lg = (2 * PI_DOUBLE - p1_p2_rad);
-		if (utilities::is_equal(p1_p2_rad_lg + p2_p3_rad + p3_p1_rad, 2 * PI_DOUBLE, CIRCLE_FLOATING_POINT_TOLERANCE))
-		{
-			found_angle = true;
-			angle_1 = p1_p2_rad_lg;
-			angle_2 = p2_p3_rad;
+		if (polar_start_theta < polar_mid_theta && polar_mid_theta < polar_end_theta) {
+			direction = 1;		
+			angle_radians = polar_end_theta - polar_start_theta;
 		}
-		else
+		else if (
+			(0.0 <= polar_mid_theta && polar_mid_theta < polar_start_theta) ||
+			(polar_end_theta < polar_mid_theta && polar_mid_theta < (2.0 * PI_DOUBLE))
+		)
 		{
-			double p2_p3_rad_lg = (2 * PI_DOUBLE - p2_p3_rad);
-			if (utilities::is_equal(p1_p2_rad + p2_p3_rad_lg + p3_p1_rad, 2 * PI_DOUBLE, CIRCLE_FLOATING_POINT_TOLERANCE))
-			{
-				found_angle = true;
-				angle_1 = p1_p2_rad;
-				angle_2 = p2_p3_rad_lg;
-			}
+			direction = 2;
+			angle_radians = polar_start_theta + ((2.0 * PI_DOUBLE) - polar_end_theta);
 		}
 	}
-	if (!found_angle)
-		return false; // No angle could be found, exit.
-	angle_radians = angle_1 + angle_2;
-	double length = angle_radians * c.radius;
-	if (!utilities::is_equal(length, approximate_length, resolution))
+	else if (polar_start_theta > polar_end_theta)
+	{
+		if (
+			(polar_start_theta < polar_mid_theta && polar_mid_theta < (2.0 * PI_DOUBLE)) ||
+			(0.0 < polar_mid_theta && polar_mid_theta < polar_end_theta)
+		)
+		{
+			direction = 1;
+			angle_radians = polar_end_theta + ((2.0 * PI_DOUBLE) - polar_start_theta);
+		}
+		else if (polar_end_theta < polar_mid_theta && polar_mid_theta < polar_start_theta)
+		{
+			direction = 2;
+			angle_radians = polar_start_theta - polar_end_theta;
+		}
+	}
+	
+	if (direction == 0) return false;
+	
+	double arc_length = c.radius * angle_radians;
+	if (!utilities::is_equal(arc_length, approximate_length, resolution))
 		return false;
 
-	// Very small angles can't be relied upon to calculate the sign of the arc (clockwise vs anticlockwise)
-	if (angle_radians < MIN_ALLOWED_ARC_THETA)
-	{
-		return false;
-	}
-	
-	// Calculate the sign of the angle.  This should be accurate now that we have filtered out small angles and exited due to lengh mismatches
-	vector v1 = p1 - p2;
-	vector v2 = p3 - p2;
-	// Try to make a reasonable guess about the angle's direction.  This works well unless the the angle is very small
-	double magnitude1 = vector::cross_product_magnitude(v1, v2);
-	// We can't use our utility compare (utility::greater_that) here, else we will lose
-	// very important resolution information
-	bool is_clockwise = false;
-	
-	if (magnitude1 > 0.0)
-	{
-		is_clockwise = true;
-	}
-	// If the calculated length isn't within the resolution, exit
-	if (is_clockwise)
-		angle_radians *= -1.0f;
-	
+	if(direction == 2)
+		angle_radians *= -1.0;
+
 	target_arc.center.x = c.center.x;
 	target_arc.center.y = c.center.y;
 	target_arc.center.z = c.center.z;
 	target_arc.radius = c.radius;
 	target_arc.start_point = start_point;
 	target_arc.end_point = end_point;
-	target_arc.length = length;
+	target_arc.length = arc_length;
 	target_arc.angle_radians = angle_radians;
+	target_arc.polar_start_theta = polar_start_theta;
+	target_arc.polar_end_theta = polar_end_theta;
 	return true;
 	
 }
 
+bool arc::try_create_arc(const circle& c, const array_list<point>& points, double approximate_length, double resolution, arc& target_arc)
+{
+	int mid_point_index = ((points.count() - 2) / 2) + 1;
+	return arc::try_create_arc(c, points[0], points[mid_point_index], points[points.count() - 1], approximate_length, resolution, target_arc);
+}
 #pragma endregion
 
-segmented_shape::segmented_shape() : points_(50)
+segmented_shape::segmented_shape() : segmented_shape(DEFAULT_MIN_SEGMENTS, DEFAULT_MAX_SEGMENTS, DEFAULT_RESOLUTION_MM )
 {
-	max_segments_ = 50;
-	resolution_mm_ = 0.0250;
-	e_relative_ = 0;
-	is_shape_ = false;
-	min_segments_ = 3;
-	original_shape_length_ = 0;
-	is_extruding_ = true;
 }
+
 segmented_shape::segmented_shape(int min_segments, int max_segments, double resolution_mm) : points_(max_segments)
 {
+	
 	max_segments_ = max_segments;
 	resolution_mm_ = resolution_mm / 2.0; // divide by 2 because it is + or - 1/2 of the desired resolution.
 	e_relative_ = 0;
 	is_shape_ = false;
-	min_segments_ = min_segments;
+	// min segments can never be lower than 3 (the default) else there could be no compression.
+	if (min_segments < DEFAULT_MIN_SEGMENTS) min_segments_ = DEFAULT_MIN_SEGMENTS;
+	else min_segments_ = min_segments;
+
 	original_shape_length_ = 0;
 	is_extruding_ = true;
 }

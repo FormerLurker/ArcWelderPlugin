@@ -24,7 +24,7 @@
 logger::logger(std::vector<std::string> names, std::vector<int> levels) {
 	// set to true by default, but can be changed by inheritance to support mandatory innitialization (for python or other integrations)
 	loggers_created_ = true;
-	num_loggers_ = names.size();
+	num_loggers_ = static_cast<int>(names.size());
 	logger_names_ = new std::string[static_cast<int>(num_loggers_)];
 	logger_levels_ = new int[static_cast<int>(num_loggers_)];
 	// this is slow due to the vectors, but it is trivial.  Could switch to an iterator
@@ -142,8 +142,9 @@ void logger::log(const int logger_type, const int log_level, const std::string& 
 
 	// write the log
 	if (is_exception)
-		std::cerr << output << "\n";
+		std::cerr << output << std::endl;
 	else
-		std::cout << output << "\n";
+		std::cout << output << std::endl;
+	std::cout.flush();
 	
 }

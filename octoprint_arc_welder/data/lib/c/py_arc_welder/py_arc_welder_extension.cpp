@@ -188,13 +188,14 @@ extern "C"
 		std::stringstream stream;
 		stream << "py_gcode_arc_converter.ConvertFile - Parameters received: source_file_path: '" << 
 			args.source_file_path << "', target_file_path:'" << args.target_file_path << "' resolution_mm:" << 
-			args.resolution_mm << ", g90_91_influences_extruder: " << (args.g90_g91_influences_extruder ? "True" : "False") << "\n";
+			args.resolution_mm << "' max_radius_mm:" <<
+			args.max_radius_mm << ", g90_91_influences_extruder: " << (args.g90_g91_influences_extruder ? "True" : "False") << "\n";
 		p_py_logger->log(GCODE_CONVERSION, INFO, stream.str());
 
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 
-		py_arc_welder arc_welder_obj(args.source_file_path, args.target_file_path, p_py_logger, args.resolution_mm, args.g90_g91_influences_extruder, 50, py_progress_callback);
+		py_arc_welder arc_welder_obj(args.source_file_path, args.target_file_path, p_py_logger, args.resolution_mm, args.max_radius_mm, args.g90_g91_influences_extruder, 50, py_progress_callback);
 		arc_welder_results results = arc_welder_obj.process();
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
@@ -211,7 +212,7 @@ extern "C"
 			u8"cancelled",
 			results.cancelled,
 			u8"message",
-			results.message,
+			results.message.c_str(),
 			u8"progress",
 			p_progress
 		);
@@ -259,6 +260,21 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 	{
 		args.resolution_mm = 0.05; // Set to the default if no resolution is provided, or if it is less than 0.
 	}
+
+	// Extract the max_radius in mm
+	PyObject* py_max_radius_mm = PyDict_GetItemString(py_args, "max_radius_mm");
+	if (py_max_radius_mm == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve the max_radius_mm parameter from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.max_radius_mm = gcode_arc_converter::PyFloatOrInt_AsDouble(py_max_radius_mm);
+	if (args.max_radius_mm > DEFAULT_MAX_RADIUS_MM)
+	{
+		args.max_radius_mm = DEFAULT_MAX_RADIUS_MM; // Set to the default if no resolution is provided, or if it is less than 0.
+	}
+
 	// Extract G90/G91 influences extruder
 	// g90_influences_extruder
 	PyObject* py_g90_g91_influences_extruder = PyDict_GetItemString(py_args, "g90_g91_influences_extruder");

@@ -26,14 +26,23 @@
 #include <string>
 #include <limits>
 #define PI_DOUBLE 3.14159265358979323846
-#define CIRCLE_FLOATING_POINT_TOLERANCE 0.0000000001
+//#define CIRCLE_GENERATION_A_ZERO_TOLERANCE 0.0000000001 // fail
+//#define CIRCLE_GENERATION_A_ZERO_TOLERANCE 0.001 // pass
+//#define CIRCLE_GENERATION_A_ZERO_TOLERANCE 0.0001 // pass
+#define CIRCLE_GENERATION_A_ZERO_TOLERANCE 0.00001 // PASS
+//#define CIRCLE_GENERATION_A_ZERO_TOLERANCE 0.000001 // pass 
+//#define CIRCLE_GENERATION_A_ZERO_TOLERANCE 0.0000001 // fail
+//#define CIRCLE_GENERATION_A_ZERO_TOLERANCE 0.0000005 // fail
+//#define CIRCLE_GENERATION_A_ZERO_TOLERANCE 0.00000075 // fail
+//#define CIRCLE_GENERATION_A_ZERO_TOLERANCE 0.000000875 // fail
+
+
 #include <list> 
 #include "utilities.h"
 #include "array_list.h"
 // The minimum theta value allowed between any two arc in order for an arc to be
 // created.  This prevents sign calculation issues for very small values of theta
 
-#define MIN_ALLOWED_ARC_THETA       0.0001f // Safe value for full theta
 //#define MIN_ALLOWED_ARC_THETA     0.0000046875f // Lowest discovered value for full theta
 
 struct point
@@ -117,11 +126,13 @@ struct circle {
 	double radius;
 
 	bool is_point_on_circle(point p, double resolution_mm);
-	static bool try_create_circle(point p1, point p2, point p3, circle& new_circle);
+	static bool try_create_circle(point p1, point p2, point p3, double max_radius, circle& new_circle);
 	
-	double get_radians(point p1, point p2);
+	double get_radians(const point& p1, const point& p2) const;
 
-	point get_closest_point(point p);
+	double get_polar_radians(const point& p1) const;
+
+	point get_closest_point(const point& p) const;
 };
 
 struct arc : circle
@@ -140,19 +151,27 @@ struct arc : circle
 		end_point.y = 0;
 		end_point.z = 0;
 		is_arc = false;
+		polar_start_theta = 0;
+		polar_end_theta = 0;
 			
 	}
 	
 	bool is_arc;
 	double length;
 	double angle_radians;
+	double polar_start_theta;
+	double polar_end_theta;
 	point start_point;
 	point end_point;
-	static bool try_create_arc(circle c, point start_point, point mid_point, point end_point, double approximate_length, double resolution, arc& target_arc);
-	
+	bool is_point_in_arc_slice(const point& p);
+	static bool try_create_arc(const circle& c, const point& start_point, const point& mid_point, const point& end_point, double approximate_length, double resolution, arc& target_arc);
+	static bool try_create_arc(const circle& c, const array_list<point>& points, double approximate_length, double resolution, arc& target_arc);
 };
 double distance_from_segment(segment s, point p);
 
+#define DEFAULT_MIN_SEGMENTS 3
+#define DEFAULT_MAX_SEGMENTS 50
+#define DEFAULT_RESOLUTION_MM 0.05
 class segmented_shape
 {
 public:
@@ -179,14 +198,13 @@ public:
 protected:
 	array_list<point> points_;
 	void set_is_shape(bool value);
-	int min_segments_;
 	double original_shape_length_;
 	double e_relative_;
 	bool is_extruding_;
 	double resolution_mm_;
 	bool is_shape_;
 private:
-	
+	int min_segments_;
 	int max_segments_;
 	
 };

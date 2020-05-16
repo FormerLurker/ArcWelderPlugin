@@ -125,7 +125,7 @@ public:
 		return items_[(front_index_ + index + max_size_) % max_size_];
 	}
 	
-	int  count()
+	int  count() const
 	{
 		return count_;
 

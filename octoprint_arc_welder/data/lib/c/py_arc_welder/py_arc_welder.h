@@ -34,7 +34,7 @@
 class py_arc_welder : public arc_welder
 {
 public:
-	py_arc_welder(std::string source_path, std::string target_path, py_logger* logger, double resolution_mm, bool g90_g91_influences_extruder, int buffer_size, PyObject* py_progress_callback):arc_welder(source_path, target_path, logger, resolution_mm, g90_g91_influences_extruder, buffer_size)
+	py_arc_welder(std::string source_path, std::string target_path, py_logger* logger, double resolution_mm, double max_radius, bool g90_g91_influences_extruder, int buffer_size, PyObject* py_progress_callback):arc_welder(source_path, target_path, logger, resolution_mm, max_radius, g90_g91_influences_extruder, buffer_size)
 	{
 		py_progress_callback_ = py_progress_callback;
 	}
@@ -43,7 +43,7 @@ public:
 	}
 	static PyObject* build_py_progress(arc_welder_progress progress);
 protected:
-	virtual bool on_progress_(arc_welder_progress progress);
+	virtual bool on_progress_(const arc_welder_progress& progress);
 private:
 	PyObject* py_progress_callback_;
 };

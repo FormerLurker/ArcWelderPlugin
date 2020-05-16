@@ -32,16 +32,16 @@
 #include <stdio.h>
 #include <cmath>
 
-segmented_arc::segmented_arc() : segmented_shape()
+segmented_arc::segmented_arc() : segmented_arc(DEFAULT_MIN_SEGMENTS, DEFAULT_MAX_SEGMENTS, DEFAULT_RESOLUTION_MM, DEFAULT_MAX_RADIUS_MM)
 {
-	min_segments_ = 3;
-	s_stream_ << std::fixed;
 }
 
-segmented_arc::segmented_arc(int max_segments, double resolution_mm) : segmented_shape(3, max_segments, resolution_mm)
+segmented_arc::segmented_arc(int min_segments, int max_segments, double resolution_mm, double max_radius_mm) : segmented_shape(min_segments, max_segments, resolution_mm)
 {
-	min_segments_ = 3;
-	s_stream_ << std::fixed;
+	gcode_buffer_[0] = '\0';
+	
+	if (max_radius_mm > DEFAULT_MAX_RADIUS_MM) max_radius_mm_ = DEFAULT_MAX_RADIUS_MM;
+	else max_radius_mm_ = max_radius_mm;
 }
 
 segmented_arc::~segmented_arc()
@@ -51,7 +51,7 @@ segmented_arc::~segmented_arc()
 point segmented_arc::pop_front(double e_relative)
 {
 	e_relative_ -= e_relative;
-	if (points_.count() == min_segments_)
+	if (points_.count() == get_min_segments())
 	{
 		set_is_shape(false);
 	}
@@ -61,7 +61,7 @@ point segmented_arc::pop_back(double e_relative)
 {
 	e_relative_ -= e_relative;
 	return points_.pop_back();
-	if (points_.count() == min_segments_)
+	if (points_.count() == get_min_segments())
 	{
 		set_is_shape(false);
 	}
@@ -115,9 +115,11 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 			return false;
 		}*/  // Test - see what happens without a max segment length.
 	}
-	if (points_.count() < min_segments_ - 1)
+	if (points_.count() < get_min_segments() - 1)
 	{
 		point_added = true;
+		points_.push_back(p);
+		original_shape_length_ += distance;
 	}
 	else
 	{
@@ -126,8 +128,7 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 	}
 	if (point_added)
 	{
-		points_.push_back(p);
-		original_shape_length_ += distance;
+		
 		if (points_.count() > 1)
 		{
 			// Only add the relative distance to the second point on up.
@@ -135,7 +136,7 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 		}
 		//std::cout << " success - " << points_.count() << " points.\n";
 	}
-	else if (points_.count() < min_segments_ && points_.count() > 1)
+	else if (points_.count() < get_min_segments() && points_.count() > 1)
 	{
 		// If we haven't added a point, and we have exactly min_segments_,
 		// pull off the initial arc point and try again
@@ -155,7 +156,7 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 bool segmented_arc::try_add_point_internal_(point p, double pd)
 {
 	// If we don't have enough points (at least min_segments) return false
-	if (points_.count() < min_segments_ - 1)
+	if (points_.count() < get_min_segments() - 1)
 		return false;
 	
 	// Create a test circle
@@ -163,7 +164,7 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
 	bool circle_created;
 	// Find a point in the middle of our list for p2
 	int mid_point_index = ((points_.count() - 2) / 2)+1;
-	circle_created = circle::try_create_circle(points_[0], points_[mid_point_index], p, test_circle);
+	circle_created = circle::try_create_circle(points_[0], points_[mid_point_index], p, max_radius_mm_, test_circle);
 	
 	if (circle_created)
 	{
@@ -172,10 +173,19 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
 		bool circle_fits_points;
 
 		// the circle is new..  we have to test it now, which is expensive :(
-		circle_fits_points = does_circle_fit_points_(test_circle, p, pd);
+		points_.push_back(p);
+		double previous_shape_length = original_shape_length_;
+		original_shape_length_ += pd;
+		
+		circle_fits_points = does_circle_fit_points_(test_circle);
 		if (circle_fits_points)
 		{
 			arc_circle_ = test_circle;
+		}
+		else
+		{
+			points_.pop_back();
+			original_shape_length_ = previous_shape_length;
 		}
 		
 		// Only set is_shape if it goes from false to true
@@ -190,7 +200,7 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
 	
 }
 
-bool segmented_arc::does_circle_fit_points_(circle c, point p, double pd)
+bool segmented_arc::does_circle_fit_points_(const circle& c)
 {
 	// We know point 1 must fit (we used it to create the circle).  Check the other points
 	// Note:  We have not added the current point, but that's fine since it is guaranteed to fit too.
@@ -229,36 +239,25 @@ bool segmented_arc::does_circle_fit_points_(circle c, point p, double pd)
 		}
 		
 	}
-
-	// Check the midpoint of the new point and the final point
-	point point_to_test;
-	if (segment::get_closest_perpendicular_point(points_[points_.count() - 1], p, c.center, point_to_test))
-	{
-		distance_from_center = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, c.center.x, c.center.y);
-		difference_from_radius = abs(distance_from_center - c.radius);
-		// Test allowing more play for the midpoints.
-		if (utilities::greater_than(difference_from_radius, resolution_mm_))
-		{
-			return false;
-		}
-	}
 	
 	// get the current arc and compare the total length to the original length
 	arc a;
-	return try_get_arc_(c, p, pd, a );
+	return try_get_arc_(c, a);
 	
 }
 
 bool segmented_arc::try_get_arc(arc & target_arc)
 {
-	int mid_point_index = ((points_.count() - 2) / 2) + 1;
-	return arc::try_create_arc(arc_circle_, points_[0], points_[mid_point_index], points_[points_.count() - 1], original_shape_length_, resolution_mm_, target_arc);
+	//int mid_point_index = ((points_.count() - 2) / 2) + 1;
+	//return arc::try_create_arc(arc_circle_, points_[0], points_[mid_point_index], points_[points_.count() - 1], original_shape_length_, resolution_mm_, target_arc);
+	return arc::try_create_arc(arc_circle_ ,points_, original_shape_length_, resolution_mm_, target_arc);
 }
 
-bool segmented_arc::try_get_arc_(circle& c, point endpoint, double additional_distance, arc &target_arc)
+bool segmented_arc::try_get_arc_(const circle& c, arc &target_arc)
 {
-	int mid_point_index = ((points_.count() - 1) / 2) + 1;
-	return arc::try_create_arc(c, points_[0], points_[mid_point_index], endpoint, original_shape_length_ + additional_distance, resolution_mm_, target_arc);
+	//int mid_point_index = ((points_.count() - 1) / 2) + 1;
+	//return arc::try_create_arc(c, points_[0], points_[mid_point_index], endpoint, original_shape_length_ + additional_distance, resolution_mm_, target_arc);
+	return arc::try_create_arc(c, points_, original_shape_length_, resolution_mm_, target_arc);
 }
 
 std::string segmented_arc::get_shape_gcode_absolute(double e, double f)
@@ -290,12 +289,12 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
 			if (utilities::greater_than_or_equal(f, 1))
 			{
 				// Add F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
+				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
 			}
 			else
 			{
 				// No F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
+				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
 			}
 		}
 		else
@@ -305,12 +304,12 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
 			if (utilities::greater_than_or_equal(f, 1))
 			{
 				// Add F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
+				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G2 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
 			}
 			else
 			{
 				// No F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f", c.end_point.x, c.end_point.y, i, j);
+				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G2 X%.3f Y%.3f I%.3f J%.3f", c.end_point.x, c.end_point.y, i, j);
 			}
 		}
 	}
@@ -323,12 +322,12 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
 			if (utilities::greater_than_or_equal(f, 1))
 			{
 				// Add F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
+				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
 			}
 			else
 			{
 				// No F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
+				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
 			}
 		}
 		else
@@ -338,7 +337,7 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
 			if (utilities::greater_than_or_equal(f, 1))
 			{
 				// Add F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
+				snprintf(gcode_buffer_, GCODE_CHAR_BUFFER_SIZE, "G3 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
 			}
 			else
 			{

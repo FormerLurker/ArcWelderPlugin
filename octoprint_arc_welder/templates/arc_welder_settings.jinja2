@@ -55,12 +55,25 @@
                                 </div>
                             </div>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_resolution_mm"><strong>Resolution In
-                                    MM</strong></label>
+                                <label class="control-label" for="arc_welder_resolution_mm"><strong>Resolution</strong></label>
                                 <div class="controls">
-                                    <input class="input-text" required="true" type="number" min="0.001" max="0.1"
-                                           step="0.001" id="arc_welder_resolution_mm"
-                                           data-bind="value: plugin_settings().resolution_mm">
+                                    <div class="input-append">
+                                        <input class="input-text" required="true" type="number" min="0.001" max="0.1"
+                                               step="0.001" id="arc_welder_resolution_mm"
+                                               data-bind="value: plugin_settings().resolution_mm">
+                                        <span class="add-on">mm</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_max_radius_mm"><strong>Maximum Arc Radius</strong></label>
+                                <div class="controls">
+                                    <div class="input-append">
+                                        <input class="input-text" required="true" type="number" min="1" max="1000000"
+                                               step="1" id="arc_welder_max_radius_mm"
+                                               data-bind="value: plugin_settings().max_radius_mm">
+                                        <span class="add-on">mm</span>
+                                    </div>
                                 </div>
                             </div>
                             <div class="control-group">

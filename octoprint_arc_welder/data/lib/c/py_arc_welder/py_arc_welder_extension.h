@@ -30,6 +30,7 @@
 #endif
 #include <string>
 #include "py_logger.h"
+#include "arc_welder.h"
 extern "C"
 {
 #if PY_MAJOR_VERSION >= 3
@@ -44,14 +45,16 @@ struct py_gcode_arc_args {
 	py_gcode_arc_args() {
 		source_file_path = "";
 		target_file_path = "";
-		resolution_mm = 0.05;
-		g90_g91_influences_extruder = false;
+		resolution_mm = DEFAULT_RESOLUTION_MM;
+		max_radius_mm = DEFAULT_MAX_RADIUS_MM;
+		g90_g91_influences_extruder = DEFAULT_G90_G91_INFLUENCES_EXTREUDER;
 		log_level = 0;
 	}
-	py_gcode_arc_args(std::string source_file_path_, std::string target_file_path_, double resolution_mm_, bool g90_g91_influences_extruder_, int log_level_) {
+	py_gcode_arc_args(std::string source_file_path_, std::string target_file_path_, double resolution_mm_, double max_radius_mm_, bool g90_g91_influences_extruder_, int log_level_) {
 		source_file_path = source_file_path_;
 		target_file_path = target_file_path_;
 		resolution_mm = resolution_mm_;
+		max_radius_mm = max_radius_mm_;
 		g90_g91_influences_extruder = g90_g91_influences_extruder_;
 		log_level = log_level_;
 	}
@@ -59,6 +62,7 @@ struct py_gcode_arc_args {
 	std::string target_file_path;
 	double resolution_mm;
 	bool g90_g91_influences_extruder;
+	double max_radius_mm;
 	int log_level;
 };
 

@@ -37,6 +37,8 @@
 #include "unwritten_command.h"
 #include "logger.h"
 
+#define DEFAULT_G90_G91_INFLUENCES_EXTREUDER false
+
 struct arc_welder_progress {
 	arc_welder_progress() {
 		percent_complete = 0.0;
@@ -47,7 +49,10 @@ struct arc_welder_progress {
 		points_compressed = 0;
 		arcs_created = 0;
 		source_file_size = 0;
+		source_file_position = 0;
 		target_file_size = 0;
+		compression_ratio = 0;
+		compression_percent = 0;
 	}
 	double percent_complete;
 	double seconds_elapsed;
@@ -56,21 +61,23 @@ struct arc_welder_progress {
 	int lines_processed;
 	int points_compressed;
 	int arcs_created;
+	double compression_ratio;
+	double compression_percent;
+	long source_file_position;
 	long source_file_size;
 	long target_file_size;
 
-	std::string str() {
+	std::string str() const {
 		std::stringstream stream;
 		stream << std::fixed << std::setprecision(2);
-		double compression_ratio = 0;
-		if (target_file_size > 0)
-			compression_ratio = (static_cast<float>(source_file_size) / static_cast<float>(target_file_size) * 100.0f);
+			
 		stream << percent_complete << "% complete in " << seconds_elapsed << " seconds with " << seconds_remaining << " seconds remaining.";
 		stream << " Gcodes Processed: " << gcodes_processed;
 		stream << ", Current Line: " << lines_processed;
 		stream << ", Points Compressed: " << points_compressed;
 		stream << ", ArcsCreated: " << arcs_created;
-		stream << ", Compression: " << compression_ratio << "% ";
+		stream << ", Compression Ratio: " << compression_ratio;
+		stream << ", Size Reduction: " << compression_percent << "% ";
 		return stream.str();
 	}
 };
@@ -94,16 +101,17 @@ struct arc_welder_results {
 class arc_welder
 {
 public:
-	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, gcode_position_args args);
-	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, bool g90_g91_influences_extruder, int buffer_size);
-	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback);
+	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius_mm, gcode_position_args args);
+	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius_mm, bool g90_g91_influences_extruder, int buffer_size);
+	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius_mm, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback);
 	void set_logger_type(int logger_type);
 	virtual ~arc_welder();
 	arc_welder_results process();
 	double notification_period_seconds;
 protected:
-	virtual bool on_progress_(arc_welder_progress progress);
+	virtual bool on_progress_(const arc_welder_progress& progress);
 private:
+  arc_welder_progress get_progress_(long source_file_position, double start_clock);
 	void add_arcwelder_comment_to_target();
 	void reset();
 	static gcode_position_args get_args_(bool g90_g91_influences_extruder, int buffer_size);

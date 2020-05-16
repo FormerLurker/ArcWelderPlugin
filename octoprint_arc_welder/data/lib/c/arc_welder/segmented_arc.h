@@ -29,12 +29,13 @@
 #include <sstream>
 
 #define GCODE_CHAR_BUFFER_SIZE 100
+#define DEFAULT_MAX_RADIUS_MM 1000000.0 // 1km
 class segmented_arc :
 	public segmented_shape
 {
 public:
 	segmented_arc();
-	segmented_arc(int max_segments, double resolution_mm);
+	segmented_arc(int min_segments, int max_segments, double resolution_mm, double max_radius);
 	virtual ~segmented_arc();
 	virtual bool try_add_point(point p, double e_relative);
 	std::string get_shape_gcode_absolute(double e, double f);
@@ -47,14 +48,13 @@ public:
 	// static gcode buffer
 
 private:
-	char gcode_buffer_[GCODE_CHAR_BUFFER_SIZE];
+	char gcode_buffer_[GCODE_CHAR_BUFFER_SIZE + 1];
 	bool try_add_point_internal_(point p, double pd);
-	bool does_circle_fit_points_(circle c, point p, double additional_distance);
-	bool try_get_arc_(circle& c, point endpoint, double additional_distance, arc & target_arc);
+	bool does_circle_fit_points_(const circle& c);
+	bool try_get_arc_(const circle& c, arc& target_arc);
 	std::string get_shape_gcode_(bool has_e, double e, double f);
-	int min_segments_;
 	circle arc_circle_;
 	int test_count_ = 0;
-	std::ostringstream s_stream_;
+	double max_radius_mm_;
 };
 

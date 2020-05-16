@@ -101,6 +101,7 @@ class ArcWelderPlugin(
             use_octoprint_settings=True,
             g90_g91_influences_extruder=False,
             resolution_mm=0.05,
+            max_radius_mm=1000*1000,  # 1KM, pretty big :)
             overwrite_source_file=False,
             target_prefix="",
             target_postfix=".aw",
@@ -325,6 +326,13 @@ class ArcWelderPlugin(
         return resolution_mm
 
     @property
+    def _max_radius_mm(self):
+        max_radius_mm = self._settings.get_float(["max_radius_mm"])
+        if max_radius_mm is None:
+            max_radius_mm = self.settings_default["max_radius_mm"]
+        return max_radius_mm
+
+    @property
     def _overwrite_source_file(self):
         overwrite_source_file = self._settings.get_boolean(["overwrite_source_file"])
         if overwrite_source_file is None:
@@ -376,6 +384,7 @@ class ArcWelderPlugin(
         return {
             "path": source_path_on_disk,
             "resolution_mm": self._resolution_mm,
+            "max_radius_mm": self._max_radius_mm,
             "g90_g91_influences_extruder": self._g90_g91_influences_extruder,
             "log_level": self._gcode_conversion_log_level
         }
@@ -459,12 +468,16 @@ class ArcWelderPlugin(
                 "points_compressed": progress["points_compressed"],
                 "arcs_created": progress["arcs_created"],
                 "source_file_size": progress["source_file_size"],
+                "source_file_position": progress["source_file_position"],
                 "target_file_size": progress["target_file_size"],
+                "compression_ratio": progress["compression_ratio"],
+                "compression_percent": progress["compression_percent"],
                 "source_filename": self.preprocessing_job_source_file_path,
                 "target_filename": self.preprocessing_job_target_file_name,
                 "preprocessing_job_guid": self.preprocessing_job_guid
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)
+            time.sleep(0.01)
         # return true if processing should continue.  This is set by the cancelled blueprint plugin.
         return not self.is_cancelled
 
@@ -645,21 +658,6 @@ class ArcWelderPlugin(
         # moved most of the heavy lifting to get_latest, since I need to do a custom version compare.
         # AND I want to use the most recent software update release channel settings.
         return self.get_release_info()
-
-    # def get_latest(self, target, *args, **kwargs):
-    #     # Custom software update 'get_latest' function.  Builds the check data based on the
-    #     # current software update plugin settings and then calls the github_release version checker
-    #     # that implements a custom compare function.
-    #     online = False
-    #     if "online" in kwargs:
-    #         online = kwargs["online"]
-    #
-    #     return github_release.get_latest(
-    #         target,
-    #         self.get_release_info()["ard_welder"],
-    #         custom_compare=arc_welder_setuptools.custom_version_compare,
-    #         online=online
-    #     )
 
 
 __plugin_pythoncompat__ = ">=2.7,<4"

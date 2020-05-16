@@ -442,12 +442,8 @@ $(function () {
                     var points_compressed = progress.points_compressed;
                     var source_file_size = progress.source_file_size;
                     var target_file_size = progress.target_file_size;
-                    var compression_ratio = 0;
-                    if (target_file_size > 0)
-                        compression_ratio = source_file_size / target_file_size;
-                    var space_saved_percent = 0;
-                    if (source_file_size > 0)
-                        space_saved_percent = (1.0 - (target_file_size / source_file_size)) * 100.0;
+                    var compression_ratio = progress.compression_ratio;
+                    var compression_percent = progress.compression_percent;
                     var space_saved_string = ArcWelder.toFileSizeString(source_file_size - target_file_size, 1);
                     var source_size_string = ArcWelder.toFileSizeString(source_file_size, 1);
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
@@ -464,7 +460,7 @@ $(function () {
                     var progress_text =
                             file_name_html + "<div><strong>Time:</strong> " + ArcWelder.ToTimer(seconds_elapsed) + "</div><div class='row-fluid'><span class='span5'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                             + "<span class='span7'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>"
-                            + "<div class='row-fluid'><div class='span5'><strong>Compression</strong><br/> Ratio:" + compression_ratio.toFixed(1) + " - " + space_saved_percent.toFixed(1) + "%</div><div class='span7'><strong>Space</strong><br/>"+ source_size_string + " - " + space_saved_string + " = " + target_size_string + "</div></div>";
+                            + "<div class='row-fluid'><div class='span5'><strong>Compression</strong><br/> Ratio: " + compression_ratio.toFixed(1) + " - " + compression_percent.toFixed(1) + "%</div><div class='span7'><strong>Space</strong><br/>"+ source_size_string + " - " + space_saved_string + " = " + target_size_string + "</div></div>";
                         var options = {
                             title: "Arc Welder Preprocessing Complete",
                             text: progress_text,
@@ -494,21 +490,19 @@ $(function () {
                     break;
                 case "preprocessing-progress":
                     // TODO: CHANGE THIS TO A PROGRESS INDICATOR
-                    var percent_finished = data.percent_complete;
-                    var seconds_elapsed = data.seconds_elapsed;
-                    var seconds_remaining = data.seconds_remaining;
-                    var arcs_created = data.arcs_created;
-                    var points_compressed = data.points_compressed;
-                    var source_file_size = data.source_file_size;
-                    var target_file_size = data.target_file_size;
-                    var compression_ratio = 0;
-                    if (target_file_size > 0)
-                        compression_ratio = source_file_size / target_file_size;
-                    var space_saved_percent = 0;
-                    if (source_file_size > 0)
-                        space_saved_percent = (1.0 - (target_file_size / source_file_size)) * 100.0;
-                    var space_saved_string = ArcWelder.toFileSizeString(source_file_size - target_file_size, 1);
-                    var source_size_string = ArcWelder.toFileSizeString(source_file_size, 1);
+                    var progress = data;
+                    var seconds_elapsed = progress.seconds_elapsed;
+                    var seconds_remaining = progress.seconds_remaining;
+                    var percent_complete = progress.percent_complete;
+                    var arcs_created = progress.arcs_created;
+                    var points_compressed = progress.points_compressed;
+                    var source_file_size = progress.source_file_size;
+                    var target_file_size = progress.target_file_size;
+                    var source_file_position = progress.source_file_position;
+                    var compression_ratio = progress.compression_ratio;
+                    var compression_percent = progress.compression_percent;
+                    var space_saved_string = ArcWelder.toFileSizeString(source_file_position - target_file_size, 1);
+                    var source_position_string = ArcWelder.toFileSizeString(source_file_position, 1);
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
 
                     if (self.pre_processing_progress == null){
@@ -521,14 +515,14 @@ $(function () {
                         + "<span class='span7'><strong>Elapsed:</strong>&nbsp;" + ArcWelder.ToTimer(seconds_elapsed) + "<br/><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span>"
                         + "<div/>"
                         + "<div class='row-fluid'>"
-                        + "<div class='span5'><strong>Compression</strong><br/> Ratio:" + compression_ratio.toFixed(1) + " - " + space_saved_percent.toFixed(1) + "%</div>"
-                        + "<div class='span7'><strong>Space</strong><br/>"+ source_size_string + " - " + space_saved_string + " = " + target_size_string + "</div>"
+                        + "<div class='span5'><strong>Compression</strong><br/> Ratio: " + compression_ratio.toFixed(1) + " - " + compression_percent.toFixed(1) + "%</div>"
+                        + "<div class='span7'><strong>Space</strong><br/>"+ source_position_string + " - " + space_saved_string + " = " + target_size_string + "</div>"
                         + "</div>";
                         //+ "  Line:" + lines_processed.toString()
                         //+ "<div class='row-fluid'><span class='span6'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                         //+ "<span class='span6'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span><div/>";
                     self.pre_processing_progress = self.pre_processing_progress.update(
-                        percent_finished, progress_text
+                        percent_complete, progress_text
                     );
                     break;
                 default:

@@ -25,7 +25,7 @@
 
 PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 {
-	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i}",
+	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f}",
 		u8"percent_complete",
 		progress.percent_complete,
 		u8"seconds_elapsed",
@@ -40,19 +40,25 @@ PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 		progress.points_compressed,
 		u8"arcs_created",
 		progress.arcs_created,
+		u8"source_file_position",
+		progress.source_file_position,
 		u8"source_file_size",
 		progress.source_file_size,
 		u8"target_file_size",
-		progress.target_file_size
+		progress.target_file_size,
+		u8"compression_ratio",
+		progress.compression_ratio,
+		u8"compression_percent",
+		progress.compression_percent
 	);
 	return py_progress;
 }
 
-bool py_arc_welder::on_progress_(arc_welder_progress progress)
+bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 {
 	PyObject* py_dict = py_arc_welder::build_py_progress(progress);
 	if (py_dict == NULL)
-		return NULL;
+		return false;
 	PyObject* func_args = Py_BuildValue("(O)", py_dict);
 	if (func_args == NULL)
 	{

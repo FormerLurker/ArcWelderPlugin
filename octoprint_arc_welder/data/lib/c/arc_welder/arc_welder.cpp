@@ -32,7 +32,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, gcode_position_args args) : current_arc_(gcode_position_args_.position_buffer_size - 5, resolution_mm)
+arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, gcode_position_args args) : current_arc_(DEFAULT_MIN_SEGMENTS, gcode_position_args_.position_buffer_size - 5, resolution_mm, max_radius)
 {
 	p_logger_ = log;
 	debug_logging_enabled_ = false;
@@ -70,14 +70,14 @@ arc_welder::arc_welder(std::string source_path, std::string target_path, logger 
 	p_source_position_ = new gcode_position(gcode_position_args_); 
 }
 
-arc_welder::arc_welder(std::string source_path, std::string target_path, logger* log, double resolution_mm, bool g90_g91_influences_extruder, int buffer_size)
-	: arc_welder(source_path, target_path, log, resolution_mm, arc_welder::get_args_(g90_g91_influences_extruder, buffer_size))
+arc_welder::arc_welder(std::string source_path, std::string target_path, logger* log, double resolution_mm, double max_radius, bool g90_g91_influences_extruder, int buffer_size)
+	: arc_welder(source_path, target_path, log, resolution_mm, max_radius, arc_welder::get_args_(g90_g91_influences_extruder, buffer_size))
 {
 	
 }
 
-arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback)
-	: arc_welder(source_path, target_path, log, resolution_mm, arc_welder::get_args_(g90_g91_influences_extruder, buffer_size))
+arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback)
+	: arc_welder(source_path, target_path, log, resolution_mm, max_radius, arc_welder::get_args_(g90_g91_influences_extruder, buffer_size))
 {
 	progress_callback_ = callback;
 }
@@ -127,6 +127,7 @@ void arc_welder::set_logger_type(int logger_type)
 
 void arc_welder::reset()
 {
+	p_logger_->log(logger_type_, DEBUG, "Resetting all tracking variables.");
 	lines_processed_ = 0;
 	gcodes_processed_ = 0;
 	last_gcode_line_written_ = 0;
@@ -160,11 +161,12 @@ double arc_welder::get_time_elapsed(double start_clock, double end_clock)
 arc_welder_results arc_welder::process()
 {
 	arc_welder_results results;
-
+	p_logger_->log(logger_type_, DEBUG, "Configuring logging settings.");
 	verbose_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, VERBOSE);
 	debug_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, DEBUG);
 	info_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, INFO);
 	error_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, ERROR);
+
 	// reset tracking variables
 	reset();
 	// local variable to hold the progress update return.  If it's false, we will exit.
@@ -172,131 +174,157 @@ arc_welder_results arc_welder::process()
 	
 	// Create a stringstream we can use for messaging.
 	std::stringstream stream;
-	
+	p_logger_->log(logger_type_, DEBUG, "Configuring progress updates.");
 	int read_lines_before_clock_check = 5000;
 	double next_update_time = get_next_update_time();
 	const clock_t start_clock = clock();
+	p_logger_->log(logger_type_, DEBUG, "Getting source file size.");
 	file_size_ = get_file_size(source_path_);
+	stream.clear();
+	stream.str("");
+	stream << "Source file size: " << file_size_;
+	p_logger_->log(logger_type_, DEBUG, stream.str());
 	// Create the source file read stream and target write stream
 	std::ifstream gcodeFile;
-	gcodeFile.open(source_path_.c_str());
-	output_file_.open(target_path_.c_str());
+	p_logger_->log(logger_type_, DEBUG, "Opening the source file for reading.");
+	gcodeFile.open(source_path_.c_str(), std::ifstream::in);
+	if (!gcodeFile.is_open())
+	{
+		results.success = false;
+		results.message = "Unable to open the source file.";
+		p_logger_->log_exception(logger_type_, results.message);
+		return results;
+	}
+	p_logger_->log(logger_type_, DEBUG, "Source file opened successfully.");
+
+	p_logger_->log(logger_type_, DEBUG, "Opening the target file for writing.");
+	output_file_.open(target_path_.c_str(), std::ifstream::out);
+	if (!output_file_.is_open())
+	{
+		results.success = false;
+		results.message = "Unable to open the target file.";
+		p_logger_->log_exception(logger_type_, results.message);
+		gcodeFile.close();
+		return results;
+	}
+	p_logger_->log(logger_type_, DEBUG, "Target file opened successfully.");
 	std::string line;
 	int lines_with_no_commands = 0;
-	gcodeFile.sync_with_stdio(false);
-	output_file_.sync_with_stdio(false);
-	if (gcodeFile.is_open())
+	//gcodeFile.sync_with_stdio(false);
+	//output_file_.sync_with_stdio(false);
+	
+	add_arcwelder_comment_to_target();
+	
+	parsed_command cmd;
+	// Communicate every second
+	p_logger_->log(logger_type_, DEBUG, "Processing source file.");
+	while (std::getline(gcodeFile, line) && continue_processing)
 	{
-		if (output_file_.is_open())
+		lines_processed_++;
+
+		cmd.clear();
+		if (verbose_logging_enabled_)
 		{
-			add_arcwelder_comment_to_target();
-			if (info_logging_enabled_)
-			{
-				stream.clear();
-				stream.str("");
-				stream << "Opened file for reading.  File Size: " << file_size_;
-				p_logger_->log(logger_type_, DEBUG, stream.str());
-			}
-			parsed_command cmd;
-			// Communicate every second
-			while (std::getline(gcodeFile, line) && continue_processing)
-			{
-				lines_processed_++;
-
-				cmd.clear();
-				parser_.try_parse_gcode(line.c_str(), cmd);
-				bool has_gcode = false;
-				if (cmd.gcode.length() > 0)
-				{
-					has_gcode = true;
-					gcodes_processed_++;
-				}
-				else
-				{
-					lines_with_no_commands++;
-				}
-
-				// Always process the command through the printer, even if no command is found
-				// This is important so that comments can be analyzed
-				//std::cout << "stabilization::process_file - updating position...";
-				process_gcode(cmd, false);
-
-				// Only continue to process if we've found a command.
-				if (has_gcode)
-				{
-					if ((lines_processed_ % read_lines_before_clock_check) == 0 && next_update_time < clock())
-					{
-						arc_welder_progress progress;
-						progress.gcodes_processed = gcodes_processed_;
-						progress.lines_processed = lines_processed_;
-						progress.points_compressed = points_compressed_;
-						progress.arcs_created = arcs_created_;
-						progress.target_file_size = static_cast<long>(output_file_.tellp());
-						progress.source_file_size = static_cast<long>(gcodeFile.tellg());
-						// ToDo: tellg does not do what I think it does, but why?
-						long bytesRemaining = file_size_ - progress.source_file_size;
-						progress.percent_complete = static_cast<double>(progress.source_file_size) / static_cast<double>(file_size_) * 100.0;
-						progress.seconds_elapsed = get_time_elapsed(start_clock, clock());
-						double bytesPerSecond = static_cast<double>(progress.source_file_size) / progress.seconds_elapsed;
-						progress.seconds_remaining = bytesRemaining / bytesPerSecond;
-						continue_processing = on_progress_(progress);
-						next_update_time = get_next_update_time();
-					}
-				}
-			}
-
-			if (current_arc_.is_shape() && waiting_for_arc_)
-			{
-				process_gcode(cmd, true);
-			}
-			write_unwritten_gcodes_to_file();
-
-			output_file_.close();
-			results.success = continue_processing;
-			results.cancelled = !continue_processing;
-			results.progress.target_file_size = get_file_size(target_path_);
-			
+			stream.clear();
+			stream.str("");
+			stream << "Parsing: " << line;
+			p_logger_->log(logger_type_, VERBOSE, stream.str());
+		}
+		parser_.try_parse_gcode(line.c_str(), cmd);
+		bool has_gcode = false;
+		if (cmd.gcode.length() > 0)
+		{
+			has_gcode = true;
+			gcodes_processed_++;
 		}
 		else
 		{
-			results.success = false;
-			results.message = "Unable to open the target file for writing.";
-			p_logger_->log_exception(logger_type_, results.message);
+			lines_with_no_commands++;
 		}
-		gcodeFile.close();
-	}
-	else
-	{
-		results.success = false;
-		results.message = "Unable to open the input file for processing.";
-		p_logger_->log_exception(logger_type_, results.message);
+
+		// Always process the command through the printer, even if no command is found
+		// This is important so that comments can be analyzed
+		//std::cout << "stabilization::process_file - updating position...";
+		process_gcode(cmd, false);
+
+		// Only continue to process if we've found a command and either a progress_callback_ is supplied, or debug loggin is enabled.
+		if (has_gcode && (progress_callback_ != NULL || info_logging_enabled_))
+		{
+			if ((lines_processed_ % read_lines_before_clock_check) == 0 && next_update_time < clock())
+			{
+				if (verbose_logging_enabled_)
+				{
+					p_logger_->log(logger_type_, VERBOSE, "Sending progress update.");
+				}
+				continue_processing = on_progress_(get_progress_(static_cast<long>(gcodeFile.tellg()), static_cast<double>(start_clock)));
+				next_update_time = get_next_update_time();
+			}
+		}
 	}
 
+	if (current_arc_.is_shape() && waiting_for_arc_)
+	{
+		p_logger_->log(logger_type_, DEBUG, "The target file opened successfully.");
+		process_gcode(cmd, true);
+	}
+	p_logger_->log(logger_type_, DEBUG, "Writing all unwritten gcodes to the target file.");
+	write_unwritten_gcodes_to_file();
+
+	p_logger_->log(logger_type_, DEBUG, "Processing complete, closing source and target file.");
+	arc_welder_progress final_progress = get_progress_(static_cast<long>(file_size_), static_cast<double>(start_clock));
+	if (progress_callback_ != NULL || info_logging_enabled_)
+	{
+		// Sending final progress update message
+		on_progress_(final_progress);
+	}
 	
+	output_file_.close();
+	gcodeFile.close();
 	const clock_t end_clock = clock();
-	const double total_seconds = static_cast<double>(end_clock - start_clock) / CLOCKS_PER_SEC;
-	results.progress.seconds_elapsed = total_seconds;
-	results.progress.gcodes_processed = gcodes_processed_;
-	results.progress.lines_processed = lines_processed_;
-	results.progress.points_compressed = points_compressed_;
-	results.progress.arcs_created = arcs_created_;
-	results.progress.source_file_size = file_size_;
+	
+	results.success = continue_processing;
+	results.cancelled = !continue_processing;
+	results.progress = final_progress;
 	return results;
 }
 
-bool arc_welder::on_progress_(arc_welder_progress progress)
+bool arc_welder::on_progress_(const arc_welder_progress& progress)
 {
 	if (progress_callback_ != NULL)
 	{
 		return progress_callback_(progress);
 	}
-	std::stringstream stream;
-	if (debug_logging_enabled_)
+	else if (info_logging_enabled_)
 	{
-		p_logger_->log(logger_type_, DEBUG, progress.str());
+		p_logger_->log(logger_type_, INFO, progress.str());
 	}
 
 	return true;
+}
+
+arc_welder_progress arc_welder::get_progress_(long source_file_position, double start_clock)
+{
+	arc_welder_progress progress;
+	progress.gcodes_processed = gcodes_processed_;
+	progress.lines_processed = lines_processed_;
+	progress.points_compressed = points_compressed_;
+	progress.arcs_created = arcs_created_;
+	progress.source_file_position = source_file_position;
+	progress.target_file_size = static_cast<long>(output_file_.tellp());
+	progress.source_file_size = file_size_;
+	long bytesRemaining = file_size_ - static_cast<long>(source_file_position);
+	progress.percent_complete = static_cast<double>(source_file_position) / static_cast<double>(file_size_) * 100.0;
+	progress.seconds_elapsed = get_time_elapsed(start_clock, clock());
+	double bytesPerSecond = static_cast<double>(source_file_position) / progress.seconds_elapsed;
+	progress.seconds_remaining = bytesRemaining / bytesPerSecond;
+
+	if (source_file_position > 0) {
+		progress.compression_ratio = (static_cast<float>(source_file_position) / static_cast<float>(progress.target_file_size));
+		progress.compression_percent = (1.0 - (static_cast<float>(progress.target_file_size) / static_cast<float>(source_file_position))) * 100.0f;
+	}
+
+	return progress;
+	
 }
 
 int arc_welder::process_gcode(parsed_command cmd, bool is_end)
@@ -666,6 +694,7 @@ std::string arc_welder::get_arc_gcode_absolute(double e, double f, const std::st
 
 void arc_welder::add_arcwelder_comment_to_target()
 {
+	p_logger_->log(logger_type_, DEBUG, "Adding ArcWelder comment to the target file.");
 	std::stringstream stream;
 	stream << std::fixed << std::setprecision(2);
 	stream <<	"; Postprocessed by [ArcWelder](https://github.com/FormerLurker/ArcWelderLib)\n";

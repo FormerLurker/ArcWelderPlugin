@@ -116,7 +116,7 @@ compiler_opts = {
         "define_macros": [],
     },
     MSVCCompiler.compiler_type: {
-        "extra_compile_args": ["/O2", "/GL", "/analyze", "/Gy", "/MD", "/EHsc"],
+        "extra_compile_args": ["/O2", "/GL", "/Gy", "/MD", "/EHsc"],
         "extra_link_args": [],
         "define_macros": [],
     },
