@@ -235,7 +235,8 @@ bool segmented_arc::does_circle_fit_points_(const circle& c)
 	}
 	
 	// get the current arc and compare the total length to the original length
-	return true;
+	arc a;
+	return try_get_arc_(c, a);
 	
 }
 
