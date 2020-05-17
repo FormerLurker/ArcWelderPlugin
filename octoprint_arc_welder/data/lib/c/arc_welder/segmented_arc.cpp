@@ -28,7 +28,6 @@
 #include "segmented_shape.h"
 #include <iostream>
 #include <iomanip>
-
 #include <stdio.h>
 #include <cmath>
 
