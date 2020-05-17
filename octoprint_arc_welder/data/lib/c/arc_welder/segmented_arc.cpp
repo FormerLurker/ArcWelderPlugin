@@ -224,7 +224,7 @@ bool segmented_arc::does_circle_fit_points_(circle& c) const
 		// Make sure the length from the center of our circle to the test point is 
 		// at or below our max distance.
 		distance_from_center = utilities::get_cartesian_distance(points_[index].x, points_[index].y, c.center.x, c.center.y);
-		double difference_from_radius = abs(distance_from_center - c.radius);
+		double difference_from_radius = std::abs(distance_from_center - c.radius);
 		if (utilities::greater_than(difference_from_radius, resolution_mm_))
 		{
 			//std::cout << " failed - end points do not lie on circle.\n";
@@ -239,7 +239,7 @@ bool segmented_arc::does_circle_fit_points_(circle& c) const
 		if (segment::get_closest_perpendicular_point(points_[index], points_[index + 1], c.center, point_to_test))
 		{
 			distance_from_center = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, c.center.x, c.center.y);
-			difference_from_radius = abs(distance_from_center - c.radius);
+			difference_from_radius = std::abs(distance_from_center - c.radius);
 			// Test allowing more play for the midpoints.
 			if (utilities::greater_than(difference_from_radius, resolution_mm_))
 			{

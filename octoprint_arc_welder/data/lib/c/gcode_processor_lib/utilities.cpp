@@ -130,7 +130,7 @@ char * utilities::to_string(double value, unsigned short precision, char * str)
 	int char_count = 0, int_count = 0;
 	bool is_negative = false;
 	double integer_part, fractional_part;
-	fractional_part = fabs(modf(value, &integer_part)); //Separate integer/fractional parts
+	fractional_part = std::abs(std::modf(value, &integer_part)); //Separate integer/fractional parts
 	if (value < 0)
 	{
 		str[char_count++] = '-';
@@ -146,8 +146,8 @@ char * utilities::to_string(double value, unsigned short precision, char * str)
 	{
 		while (integer_part > 0) //Convert integer part, if any
 		{
-			reversed_int[int_count++] = '0' + (int)fmod(integer_part, 10);
-			integer_part = floor(integer_part / 10);
+			reversed_int[int_count++] = '0' + (int)std::fmod(integer_part, 10);
+			integer_part = std::floor(integer_part / 10);
 		}
 	}
 	int start = is_negative ? 1 : 0;
@@ -163,7 +163,7 @@ char * utilities::to_string(double value, unsigned short precision, char * str)
 		while (fractional_part > 0 && precision-- > 0) //Convert fractional part, if any
 		{
 			fractional_part *= 10;
-			fractional_part = modf(fractional_part, &integer_part);
+			fractional_part = std::modf(fractional_part, &integer_part);
 			str[char_count++] = '0' + (int)integer_part;
 		}
 	}
