@@ -185,12 +185,7 @@ extern "C"
 			return NULL;
 		}
 		p_py_logger->set_log_level_by_value(args.log_level);
-		std::stringstream stream;
-		stream << "py_gcode_arc_converter.ConvertFile - Parameters received: source_file_path: '" << 
-			args.source_file_path << "', target_file_path:'" << args.target_file_path << "' resolution_mm:" << 
-			args.resolution_mm << "' max_radius_mm:" <<
-			args.max_radius_mm << ", g90_91_influences_extruder: " << (args.g90_g91_influences_extruder ? "True" : "False") << "\n";
-		p_py_logger->log(GCODE_CONVERSION, INFO, stream.str());
+		
 
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);

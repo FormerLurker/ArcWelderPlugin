@@ -371,6 +371,12 @@ gcode_position::~gcode_position()
 	delete_z_lift_heights_();
 }
 
+bool gcode_position::get_g90_91_influences_extruder()
+{
+	return g90_influences_extruder_;
+}
+
+
 void gcode_position::set_num_extruders(int num_extruders)
 {
 	delete_retraction_lengths_();

@@ -160,20 +160,27 @@ double arc_welder::get_time_elapsed(double start_clock, double end_clock)
 
 arc_welder_results arc_welder::process()
 {
-	arc_welder_results results;
+arc_welder_results results;
 	p_logger_->log(logger_type_, DEBUG, "Configuring logging settings.");
 	verbose_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, VERBOSE);
 	debug_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, DEBUG);
 	info_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, INFO);
 	error_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, ERROR);
 
+	std::stringstream stream;
+	stream << std::fixed << std::setprecision(5);
+	stream << "py_gcode_arc_converter.ConvertFile - Parameters received: source_file_path: '" <<
+		source_path_ << "', target_file_path:'" << target_path_ << "', resolution_mm:" <<
+		resolution_mm_ << "mm (+-" << current_arc_.get_resolution_mm() << "mm), max_radius_mm:" << current_arc_.get_max_radius()
+		 << "mm, g90_91_influences_extruder: " << (p_source_position_->get_g90_91_influences_extruder() ? "True" : "False") << "\n";
+	p_logger_->log(logger_type_, INFO, stream.str());
+
+
 	// reset tracking variables
 	reset();
 	// local variable to hold the progress update return.  If it's false, we will exit.
 	bool continue_processing = true;
 	
-	// Create a stringstream we can use for messaging.
-	std::stringstream stream;
 	p_logger_->log(logger_type_, DEBUG, "Configuring progress updates.");
 	int read_lines_before_clock_check = 5000;
 	double next_update_time = get_next_update_time();

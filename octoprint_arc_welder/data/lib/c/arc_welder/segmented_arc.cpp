@@ -64,7 +64,10 @@ point segmented_arc::pop_back(double e_relative)
 		set_is_shape(false);
 	}
 }
-
+double segmented_arc::get_max_radius() const
+{
+	return max_radius_mm_;
+}
 bool segmented_arc::is_shape() const
 {
 /*
@@ -124,6 +127,8 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 				original_shape_length_ -= distance;
 			}
 		}
+		
+
 	}
 	else
 	{

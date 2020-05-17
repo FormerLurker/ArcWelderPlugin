@@ -146,6 +146,7 @@ public:
 	position * get_current_position_ptr();
 	position * get_previous_position_ptr();
 	gcode_comment_processor* get_gcode_comment_processor();
+	bool get_g90_91_influences_extruder();
 private:
 	gcode_position(const gcode_position &source);
 	int position_buffer_size_;

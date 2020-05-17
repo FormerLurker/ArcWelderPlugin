@@ -45,6 +45,7 @@ public:
 	point pop_front(double e_relative);
 	point pop_back(double e_relative);
 	bool try_get_arc(arc & target_arc);
+	double get_max_radius() const;
 	// static gcode buffer
 
 private:
