@@ -123,6 +123,54 @@ std::string utilities::to_string(double value)
 	return os.str();
 }
 
+char * utilities::to_string(double value, unsigned short precision, char * str)
+{
+	char reversed_int[20];
+	
+	int char_count = 0, int_count = 0;
+	bool is_negative = false;
+	double integer_part, fractional_part;
+	fractional_part = fabs(modf(value, &integer_part)); //Separate integer/fractional parts
+	if (value < 0)
+	{
+		str[char_count++] = '-';
+		integer_part *= -1;
+		is_negative = true;
+	}
+
+	if (integer_part == 0)
+	{
+		str[char_count++] = '0';
+	}
+	else
+	{
+		while (integer_part > 0) //Convert integer part, if any
+		{
+			reversed_int[int_count++] = '0' + (int)fmod(integer_part, 10);
+			integer_part = floor(integer_part / 10);
+		}
+	}
+	int start = is_negative ? 1 : 0;
+	int end = char_count - start;
+	for (int i = 0; i < int_count; i++)
+	{
+		str[char_count++] = reversed_int[int_count - i - 1];
+	}
+	if (precision > 0)
+	{
+		str[char_count++] = '.'; //Decimal point
+
+		while (fractional_part > 0 && precision-- > 0) //Convert fractional part, if any
+		{
+			fractional_part *= 10;
+			fractional_part = modf(fractional_part, &integer_part);
+			str[char_count++] = '0' + (int)integer_part;
+		}
+	}
+	str[char_count] = 0; //String terminator
+	return str;
+}
+
 std::string utilities::ltrim(const std::string& s)
 {
 	size_t start = s.find_first_not_of(WHITESPACE_);

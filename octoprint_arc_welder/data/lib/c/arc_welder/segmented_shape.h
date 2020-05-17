@@ -163,7 +163,6 @@ struct arc : circle
 	double polar_end_theta;
 	point start_point;
 	point end_point;
-	bool is_point_in_arc_slice(const point& p);
 	static bool try_create_arc(const circle& c, const point& start_point, const point& mid_point, const point& end_point, double approximate_length, double resolution, arc& target_arc);
 	static bool try_create_arc(const circle& c, const array_list<point>& points, double approximate_length, double resolution, arc& target_arc);
 };
@@ -186,7 +185,7 @@ public:
 	double get_shape_length();
 	double get_shape_e_relative();
 	void set_resolution_mm(double resolution_mm);
-	virtual bool is_shape();
+	virtual bool is_shape() const;
 	// public virtual functions
 	virtual void clear();
 	virtual point pop_front();

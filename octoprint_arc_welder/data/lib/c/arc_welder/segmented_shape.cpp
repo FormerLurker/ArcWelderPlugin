@@ -175,12 +175,6 @@ bool circle::try_create_circle(point p1, point p2, point p3, double max_radius, 
 
 	if (utilities::is_zero(a, CIRCLE_GENERATION_A_ZERO_TOLERANCE))
 	{
-#if _DEBUG
-		if (!utilities::is_zero(a, 0.000001))
-		{
-			std::cout << "This is an interesting point.  Colinear";
-		}
-#endif
 		return false;
 	}
 
@@ -381,9 +375,9 @@ void segmented_shape::clear()
 	e_relative_ = 0;
 	original_shape_length_ = 0;
 }
-bool segmented_shape::is_shape()
+bool segmented_shape::is_shape() const
 {
-	// return the pre-calculated value.  This should be updated by the plugin;
+	// return the pre-calculated value.  This should be updated by the plugin
 	return is_shape_;
 }
 void segmented_shape::set_is_shape(bool value)

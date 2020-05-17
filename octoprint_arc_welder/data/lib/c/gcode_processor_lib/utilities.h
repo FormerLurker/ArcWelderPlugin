@@ -44,6 +44,7 @@ public:
 	static double get_cartesian_distance(double x1, double y1, double x2, double y2);
 	static double get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2);
 	static std::string to_string(double value);
+	static char* to_string(double value, unsigned short precision, char* str);
 	static std::string ltrim(const std::string& s);
 	static std::string rtrim(const std::string& s);
 	static std::string trim(const std::string& s);

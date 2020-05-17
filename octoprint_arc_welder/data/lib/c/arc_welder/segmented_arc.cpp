@@ -28,7 +28,7 @@
 #include "segmented_shape.h"
 #include <iostream>
 #include <iomanip>
-#include <sstream>
+
 #include <stdio.h>
 #include <cmath>
 
@@ -38,8 +38,6 @@ segmented_arc::segmented_arc() : segmented_arc(DEFAULT_MIN_SEGMENTS, DEFAULT_MAX
 
 segmented_arc::segmented_arc(int min_segments, int max_segments, double resolution_mm, double max_radius_mm) : segmented_shape(min_segments, max_segments, resolution_mm)
 {
-	gcode_buffer_[0] = '\0';
-	
 	if (max_radius_mm > DEFAULT_MAX_RADIUS_MM) max_radius_mm_ = DEFAULT_MAX_RADIUS_MM;
 	else max_radius_mm_ = max_radius_mm;
 }
@@ -67,14 +65,14 @@ point segmented_arc::pop_back(double e_relative)
 	}
 }
 
-bool segmented_arc::is_shape()
+bool segmented_arc::is_shape() const
 {
+/*
 	if (is_shape_)
 	{
 		arc a;
-		bool is_arc = try_get_arc(a);
-		return is_arc;
-	}
+		return arc::try_create_arc(arc_circle_, points_, original_shape_length_, resolution_mm_, a);;
+	} */
 	return is_shape_;
 }
 
@@ -108,18 +106,24 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 			//std::cout << " failed - no distance change.\n";
 			return false;
 		}
-		/*else if (utilities::greater_than(distance, max_segment_length_))
-		{
-			// we can't make an arc if the distance between points
-			// is greater than the resolution.
-			return false;
-		}*/  // Test - see what happens without a max segment length.
+		
 	}
+	
 	if (points_.count() < get_min_segments() - 1)
 	{
 		point_added = true;
 		points_.push_back(p);
 		original_shape_length_ += distance;
+		if (points_.count() == get_min_segments())
+		{
+			arc a;
+			if (!arc::try_create_arc(arc_circle_, points_, original_shape_length_, resolution_mm_, a))
+			{
+				point_added = false;
+				points_.pop_back();
+				original_shape_length_ -= distance;
+			}
+		}
 	}
 	else
 	{
@@ -200,7 +204,7 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
 	
 }
 
-bool segmented_arc::does_circle_fit_points_(const circle& c)
+bool segmented_arc::does_circle_fit_points_(circle& c) const
 {
 	// We know point 1 must fit (we used it to create the circle).  Check the other points
 	// Note:  We have not added the current point, but that's fine since it is guaranteed to fit too.
@@ -242,11 +246,11 @@ bool segmented_arc::does_circle_fit_points_(const circle& c)
 	
 	// get the current arc and compare the total length to the original length
 	arc a;
-	return try_get_arc_(c, a);
+	return arc::try_create_arc(c, points_, original_shape_length_, resolution_mm_, a);
 	
 }
 
-bool segmented_arc::try_get_arc(arc & target_arc)
+bool segmented_arc::try_get_arc(arc & target_arc)																								 
 {
 	//int mid_point_index = ((points_.count() - 2) / 2) + 1;
 	//return arc::try_create_arc(arc_circle_, points_[0], points_[mid_point_index], points_[points_.count() - 1], original_shape_length_, resolution_mm_, target_arc);
@@ -271,82 +275,57 @@ std::string segmented_arc::get_shape_gcode_relative(double f)
 	return get_shape_gcode_(has_e, e_relative_, f);
 }
 
-std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f)
+std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) const
 {
+	
+	char buf[20];
+	std::string gcode;
 	arc c;
-	try_get_arc(c);
-
+	arc::try_create_arc(arc_circle_, points_, original_shape_length_, resolution_mm_, c);
+	
 	double i = c.center.x - c.start_point.x;
 	double j = c.center.y - c.start_point.y;
 	// Here is where the performance part kicks in (these are expensive calls) that makes things a bit ugly.
 	// there are a few cases we need to take into consideration before choosing our sprintf string
+	// create the XYZ portion
+	
 	if (utilities::less_than(c.angle_radians, 0))
 	{
-		// G2
-		if (has_e != 0)
-		{
-			// Add E param
-			if (utilities::greater_than_or_equal(f, 1))
-			{
-				// Add F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
-			}
-			else
-			{
-				// No F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
-			}
-		}
-		else
-		{
-			// No E param
-			// Add E param
-			if (utilities::greater_than_or_equal(f, 1))
-			{
-				// Add F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
-			}
-			else
-			{
-				// No F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G2 X%.3f Y%.3f I%.3f J%.3f", c.end_point.x, c.end_point.y, i, j);
-			}
-		}
+		gcode = "G2";
 	}
 	else
 	{
-		// G3
-		if (has_e != 0)
-		{
-			// Add E param
-			if (utilities::greater_than_or_equal(f, 1))
-			{
-				// Add F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f F%.0f", c.end_point.x, c.end_point.y, i, j, e, f);
-			}
-			else
-			{
-				// No F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f E%.5f", c.end_point.x, c.end_point.y, i, j, e);
-			}
-		}
-		else
-		{
-			// No E param
-			// Add E param
-			if (utilities::greater_than_or_equal(f, 1))
-			{
-				// Add F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f F%.0f", c.end_point.x, c.end_point.y, i, j, f);
-			}
-			else
-			{
-				// No F param
-				snprintf(gcode_buffer_, sizeof(gcode_buffer_), "G3 X%.3f Y%.3f I%.3f J%.3f", c.end_point.x, c.end_point.y, i, j);
-			}
-		}
+		gcode = "G3";
+	
 	}
-	return std::string(gcode_buffer_);
+	// Add X, Y, I and J
+	gcode += " X";
+	gcode += utilities::to_string(c.end_point.x, 3, buf);
+
+	gcode += " Y";
+	gcode += utilities::to_string(c.end_point.y, 3, buf);
+
+	gcode += " I";
+	gcode += utilities::to_string(i, 3, buf);
+
+	gcode += " J";
+	gcode += utilities::to_string(j, 3, buf);
+	
+	// Add E if it appears
+	if (has_e)
+	{
+		gcode += " E";
+		gcode += utilities::to_string(e, 5, buf);
+	}
+
+	// Add F if it appears
+	if (utilities::greater_than_or_equal(f, 1))
+	{
+		gcode += " F";
+		gcode += utilities::to_string(f, 0, buf);
+	}
+
+	return gcode;
 
 }
 

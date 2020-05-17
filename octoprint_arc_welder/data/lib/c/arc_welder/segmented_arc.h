@@ -41,18 +41,17 @@ public:
 	std::string get_shape_gcode_absolute(double e, double f);
 	std::string get_shape_gcode_relative(double f);
 	
-	virtual bool is_shape();
+	virtual bool is_shape() const;
 	point pop_front(double e_relative);
 	point pop_back(double e_relative);
 	bool try_get_arc(arc & target_arc);
 	// static gcode buffer
 
 private:
-	char gcode_buffer_[GCODE_CHAR_BUFFER_SIZE + 1];
 	bool try_add_point_internal_(point p, double pd);
-	bool does_circle_fit_points_(const circle& c);
+	bool does_circle_fit_points_(circle& c) const;
 	bool try_get_arc_(const circle& c, arc& target_arc);
-	std::string get_shape_gcode_(bool has_e, double e, double f);
+	std::string get_shape_gcode_(bool has_e, double e, double f) const;
 	circle arc_circle_;
 	int test_count_ = 0;
 	double max_radius_mm_;
