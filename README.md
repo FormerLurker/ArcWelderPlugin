@@ -23,7 +23,7 @@ These settings control the main aspects of the plugin and how your gcode file wi
 Here you can control how **Arc Welder** will handle the output file.  It can either overwrite the source gcode file completely, or you can create a new file with a different name.
 
 * **Overwrite Source File** - When selected, Arc Welder will overwrite the original file with the compressed version.
-* **Target File Prefix** - When *Overwrite Source File* is disabled, **Arc Welder** will produce a new file with this prefix.  For example, if you use **AW_** as your prefix, and your source file is called **print.gcode** the output file would be called **AW_print.gcode.
+* **Target File Prefix** - When *Overwrite Source File* is disabled, **Arc Welder** will produce a new file with this prefix.  For example, if you use **AW_** as your prefix, and your source file is called **print.gcode** the output file would be called **AW_print.gcode**.
 * **Target File Postfix** - When *Overwrite Source File* is disabled   **Arc Welder** will produce a new file with this postfix before the file extension.  For example, if you use **.aw** for your postfix, and your source file is called **print.gcode** the resulting file would be called **print.aw.gcode**.  You can combine prefixes and postfixes if you like.
 
 #### Printer Settings
