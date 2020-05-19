@@ -32,7 +32,18 @@ $(function () {
         return "./plugin/" + ArcWelder.PLUGIN_ID + "/" + fn;
     };
     ArcWelder.HelpDocumentRootUrl = ArcWelder.APIURL("static/docs/help/");
-
+    ArcWelder.PopupKey = function(key) {
+        if (Array.isArray(key))
+        {
+            var keys = [];
+            for (var index=0; index < key.length; index++)
+            {
+                keys.push(ArcWelder.PLUGIN_ID + "_" + key);
+            }
+            return keys;
+        }
+        return ArcWelder.PLUGIN_ID + "_" + key;
+    };
     ArcWelder.Help = new MarkdownHelp({
         plugin_id: ArcWelder.PLUGIN_ID,
         plugin_name: "Arc Welder: Anti Stutter",
@@ -177,7 +188,12 @@ $(function () {
                             desktop: true
                         }
                     };
-                    PNotifyExtensions.displayPopupForKey(options, data.key, data.close_keys);
+
+                    PNotifyExtensions.displayPopupForKey(
+                        options,
+                        ArcWelder.PopupKey(data.key),
+                        ArcWelder.PopupKey(data.close_keys)
+                    );
                     break;
                 case "preprocessing-start":
                     self.createProgressPopup(data.preprocessing_job_guid, data.source_filename);
@@ -193,7 +209,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    PNotifyExtensions.displayPopupForKey(options, "preprocessing-failed", []);
+                    PNotifyExtensions.displayPopupForKey(options, ArcWelder.PopupKey("preprocessing-failed"), []);
                     self.closePreprocessingPopup();
                     break;
                 case "preprocessing-cancelled":
@@ -207,7 +223,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    PNotifyExtensions.displayPopupForKey(options, "preprocessing-cancelled", []);
+                    PNotifyExtensions.displayPopupForKey(options, ArcWelder.PopupKey("preprocessing-cancelled"), []);
                     self.closePreprocessingPopup();
                     break;
                 case "preprocessing-success":
@@ -245,7 +261,7 @@ $(function () {
                             addclass: "arc-welder",
 
                         };
-                        PNotifyExtensions.displayPopupForKey(options, "preprocessing-success");
+                        PNotifyExtensions.displayPopupForKey(options, ArcWelder.PopupKey("preprocessing-success"));
                         progress_text =
                             "Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.  " + arcs_created.toString() + " arcs were created and "
                             + points_compressed.toString() + " points were compressed.";
@@ -259,7 +275,11 @@ $(function () {
                                 fallback: false
                             }
                         };
-                        PNotifyExtensions.displayPopupForKey(options, "preprocessing-success-desktop", []);
+                        PNotifyExtensions.displayPopupForKey(
+                            options,
+                            ArcWelder.PopupKey("preprocessing-success-desktop"),
+                            []
+                        );
                     break;
                 case "preprocessing-complete":
                     self.closePreprocessingPopup();
@@ -312,7 +332,11 @@ $(function () {
                             desktop: true
                         }
                     };
-                    PNotifyExtensions.displayPopupForKey(options, "unknown_message_type", ["unknown_message_type"]);
+                    PNotifyExtensions.displayPopupForKey(
+                        options,
+                        ArcWelder.PopupKey("unknown_message_type"),
+                        ArcWelder.PopupKey(["unknown_message_type"])
+                    );
             }
         };
 
@@ -367,7 +391,11 @@ $(function () {
                             desktop: true
                         }
                     };
-                    PNotifyExtensions.displayPopupForKey(options,"cancel-popup-error", ["cancel-popup-error"]);
+                    PNotifyExtensions.displayPopupForKey(
+                        options,
+                        ArcWelder.PopupKey("cancel-popup-error"),
+                        ArcWelder.PopupKey(["cancel-popup-error"])
+                    );
                     return false;
                 }
             });
@@ -468,7 +496,11 @@ $(function () {
                                 desktop: true
                             }
                         };
-                        PNotifyExtensions.displayPopupForKey(options,"process-error", ["process-error"]);
+                        PNotifyExtensions.displayPopupForKey(
+                            options,
+                            ArcWelder.PopupKey("process-error"),
+                            ArcWelder.PopupKey(["process-error"])
+                        );
                     }
                     else
                     {
@@ -482,7 +514,11 @@ $(function () {
                                 desktop: true
                             }
                         };
-                        PNotifyExtensions.displayPopupForKey(options,"process-error", ["process-error"]);
+                        PNotifyExtensions.displayPopupForKey(
+                            options,
+                            ArcWelder.PopupKey("process-error"),
+                            ArcWelder.PopupKey(["process-error"])
+                        );
                     }
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
@@ -497,7 +533,11 @@ $(function () {
                             desktop: true
                         }
                     };
-                    PNotifyExtensions.displayPopupForKey(options,"process-error", ["process-error"]);
+                    PNotifyExtensions.displayPopupForKey(
+                        options,
+                        ArcWelder.PopupKey("process-error"),
+                        ArcWelder.PopupKey(["process-error"])
+                    );
                     // Enable the button so the user can try again
                     $(event.target).removeClass("disabled");
                     return false;

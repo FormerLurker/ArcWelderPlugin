@@ -40,7 +40,18 @@ $(function () {
         self.popup_margin = 15;
         self.popup_width_with_margin = 900;
         self.popup_width = self.popup_width_with_margin - self.popup_margin*2;
-
+        self.PopupKey = function(key) {
+            if (Array.isArray(key))
+            {
+                var keys = [];
+                for (var index=0; index < key.length; index++)
+                {
+                    keys.push(self.plugin_id + "_" + key);
+                }
+                return keys;
+            }
+            return self.plugin_id + "_" + key;
+        };
         self.stack_center = {
             "dir1": "down",
             "dir2": "right",
@@ -113,7 +124,7 @@ $(function () {
             after_close: function(notice){
                 var $overlay = $(notice.elem).parent().find("." + self.plugin_id + "-pnotify-overlay");
                 $overlay.remove();
-                PNotifyExtensions.removeKeyForClosedPopup(self.plugin_id + '-help');
+                PNotifyExtensions.removeKeyForClosedPopup(self.PopupKey('help'));
                 //console.log("Removing resize handler.");
                 window.removeEventListener('resize', self.resize_handler)
             }
@@ -166,7 +177,11 @@ $(function () {
                     self.options.text = self.converter.makeHtml(results);
                     // Set the option text to a known token so that we can replace it with our markdown
                     self.options.title = title;
-                    PNotifyExtensions.displayPopupForKey(self.options, self.plugin_id + "-help", [ self.plugin_id + "-help"]);
+                    PNotifyExtensions.displayPopupForKey(
+                        self.options,
+                        self.PopupKey("help"),
+                        self.PopupKey([ self.plugin_id + "help"])
+                    );
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
                     if (errorThrown === "NOT FOUND")
@@ -182,9 +197,13 @@ $(function () {
 
                         self.options.title = "Help Could Not Be Found";
 
-                        var popup = PNotifyExtensions.displayPopupForKey(self.options, self.plugin_id + "-help", [self.plugin_id + "-help"]);
+                        var popup = PNotifyExtensions.displayPopupForKey(
+                            self.options,
+                            self.PopupKey("help"),
+                            self.PopupKey(["help"])
+                        );
                         var $popup_item = $(popup.elem);
-                        $popup_item.find("." + self.plugin_id +  + "-pnotify-help div.ui-pnotify-container")
+                        $popup_item.find("." + self.plugin_id + "-pnotify-help div.ui-pnotify-container")
                             .css("background-color", body_background_color)
                             .css("border-color", "#000000")
                             .css("border-width", "3px")
@@ -199,7 +218,11 @@ $(function () {
                             hide: true,
                             addclass: self.add_class
                         };
-                        PNotifyExtensions.displayPopupForKey(options, self.plugin_id + "-help", [self.plugin_id + "-help"]);
+                        PNotifyExtensions.displayPopupForKey(
+                            options,
+                            self.PopupKey( "help"),
+                            self.PopupKey(["help"])
+                        );
                     }
                 }
             });
@@ -356,7 +379,7 @@ $(function () {
                 error_popup.show_current_error();
             };
 
-            PNotifyExtensions.closeConfirmDialogsForKeys([remove_keys]);
+            PNotifyExtensions.closeConfirmDialogsForKeys(self.PopupKey([remove_keys]));
             // Make sure that the default pnotify buttons exist
             PNotifyExtensions.checkPNotifyDefaultConfirmButtons();
             PNotifyExtensions.ConfirmDialogs[popup_key] = (
@@ -407,7 +430,7 @@ $(function () {
                             addClass: 'error_close',
                             click: function(){
                                 //console.log("Closing popup with key: " + popup_key.toString());
-                                PNotifyExtensions.closeConfirmDialogsForKeys([popup_key]);
+                                PNotifyExtensions.closeConfirmDialogsForKeys(self.PopupKey([popup_key]));
                             }
                         }]
                     },

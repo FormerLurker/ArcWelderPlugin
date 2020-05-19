@@ -125,7 +125,11 @@ $(function() {
                                     desktop: true
                                 }
                             };
-                            PNotifyExtensions.displayPopupForKey(options, "settings_restored", "settings_restored");
+                            PNotifyExtensions.displayPopupForKey(
+                                options,
+                                ArcWelder.PopupKey("settings_restored"),
+                                ArcWelder.PopupKey("settings_restored")
+                            );
                         },
                         error: function (XMLHttpRequest, textStatus, errorThrown) {
                             var message = "Unable to restore the default settings.  Status: " + textStatus + ".  Error: " + errorThrown;
@@ -139,7 +143,11 @@ $(function() {
                                     desktop: true
                                 }
                             };
-                            PNotifyExtensions.displayPopupForKey(options, "settings_restore_error", "settings_restore_error");
+                            PNotifyExtensions.displayPopupForKey(
+                                options,
+                                ArcWelder.PopupKey("settings_restore_error"),
+                                ArcWelder.PopupKey("settings_restore_error")
+                            );
                         }
                     });
                 }
@@ -187,7 +195,11 @@ $(function() {
                                     desktop: true
                                 }
                             };
-                            PNotifyExtensions.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
+                            PNotifyExtensions.displayPopupForKey(
+                                options,
+                                ArcWelder.PopupKey("log_file_cleared"),
+                                ArcWelder.PopupKey("log_file_cleared")
+                            );
                         },
                         error: function (XMLHttpRequest, textStatus, errorThrown) {
                             var message = "Unable to clear the log.:(  Status: " + textStatus + ".  Error: " + errorThrown;
@@ -201,7 +213,11 @@ $(function() {
                                     desktop: true
                                 }
                             };
-                            PNotifyExtensions.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
+                            PNotifyExtensions.displayPopupForKey(
+                                options,
+                                ArcWelder.PopupKey("log_file_cleared"),
+                                ArcWelder.PopupKey("log_file_cleared")
+                            );
                         }
                     });
                 }
