@@ -1,0 +1,1 @@
+When enabled **Arc Welder** will create a toast showing that pre-processing is initializing.  Default: Enabled

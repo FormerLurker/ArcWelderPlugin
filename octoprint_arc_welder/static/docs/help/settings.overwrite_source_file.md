@@ -1,0 +1,1 @@
+When selected, Arc Welder will overwrite the original file with the compressed version.  Default Value: disabled.

@@ -64,18 +64,22 @@ These settings control the main aspects of the plugin and how your gcode file wi
 
 * **Arc Welder Enabled** - Check or uncheck to enable or disable the plugin.  This prevents **Arc Welder** from converting any files and adding buttons to the file browser.  It will not remove the plugin from the tabs or settings pages.  If you want to truly disable **Arc Welder** please do so in the plugin manager.
 * **Resolution in MM** - This setting controls how much play Arc Welder has in converting gcode points into arcs.  If the arc deviates from the original points by + or - 1/2 of the resolution, the points will **not** be converted.  The default setting is 0.05 which means the arcs may not deviate by more than +- 0.025mm (which is a **really** tiny deviation).  Increasing the resolution will result in more arcs being converted, but will make the tool paths less accurate.  Decreasing the resolution will result in fewer arcs, but more accurate toolpaths.  I don't recommend going above 0.1MM.  Higher values than that may result in print failure. 
-* **Maximum Arc Radius** - This is a safety feature to prevent unusually large arcs from being generated.  The default setting is **1000000 mm** or **1KM**.
-* **File Processing Type**, and works fine for all of the gcode I've tested.  If you discover that you need to adjust this setting because of errant arcs, please (create an issue)[https://github.com/FormerLurker/ArcWelderPlugin/issues/new] and let me know!
+* **Maximum Arc Radius** - This is a safety feature to prevent unusually large arcs from being generated.  Internally Arc Welder uses a constant to prevent  arcs with a very large radius from being generated where the path is essentially (but not exactly) a straight line.  If it is not perfectly straight, and if my constant isn't conservative enough, an extremely large arc could be created that may have the wrong direction of rotation.  The default value works fine for all of the gcode I've tested (it is about 1/7th of the radius of the worst errant arc I've encountered).  If you discover that you need to adjust this setting because of errant arcs, please [create an issue](https://github.com/FormerLurker/ArcWelderPlugin/issues/new) and let me know!  The default setting is **1000000 mm** or **1KM**.
+* **File Processing Type** - There are three options here:
   * *Automatic Processing Only* - Newly uploaded files will be compressed automatically.
   * *Manual Processing Only* - Convert files by clicking on the compress button in the file manager.  Files that are already compressed will have the compress button disabled.
   * *Automatic and Manual Processing* - Newly uploaded files will automatically be converted **and** you will be able to compress files by clicking the compress button in the file manager.
+
+The default setting is *Automatic and Manual Processing*.
   
 #### Output File Settings
 Here you can control how **Arc Welder** will handle the output file.  It can either overwrite the source gcode file completely, or you can create a new file with a different name.
 
 * **Overwrite Source File** - When selected, Arc Welder will overwrite the original file with the compressed version.  Default Value: disabled.
 * **Target File Prefix** - When *Overwrite Source File* is disabled, **Arc Welder** will produce a new file with this prefix.  For example, if you use **AW_** as your prefix, and your source file is called **print.gcode** the output file would be called **AW_print.gcode**.  Default:  NO PREFIX
-* **Target File Postfix** - When *Overwrite Source File* is disabled   **Arc Welder** will produce a new file with this postfix before the file extension.  For example, if you use **.aw** for your postfix, and your source file is called **print.gcode** the resulting file would be called **print.aw.gcode**.  You can combine prefixes and postfixes if you like.  Default: .aw
+* **Target File Postfix** - When *Overwrite Source File* is disabled   **Arc Welder** will produce a new file with this postfix before the file extension.  For example, if you use **.aw** for your postfix, and your source file is called **print.gcode** the resulting file would be called **print.aw.gcode**.  Default: .aw
+
+Note:  You can combine prefixes and postfixes if you like.
 
 #### Printer Settings
 Arc welder needs to know one property of your printer's firmware to guarantee accurate results in all slicers and with all start/end gcode: G90/G91 influences extruder.

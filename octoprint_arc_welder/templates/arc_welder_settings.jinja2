@@ -48,10 +48,13 @@
                         <fieldset>
                             <legend>Preprocessor Settings</legend>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_enabled"><strong>Arc Welder Enabled</strong></label>
+                                <label class="control-label" for="arc_welder_enabled"><strong>Arc Welder
+                                    Enabled</strong></label>
                                 <div class="controls">
                                     <input class="input-text" type="checkbox" id="arc_welder_enabled"
                                            data-bind="checked: plugin_settings().enabled">
+                                    <a class="arc_welder_help" data-help-url="settings.enabled.md"
+                                       data-help-title="Enable/Disable Arc Welder"></a>
                                 </div>
                             </div>
                             <div class="control-group">
@@ -63,10 +66,13 @@
                                                data-bind="value: plugin_settings().resolution_mm">
                                         <span class="add-on">mm</span>
                                     </div>
+                                    <a class="arc_welder_help" data-help-url="settings.resolution_mm.md"
+                                       data-help-title="Arc Resolution in MM"></a>
                                 </div>
                             </div>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_max_radius_mm"><strong>Maximum Arc Radius</strong></label>
+                                <label class="control-label" for="arc_welder_max_radius_mm"><strong>Maximum Arc
+                                    Radius</strong></label>
                                 <div class="controls">
                                     <div class="input-append">
                                         <input class="input-text" required="true" type="number" min="1" max="1000000"
@@ -74,15 +80,20 @@
                                                data-bind="value: plugin_settings().max_radius_mm">
                                         <span class="add-on">mm</span>
                                     </div>
+                                    <a class="arc_welder_help" data-help-url="settings.max_radius_mm.md"
+                                       data-help-title="Max Arc Radius in MM"></a>
                                 </div>
                             </div>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_file_processing"><strong>File Processing Type</strong></label>
+                                <label class="control-label" for="arc_welder_file_processing"><strong>File Processing
+                                    Type</strong></label>
                                 <div class="controls">
                                     <select data-bind="options: ArcWelder.FILE_PROCESSING_OPTIONS,
                                         optionsText: 'name',
                                         optionsValue: 'value',
                                         value: plugin_settings().feature_settings.file_processing"></select>
+                                    <a class="arc_welder_help" data-help-url="settings.file_processing.md"
+                                       data-help-title="File Processing Options"></a>
                                 </div>
                             </div>
                         </fieldset>
@@ -94,95 +105,131 @@
                                 <div class="controls">
                                     <input class="input-text" type="checkbox" id="arc_welder_overwrite_source_file"
                                            data-bind="checked: plugin_settings().overwrite_source_file">
+                                    <a class="arc_welder_help" data-help-url="settings.overwrite_source_file.md"
+                                       data-help-title="Overwrite Source File"></a>
                                 </div>
                             </div>
                             <div class="control-group" data-bind="visible: !plugin_settings().overwrite_source_file()">
                                 <label class="control-label" for="arc_welder_target_prefix"><strong>Target File
                                     Prefix</strong></label>
                                 <div class="controls">
-                                    <input required="true" class="input-text input-block-level" type="text"
-                                           id="arc_welder_target_prefix" data-bind="value: plugin_settings().target_prefix">
+                                    <input required="true" class="input-text" type="text"
+                                           id="arc_welder_target_prefix"
+                                           data-bind="value: plugin_settings().target_prefix">
+                                    <a class="arc_welder_help" data-help-url="settings.target_prefix.md"
+                                       data-help-title="Target File Prefix"></a>
                                 </div>
                             </div>
                             <div class="control-group" data-bind="visible: !plugin_settings().overwrite_source_file()">
                                 <label class="control-label" for="arc_welder_target_postfix"><strong>Target File
                                     Postfix</strong></label>
                                 <div class="controls">
-                                    <input required="true" class="input-text input-block-level" type="text"
-                                           id="arc_welder_target_postfix" data-bind="value: plugin_settings().target_postfix">
+                                    <input required="true" class="input-text" type="text"
+                                           id="arc_welder_target_postfix"
+                                           data-bind="value: plugin_settings().target_postfix">
+                                    <a class="arc_welder_help" data-help-url="settings.target_postfix.md"
+                                       data-help-title="Target File Postfix"></a>
                                 </div>
                             </div>
-
-
                         </fieldset>
                         <fieldset>
                             <legend>Printer Settings</legend>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_use_octoprint_settings"><strong>Use Octoprint
+                                <label class="control-label" for="arc_welder_use_octoprint_settings"><strong>Use
+                                    Octoprint
                                     Printer Profile Settings</strong></label>
                                 <div class="controls">
                                     <input class="input-text" type="checkbox" id="arc_welder_use_octoprint_settings"
                                            data-bind="checked: plugin_settings().use_octoprint_settings">
+                                    <a class="arc_welder_help" data-help-url="settings.use_octoprint_settings.md"
+                                       data-help-title="Use Octoprint Printer Profile Settings"></a>
                                 </div>
                             </div>
                             <div class="control-group" data-bind="visible: !plugin_settings().use_octoprint_settings()">
                                 <label class="control-label" for="arc_welder_g90_g91_influences_extruder"><strong>G90/G91
                                     Influence Extruder</strong></label>
                                 <div class="controls">
-                                    <input class="input-text" type="checkbox" id="arc_welder_g90_g91_influences_extruder"
+                                    <input class="input-text" type="checkbox"
+                                           id="arc_welder_g90_g91_influences_extruder"
                                            data-bind="checked: plugin_settings().g90_g91_influences_extruder">
+                                    <a class="arc_welder_help" data-help-url="settings.g90_g91_influences_extruder.md"
+                                       data-help-title="G90/G91 Influences Extruder"></a>
                                 </div>
                             </div>
                         </fieldset>
                         <fieldset>
                             <legend>Notification Settings</legend>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_show_started_notification"><strong>Show Pre-Processing Started Notification</strong></label>
+                                <label class="control-label" for="arc_welder_show_started_notification"><strong>Show
+                                    Pre-Processing Started Notification</strong></label>
                                 <div class="controls">
                                     <input class="input-text" type="checkbox" id="arc_welder_show_started_notification"
                                            data-bind="checked: plugin_settings().notification_settings.show_started_notification">
+                                    <a class="arc_welder_help" data-help-url="settings.show_started_notification.md"
+                                       data-help-title="Show Pre-Processing Started Notification"></a>
                                 </div>
                             </div>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_show_progress_bar"><strong>Show Progress Bar</strong></label>
+                                <label class="control-label" for="arc_welder_show_progress_bar"><strong>Show Progress
+                                    Bar</strong></label>
                                 <div class="controls">
                                     <input class="input-text" type="checkbox" id="arc_welder_show_progress_bar"
                                            data-bind="checked: plugin_settings().notification_settings.show_progress_bar">
+                                    <a class="arc_welder_help" data-help-url="settings.show_progress_bar.md"
+                                       data-help-title="Show Progress Bar"></a>
                                 </div>
                             </div>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_show_completed_notification"><strong>Show Pre-Processing Completed Notification</strong></label>
+                                <label class="control-label" for="arc_welder_show_completed_notification"><strong>Show
+                                    Pre-Processing Completed Notification</strong></label>
                                 <div class="controls">
-                                    <input class="input-text" type="checkbox" id="arc_welder_show_completed_notification"
+                                    <input class="input-text" type="checkbox"
+                                           id="arc_welder_show_completed_notification"
                                            data-bind="checked: plugin_settings().notification_settings.show_completed_notification">
+                                    <a class="arc_welder_help" data-help-url="settings.show_completed_notification.md"
+                                       data-help-title="Show Pre-Processing Completed Notification"></a>
                                 </div>
                             </div>
                         </fieldset>
                         <fieldset>
                             <legend>Logging</legend>
                             <div class="text-center">
-                                <button type="button" class="btn btn-large" data-bind="click: function(){clearLog(false);}" title="Clear the most recent log."> <i class="icon-trash"></i>Clear Log&hellip;</button>
-                                <button type="button" class="btn btn-large" data-bind="click: function(){clearLog(true);}" title="Clear the most recent log and deletes any log file backups (up to 3)."><i class="icon-trash"></i>Clear All Logs&hellip;</button>
-                                 <a class="btn btn-large" title="Download the most recent logfile."
-                                   data-bind="attr: {href: '/plugin/arc_welder/downloadFile?type=log&apikey=' + UI_API_KEY}" download="">
+                                <button type="button" class="btn btn-large"
+                                        data-bind="click: function(){clearLog(false);}"
+                                        title="Clear the most recent log."><i class="icon-trash"></i>Clear Log&hellip;
+                                </button>
+                                <button type="button" class="btn btn-large"
+                                        data-bind="click: function(){clearLog(true);}"
+                                        title="Clear the most recent log and deletes any log file backups (up to 3)."><i
+                                        class="icon-trash"></i>Clear All Logs&hellip;
+                                </button>
+                                <a class="btn btn-large" title="Download the most recent logfile."
+                                   data-bind="attr: {href: '/plugin/arc_welder/downloadFile?type=log&apikey=' + UI_API_KEY}"
+                                   download="">
                                     <i class="fa fa-download"></i> Download Log
                                 </a>
                             </div>
                             <br/>
                             <div class="control-group">
-                                <a class="muted" data-bind="toggleContent: { class: 'fa-caret-right fa-caret-down', container: '#arc_welder_advanced_settings.hide' }">
+                                <a class="muted"
+                                   data-bind="toggleContent: { class: 'fa-caret-right fa-caret-down', container: '#arc_welder_advanced_settings.hide' }">
                                     <i class="fa fa-no-shadow fa-caret-right"></i> {{ _('Advanced Logging Settings') }}
                                 </a>
                             </div>
                             <div id="arc_welder_advanced_settings" class="hide">
                                 <p>
-                                    <span class="label label-important">Warning</span> Debug or Verbose logging of the arc_welder.gcode_conversion module will take a log of time and will result in a huge log file.  Only enable debug or verbose logging for the arc_welder.gcode_conversion module if you are trying to debug an issue, and <strong>don't forget to disable it</strong> when you are finished.</span>
+                                    <span class="label label-important">Warning</span> Debug or Verbose logging of the
+                                    arc_welder.gcode_conversion module will take a log of time and will result in a huge
+                                    log file. Only enable debug or verbose logging for the arc_welder.gcode_conversion
+                                    module if you are trying to debug an issue, and <strong>don't forget to disable
+                                    it</strong> when you are finished.</span>
                                 </p>
-                                <div data-bind="visible:  plugin_settings().logging_configuration.enabled_loggers().length == 0" class="text-warning text-center">
-                                  No loggers are enabled.  Only exceptions will be logged.
+                                <div data-bind="visible:  plugin_settings().logging_configuration.enabled_loggers().length == 0"
+                                     class="text-warning text-center">
+                                    No loggers are enabled. Only exceptions will be logged.
                                 </div>
                                 <div data-bind="visible:  plugin_settings().logging_configuration.enabled_loggers().length > 0">
-                                  <div class="row-fluid">
+                                    <div class="row-fluid">
                                         <div class="span5">
                                             Module to Log
                                         </div>
@@ -210,7 +257,9 @@
                                                     value: log_level"></select>
                                             </div>
                                             <div class="span2">
-                                                <a title="Delete" class="btn btn-danger" data-bind="click: $parent.removeLogger"><i class="icon-trash"></i></a>
+                                                <a title="Delete" class="btn btn-danger"
+                                                   data-bind="click: $parent.removeLogger"><i
+                                                        class="icon-trash"></i></a>
                                             </div>
                                         </div>
                                     </div>
@@ -218,7 +267,7 @@
                                         <hr/>
                                     </div>
                                     <div data-bind="visible: available_loggers().length > 0">
-                                      <div class="row-fluid">
+                                        <div class="row-fluid">
                                             <div class="span5">
                                                 Add Logging to a Module
                                             </div>
@@ -229,31 +278,35 @@
                                                 &nbsp;
                                             </div>
                                         </div>
-                                    <div class="row-fluid">
-                                        <div class="span5">
-                                            <select id="arc_welder_available_loggers" name="available_loggers" data-bind="options: available_loggers_sorted,
+                                        <div class="row-fluid">
+                                            <div class="span5">
+                                                <select id="arc_welder_available_loggers" name="available_loggers"
+                                                        data-bind="options: available_loggers_sorted,
                                             optionsText: 'name',
                                             optionsValue: 'name',
                                             value: logger_name_add"></select>
-                                        </div>
-                                        <div class="span5">
-                                            <select id="logging_profile_logging_level" name="logging_profile_logging_level"
-                                                    data-bind="options: data.logging_levels,
+                                            </div>
+                                            <div class="span5">
+                                                <select id="logging_profile_logging_level"
+                                                        name="logging_profile_logging_level"
+                                                        data-bind="options: data.logging_levels,
                                             optionsText: 'name',
                                             optionsValue: 'value',
                                             value: logger_level_add"></select>
+                                            </div>
+                                            <div class="span2">
+                                                <a title="Add" class="btn btn-primary" data-bind="click: addLogger"><i
+                                                        class="icon-plus"></i></a>
+                                            </div>
                                         </div>
-                                        <div class="span2">
-                                            <a title="Add" class="btn btn-primary" data-bind="click: addLogger"><i class="icon-plus"></i></a>
+                                        <div data-bind="visible: available_loggers().length === 0" class="text-center">
+                                            All available loggers are enabled.
                                         </div>
                                     </div>
-                                    <div data-bind="visible: available_loggers().length === 0" class="text-center">
-                                        All available loggers are enabled.
-                                    </div>
-                                </div>
                                 </div>
                                 <div class="control-group">
-                                    <label class="control-label" for="arc_welder_log_to_console"><strong>Log to Console</strong></label>
+                                    <label class="control-label" for="arc_welder_log_to_console"><strong>Log to
+                                        Console</strong></label>
                                     <div class="controls">
                                         <input class="input-text" type="checkbox" id="arc_welder_log_to_console"
                                                data-bind="checked: plugin_settings().logging_configuration.log_to_console">
@@ -262,14 +315,31 @@
                                 </div>
                             </div>
                         </fieldset>
+                        <div class="row-fluid">
+                            <div class="span12 text-right">
+                                <p>
+                                    <button class="btn btn-large" data-bind="click: restoreDefaultSettings">Restore
+                                        Default Settings
+                                    </button>
+                                </p>
+                            </div>
+                        </div>
                     </form>
                 </div>
                 <div id="arc_welder_about_tab" class="tab-pane" data-bind="template:'arc_welder_settings_about'">
-                     <div data-bind="template:'arc_welder_settings_about'"></div>
+                    <div data-bind="template:'arc_welder_settings_about'"></div>
                 </div>
             </div>
         </div>
+        <div class="row-fluid">
+            <div class="span12">
+                <p>
+                    <span class="label label-important">USE AT YOUR OWN RISK</span> Arc Welder is still in development
+                    and may contain errors that could affect your prints. Please be safe and don't leave your printer
+                    unattended!
+                </p>
+            </div>
+        </div>
     </div>
-    <span class="label label-important">USE AT YOUR OWN RISK</span> Arc Welder is still in development and may contain errors that could affect your prints.  Please be safe and don't leave your printer unattended!
 </div>
 {% include "arc_welder_settings_about.jinja2" %}

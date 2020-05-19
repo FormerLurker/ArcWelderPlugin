@@ -26,248 +26,20 @@
 $(function () {
     // ArcWelder Global
     ArcWelder = {};
-    ArcWelder.progressBar = function (initial_text, title, subtitle, cancel_callback, option_button_text, on_option) {
-        var self = this;
-        self.notice = null;
-        self.$progress = null;
-        self.$progressText = null;
-        self.$subTitle = null;
-        self.initial_text = initial_text;
-        self.popup_margin = 15;
-        self.popup_width_with_margin = 400;
-        self.popup_width = self.popup_width_with_margin - self.popup_margin * 2;
-        self.title = title;
-        self.subtitle = subtitle;
-        self.close = function () {
-            if (self.loader != null)
-                self.loader.remove();
-        };
-
-        self.update = function (percent_complete, progress_text) {
-            self.notice.find(".remove_button").remove();
-
-            if (self.$progress == null)
-                return null;
-            if (percent_complete < 0)
-                percent_complete = 0;
-            if (percent_complete > 100)
-                percent_complete = 100;
-            if (percent_complete === 100) {
-                //console.log("Received 100% complete progress message, removing progress bar.");
-                self.loader.remove();
-                return null
-            }
-            var percent_complete_text = percent_complete.toFixed(1);
-            self.$progress.width(percent_complete_text + "%").attr("aria-valuenow", percent_complete_text).find("span").html(percent_complete_text + "%");
-            self.$progressText.html(progress_text);
-            return self;
-        };
-
-        self.buttons = [{
-            text: 'Close',
-            click: self.close
-        }];
-        if (cancel_callback){
-            self.buttons.push({
-                text: 'Cancel',
-                click: cancel_callback
-            });
-        }
-        if (option_button_text && on_option)
-        {
-            self.buttons.push({
-                text: option_button_text,
-                click: on_option
-            });
-        }
-        // create the pnotify loader
-        self.loader = new PNotify({
-            title: title,
-            text: '<div class="progress-sub-title"></div><div class="progress progress-striped active" style="margin:0"><div class="arc-welder progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',
-            addclass: "arc-welder",
-            icon: 'fa fa-cog fa-spin',
-            width: self.popup_width.toString() + "px",
-            confirm: {
-                confirm: true,
-                buttons: self.buttons
-            },
-            buttons: {
-                closer: true,
-                sticker: false
-            },
-            hide: false,
-            history: {
-                history: false
-            },
-            before_open: function (notice) {
-                self.notice = notice.get();
-                self.$progress = self.notice.find("div.progress-bar");
-                self.$progressText = self.notice.find("div.progress-text");
-                self.notice.find(".remove_button").remove();
-                self.$subTitle = self.notice.find("div.progress-sub-title");
-                self.$subTitle.html(self.subtitle);
-                self.update(0, self.initial_text);
-            }
-        });
-        return self;
+    ArcWelder.PLUGIN_ID = "arc_welder";
+    //ArcWelder.pnotify = PNotifyExtensions({});
+    ArcWelder.APIURL = function(fn){
+        return "./plugin/" + ArcWelder.PLUGIN_ID + "/" + fn;
     };
+    ArcWelder.HelpDocumentRootUrl = ArcWelder.APIURL("static/docs/help/");
 
-    ArcWelder.Popups = {};
-    ArcWelder.displayPopupForKey = function (options, popup_key, remove_keys) {
-        ArcWelder.closePopupsForKeys(remove_keys);
-        var popup = new PNotify(options);
-        ArcWelder.Popups[popup_key] = popup;
-        return popup;
-    };
-
-    ArcWelder.closePopupsForKeys = function (remove_keys) {
-        if (!$.isArray(remove_keys)) {
-            remove_keys = [remove_keys];
-        }
-        for (var index = 0; index < remove_keys.length; index++) {
-            var key = remove_keys[index];
-            if (key in ArcWelder.Popups) {
-                var notice = ArcWelder.Popups[key];
-                if (notice.state === "opening") {
-                    notice.options.animation = "none";
-                }
-                notice.remove();
-                delete ArcWelder.Popups[key];
-            }
-        }
-    };
-
-    ArcWelder.removeKeyForClosedPopup = function (key) {
-        if (key in ArcWelder.Popups) {
-            var notice = ArcWelder.Popups[key];
-            delete ArcWelder.Popups[key];
-        }
-    };
-
-    ArcWelder.checkPNotifyDefaultConfirmButtons = function () {
-        // check to see if exactly two default pnotify confirm buttons exist.
-        // If we keep running into problems we might need to inspect the buttons to make sure they
-        // really are the defaults.
-        if (PNotify.prototype.options.confirm.buttons.length !== 2) {
-            // Someone removed the confirmation buttons, darnit!  Report the error and re-add the buttons.
-            var message = "Arc Welder detected the removal or addition of PNotify default confirmation buttons, " +
-                "which should not be done in a shared environment.  Some plugins may show strange behavior.  Please " +
-                "report this error at https://github.com/FormerLurker/ArcWelder/issues.  ArcWelder will now clear " +
-                "and re-add the default PNotify buttons.";
-            console.error(message);
-
-            // Reset the buttons in case extra buttons were added.
-            PNotify.prototype.options.confirm.buttons = [];
-
-            var buttons = [
-                {
-                    text: "Ok",
-                    addClass: "",
-                    promptTrigger: true,
-                    click: function (b, a) {
-                        b.remove();
-                        b.get().trigger("pnotify.confirm", [b, a])
-                    }
-                },
-                {
-                    text: "Cancel",
-                    addClass: "",
-                    promptTrigger: true,
-                    click: function (b) {
-                        b.remove();
-                        b.get().trigger("pnotify.cancel", b)
-                    }
-                }
-            ];
-            PNotify.prototype.options.confirm.buttons = buttons;
-        }
-    };
-
-    ArcWelder.ConfirmDialogs = {};
-    ArcWelder.closeConfirmDialogsForKeys = function (remove_keys) {
-        if (!$.isArray(remove_keys)) {
-            remove_keys = [remove_keys];
-        }
-        for (var index = 0; index < remove_keys.length; index++) {
-            var key = remove_keys[index];
-            if (key in ArcWelder.ConfirmDialogs) {
-
-                ArcWelder.ConfirmDialogs[key].remove();
-                delete ArcWelder.ConfirmDialogs[key];
-            }
-        }
-    };
-
-    ArcWelder.showConfirmDialog = function (key, title, text, onConfirm, onCancel, onComplete, onOption, optionButtonText) {
-        ArcWelder.closeConfirmDialogsForKeys([key]);
-        // Make sure that the default pnotify buttons exist
-        ArcWelder.checkPNotifyDefaultConfirmButtons();
-        options = {
-            title: title,
-            text: text,
-            icon: 'fa fa-question',
-            hide: false,
-            addclass: "arc-welder",
-            confirm: {
-                confirm: true,
-            },
-            buttons: {
-                closer: false,
-                sticker: false
-            },
-            history: {
-                history: false
-            }
-        };
-        if (onOption && optionButtonText) {
-            var confirmButtons = [
-                {
-                    text: "Ok",
-                    addClass: "",
-                    promptTrigger: true,
-                    click: function (b, a) {
-                        b.remove();
-                        b.get().trigger("pnotify.confirm", [b, a])
-                    }
-                },
-                {
-                    text: optionButtonText,
-                    click: function () {
-                        if (onOption)
-                            onOption();
-                        if (onComplete)
-                            onComplete();
-                        ArcWelder.closeConfirmDialogsForKeys([key]);
-                    }
-                },
-                {
-                    text: "Cancel",
-                    addClass: "",
-                    promptTrigger: true,
-                    click: function (b) {
-                        b.remove();
-                        b.get().trigger("pnotify.cancel", b)
-                    }
-                }
-            ];
-            options.confirm.buttons = confirmButtons;
-        }
-        ArcWelder.ConfirmDialogs[key] = (
-            new PNotify(options)
-        ).get().on('pnotify.confirm', function () {
-            if (onConfirm)
-                onConfirm();
-            if (onComplete) {
-                onComplete();
-            }
-        }).on('pnotify.cancel', function () {
-            if (onCancel)
-                onCancel();
-            if (onComplete) {
-                onComplete();
-            }
-        });
-    };
+    ArcWelder.Help = new MarkdownHelp({
+        plugin_id: ArcWelder.PLUGIN_ID,
+        plugin_name: "Arc Welder: Anti Stutter",
+        missing_file_text: "No help file is available, please report this issue within the github repository.",
+        add_class: 'arc-welder-pnotify-help',
+        document_root_url: ArcWelder.HelpDocumentRootUrl
+    });
 
     ArcWelder.ToTimer = function (seconds) {
         if (seconds == null)
@@ -369,6 +141,10 @@ $(function () {
             self.git_version(self.plugin_settings.git_version());
         };
 
+        self.onAfterBinding = function() {
+            ArcWelder.Help.bindHelpLinks("#tab_plugin_arc_welder_controls");
+        };
+
         self.onStartupComplete = function() {
             self.current_files = ko.computed( function() {
                 self.addProcessButtonToFileManager(self.files.listHelper.paginatedItems(), self.printer_state.isPrinting());
@@ -401,7 +177,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    ArcWelder.displayPopupForKey(options, data.key, data.close_keys);
+                    PNotifyExtensions.displayPopupForKey(options, data.key, data.close_keys);
                     break;
                 case "preprocessing-start":
                     self.createProgressPopup(data.preprocessing_job_guid, data.source_filename);
@@ -417,7 +193,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    ArcWelder.displayPopupForKey(options, "preprocessing-failed", []);
+                    PNotifyExtensions.displayPopupForKey(options, "preprocessing-failed", []);
                     self.closePreprocessingPopup();
                     break;
                 case "preprocessing-cancelled":
@@ -431,7 +207,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    ArcWelder.displayPopupForKey(options, "preprocessing-cancelled", []);
+                    PNotifyExtensions.displayPopupForKey(options, "preprocessing-cancelled", []);
                     self.closePreprocessingPopup();
                     break;
                 case "preprocessing-success":
@@ -469,7 +245,7 @@ $(function () {
                             addclass: "arc-welder",
 
                         };
-                        ArcWelder.displayPopupForKey(options, "preprocessing-success");
+                        PNotifyExtensions.displayPopupForKey(options, "preprocessing-success");
                         progress_text =
                             "Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.  " + arcs_created.toString() + " arcs were created and "
                             + points_compressed.toString() + " points were compressed.";
@@ -483,7 +259,7 @@ $(function () {
                                 fallback: false
                             }
                         };
-                        ArcWelder.displayPopupForKey(options, "preprocessing-success-desktop", []);
+                        PNotifyExtensions.displayPopupForKey(options, "preprocessing-success-desktop", []);
                     break;
                 case "preprocessing-complete":
                     self.closePreprocessingPopup();
@@ -536,7 +312,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    ArcWelder.displayPopupForKey(options, "unknown_message_type", ["unknown_message_type"]);
+                    PNotifyExtensions.displayPopupForKey(options, "unknown_message_type", ["unknown_message_type"]);
             }
         };
 
@@ -551,7 +327,7 @@ $(function () {
                 cancel_all_callback = self.cancelAllPreprocessing;
             }
             var subtitle = "<strong>Processing:</strong> " + source_filename;
-            self.pre_processing_progress = ArcWelder.progressBar("Initializing...", "Arc Welder Progress",
+            self.pre_processing_progress = PNotifyExtensions.progressBar("Initializing...", "Arc Welder Progress",
                 subtitle, cancel_callback, "Cancel All", cancel_all_callback);
         };
 
@@ -569,7 +345,7 @@ $(function () {
                 "preprocessing_job_guid": self.preprocessing_job_guid
             };
             $.ajax({
-                url: "./plugin/arc_welder/cancelPreprocessing",
+                url: ArcWelder.APIURL("cancelPreprocessing"),
                 type: "POST",
                 tryCount: 0,
                 retryLimit: 3,
@@ -591,7 +367,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    ArcWelder.displayPopupForKey(options,"cancel-popup-error", ["cancel-popup-error"]);
+                    PNotifyExtensions.displayPopupForKey(options,"cancel-popup-error", ["cancel-popup-error"]);
                     return false;
                 }
             });
@@ -672,7 +448,7 @@ $(function () {
             // Request that the file be processed
             var data = { "path": encodeURI(path)};
             $.ajax({
-                url: "./plugin/arc_welder/process",
+                url: ArcWelder.APIURL("process"),
                 type: "POST",
                 tryCount: 0,
                 retryLimit: 3,
@@ -692,7 +468,7 @@ $(function () {
                                 desktop: true
                             }
                         };
-                        ArcWelder.displayPopupForKey(options,"process-error", ["process-error"]);
+                        PNotifyExtensions.displayPopupForKey(options,"process-error", ["process-error"]);
                     }
                     else
                     {
@@ -706,7 +482,7 @@ $(function () {
                                 desktop: true
                             }
                         };
-                        ArcWelder.displayPopupForKey(options,"process-error", ["process-error"]);
+                        PNotifyExtensions.displayPopupForKey(options,"process-error", ["process-error"]);
                     }
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
@@ -721,7 +497,7 @@ $(function () {
                             desktop: true
                         }
                     };
-                    ArcWelder.displayPopupForKey(options,"process-error", ["process-error"]);
+                    PNotifyExtensions.displayPopupForKey(options,"process-error", ["process-error"]);
                     // Enable the button so the user can try again
                     $(event.target).removeClass("disabled");
                     return false;

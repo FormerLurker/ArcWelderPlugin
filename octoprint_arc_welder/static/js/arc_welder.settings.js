@@ -63,6 +63,10 @@ $(function() {
 
         };
 
+        self.onAfterBinding = function() {
+            ArcWelder.Help.bindHelpLinks("div#arc_welder_settings");
+        };
+
         self.get_enabled_logger_index_by_name = function (name) {
             for (var index = 0; index < self.plugin_settings().logging_configuration.enabled_loggers().length; index++) {
                 var logger = self.plugin_settings().logging_configuration.enabled_loggers()[index];
@@ -100,6 +104,47 @@ $(function() {
             }
         };
 
+        self.restoreDefaultSettings = function() {
+            PNotifyExtensions.showConfirmDialog(
+                "restore_default_settings",
+                "Restore Arc Welder Default Settings",
+                "This will restore all of the default settings, are you sure?",
+                function () {
+                    $.ajax({
+                        url: ArcWelder.APIURL("restoreDefaultSettings"),
+                        type: "POST",
+                        contentType: "application/json",
+                        success: function (data) {
+                            var options = {
+                                title: "Arc Welder Default Settings Restored",
+                                text: "The settings have been restored.",
+                                type: 'success',
+                                hide: true,
+                                addclass: "arc_welder",
+                                desktop: {
+                                    desktop: true
+                                }
+                            };
+                            PNotifyExtensions.displayPopupForKey(options, "settings_restored", "settings_restored");
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                            var message = "Unable to restore the default settings.  Status: " + textStatus + ".  Error: " + errorThrown;
+                            var options = {
+                                title: 'Restore Default Settings Error',
+                                text: message,
+                                type: 'error',
+                                hide: false,
+                                addclass: "arc_welder",
+                                desktop: {
+                                    desktop: true
+                                }
+                            };
+                            PNotifyExtensions.displayPopupForKey(options, "settings_restore_error", "settings_restore_error");
+                        }
+                    });
+                }
+            );
+        };
         self.clearLog = function (clear_all) {
             var title;
             var message;
@@ -110,7 +155,7 @@ $(function() {
                 title = "Clear Log";
                 message = "The most recent Arc Welder log file will be cleared.  Are you sure?";
             }
-            ArcWelder.showConfirmDialog(
+            PNotifyExtensions.showConfirmDialog(
                 "clear_log",
                 title,
                 message,
@@ -126,7 +171,7 @@ $(function() {
                         clear_all: clear_all
                     };
                     $.ajax({
-                        url: "./plugin/arc_welder/clearLog",
+                        url: ArcWelder.APIURL("clearLog"),
                         type: "POST",
                         data: JSON.stringify(data),
                         contentType: "application/json",
@@ -142,7 +187,7 @@ $(function() {
                                     desktop: true
                                 }
                             };
-                            ArcWelder.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
+                            PNotifyExtensions.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
                         },
                         error: function (XMLHttpRequest, textStatus, errorThrown) {
                             var message = "Unable to clear the log.:(  Status: " + textStatus + ".  Error: " + errorThrown;
@@ -156,7 +201,7 @@ $(function() {
                                     desktop: true
                                 }
                             };
-                            ArcWelder.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
+                            PNotifyExtensions.displayPopupForKey(options, "log_file_cleared", "log_file_cleared");
                         }
                     });
                 }

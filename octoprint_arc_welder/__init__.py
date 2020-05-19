@@ -217,6 +217,14 @@ class ArcWelderPlugin(
                 return jsonify({"success": True})
             return jsonify({"success": False, "message": "Arc Welder is Disabled."})
 
+    @octoprint.plugin.BlueprintPlugin.route("/restoreDefaultSettings", methods=["POST"])
+    @restricted_access
+    def restore_default_settings_request(self):
+        with ArcWelderPlugin.admin_permission.require(http_exception=403):
+            self._settings.set([], self.settings_default)
+            self._settings.save()
+            return jsonify({"success": True})
+
     # Callback Handler for /downloadFile
     # uses the ArcWelderLargeResponseHandler
     def download_file_request(self, request_handler):
@@ -249,7 +257,13 @@ class ArcWelderPlugin(
         # Define your plugin's asset files to automatically include in the
         # core UI here.
         return dict(
-            js=["js/arc_welder.js", "js/arc_welder.settings.js"],
+            js=[
+                "js/showdown.min.js",
+                "js/pnotify_extensions.js",
+                "js/markdown_help.js",
+                "js/arc_welder.js",
+                "js/arc_welder.settings.js",
+            ],
             css=["css/arc_welder.css"],
         )
 
