@@ -3,7 +3,51 @@
 Converts G0/G1 commands to G2/G3 commands.  This can greatly compress some gcode files and can reduce the number of gcodes sent to your printer when streaming gcode from OctoPrint.  This can reduce stuttering as long as your firmware correctly implements G2/G3 (arc) commands and is configured properly.
 
 ### Installation
-If you are using a pre-release version of **Arc Welder**, I recommend completely uninstalling and cleaning the files before trying to upgrade.  Once the installation has completed, make sure you reboot Octoprint before trying to use *Arc Welder**.
+
+#### Prerequisites
+
+##### Python Development Package for Linux
+
+Python is already installed if you are running Octoprint, but if you are running on Linux, the python-dev package is required.  If you are running OctoPi and Python 2.7, this will already be installed.  At the time this was written the dev package of Python 3 is not included in OctoPi.
+
+Before installing the dev package, run this command from a terminal to update your system:
+
+```
+sudo apt-get update -y
+```
+
+Next, install the python 3 dev package with this command:
+```
+sudo apt-get install -y python3-dev
+```
+
+#### Finding the Installation URL
+
+You can install Arc Welder directly from the plugin manager within OctoPrint, but you will need to find a URL to do so.  Typically you will want to install the latest release. 
+
+##### Installation URL for the Latest Release 
+1. Navigate to the [releases on Github](https://github.com/FormerLurker/ArcWelderPlugin/releases).
+2. Find the most recent release (the one on top) and click on the version number.  Note that **Pre-Release** will be tagged, so avoid those if you are only interested in stable versions.  At the time of this writing there are no stable releases because **Arc Welder** is still in beta.
+3. Scroll to the bottom of the release page and ensure the **Assets** are expanded. 
+4. Right click on the **Source code (zip)** and copy the link into your clipboard.
+
+##### Installation URL for a Specific Branch
+Currently there are 3 branches:
+
+* Master - The main branch which is typically updated with the latest stable release.  Versions in the master will look something like this: **v0.1.0**
+* rc/devel - This branch typically contains the latest prerelease code for versions that end in *dev*.  An example would be **v0.1.0rc1.dev3**.
+* devel - This version contains development code, and should not be installed unless you are asked to do so.
+
+Eventually another branch, rc/maintenance, will be added for maintenance releases.  These versions typically look like this: **0.1.0rc1**.
+
+#### Installing from the Plugin Manager
+1. Open OctoPrint and click on the settings icon (wrench/spanner)
+2. Click on the plugin manager in the left menu
+3. Within the plugin manager, click **Get More...** 
+4. Paste the installation URL you copied into the **... from URL** text box and click the **Install** button to the right of the text box.
+5. After installation is complete (**it will take longer than average** since **Arc Welcer** must compile a c++ package).  Reboot your pi.
+ 
+**Important Notes:** If you are using a pre-release version of **Arc Welder**, I recommend completely uninstalling and cleaning the files before trying to upgrade.  Once the installation has completed, make sure you reboot Octoprint before trying to use *Arc Welder**.
 
 ### Settings and Setup
 
