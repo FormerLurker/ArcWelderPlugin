@@ -138,6 +138,9 @@ bool gcode_parser::try_parse_gcode(const char * gcode, parsed_command & command)
 		command.is_empty = false;
 
 	bool has_seen_character = false;
+
+	bool is_text_only_parameter = text_only_functions_.find(command.command) != text_only_functions_.end();
+
 	while (true)
 	{
 		char cur_char = *p_gcode;
@@ -145,7 +148,7 @@ bool gcode_parser::try_parse_gcode(const char * gcode, parsed_command & command)
 			break;
 		else if (cur_char > 32 || (cur_char == ' ' && has_seen_character))
 		{
-			if (cur_char >= 'a' && cur_char <= 'z')
+			if (!is_text_only_parameter && (cur_char >= 'a' && cur_char <= 'z'))
 				command.gcode.push_back(cur_char - 32);
 			else
 				command.gcode.push_back(cur_char);
@@ -188,7 +191,7 @@ bool gcode_parser::try_parse_gcode(const char * gcode, parsed_command & command)
 
 		}
 		else if (
-			text_only_functions_.find(command.command) != text_only_functions_.end() ||
+			is_text_only_parameter ||
 			(
 				command.command.length() > 0 && command.command[0] == '@'
 			)
