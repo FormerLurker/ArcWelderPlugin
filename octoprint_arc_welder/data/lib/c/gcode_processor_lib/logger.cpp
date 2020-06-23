@@ -89,20 +89,8 @@ void logger::create_log_message(const int logger_type, const int log_level, cons
 	// example message
 	// 2020-04-20 21:36:59,414 - arc_welder.__init__ - INFO - MESSAGE_GOES_HERE
 
-	// Create the time string in YYYY-MM-DD HH:MM:SS format
-	std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-	std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-	const time_t now_time = std::chrono::system_clock::to_time_t(now);
-	struct tm  tstruct;
-	char buf[25];
-	tstruct = *localtime(&now_time);
-	// DOESN'T WORK WITH ALL COMPILERS... 
-	//localtime_s(&tstruct, &now_time);
-	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S.", &tstruct);
-	output = buf;
-	std::string s_miliseconds = std::to_string(ms.count());
-	// Add the milliseconds, padded with 0s, to the output
-	output.append(std::string(3 - s_miliseconds.length(), '0') + s_miliseconds);
+	// Create the time string in YYYY-MM-DD HH:MM:SS.ms format
+	logger::get_timestamp(output);
 	// Add a spacer
 	output.append(" - ");
 	// Add the logger name
@@ -148,3 +136,39 @@ void logger::log(const int logger_type, const int log_level, const std::string& 
 	std::cout.flush();
 	
 }
+
+void logger::get_timestamp(std::string &timestamp)
+{
+	std::time_t rawtime;
+	std::tm* timeinfo;
+	char buffer[80];
+
+	std::time(&rawtime);
+	timeinfo = std::localtime(&rawtime);
+	std::strftime(buffer, 80, "%Y-%m-%d %H:%M:%S.", timeinfo);
+	
+	timestamp = buffer;
+	clock_t t = std::clock();
+	int ms = static_cast<int>((t / CLOCKS_PER_MS)) % 1000;
+
+	std::string s_miliseconds = std::to_string(ms);
+	timestamp.append(std::string(3 - s_miliseconds.length(), '0') + s_miliseconds);
+	
+}
+
+/*
+std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+	std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+	const time_t now_time = std::chrono::system_clock::to_time_t(now);
+	struct tm  tstruct;
+	char buf[25];
+	tstruct = *localtime(&now_time);
+	// DOESN'T WORK WITH ALL COMPILERS...
+	//localtime_s(&tstruct, &now_time);
+	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S.", &tstruct);
+	output = buf;
+	std::string s_miliseconds = std::to_string(ms.count());
+	// Add the milliseconds, padded with 0s, to the output
+	output.append(std::string(3 - s_miliseconds.length(), '0') + s_miliseconds);
+
+*/
