@@ -36,6 +36,7 @@ from distutils.version import LooseVersion
 from distutils.sysconfig import customize_compiler
 from octoprint_arc_welder_setuptools import NumberedVersion
 import sys
+import platform
 import versioneer
 
 ########################################################################################################################
@@ -166,6 +167,14 @@ if DEBUG:
         },
     }
 
+# OS Specific Flags
+os_compiler_opts = {
+    'Darwin': {
+        "extra_compile_args": ["-mmacosx-version-min=10.8", "-stdlib=libc++"],
+        "extra_link_args": ["-lc++"],
+        "define_macros": [],
+    }
+}
 
 class build_ext_subclass(build_ext):
     def build_extensions(self):
@@ -181,6 +190,15 @@ class build_ext_subclass(build_ext):
             pass
         c = self.compiler
         opts = [v for k, v in compiler_opts.items() if c.compiler_type == k]
+
+        # Add OS Specific Flags
+        if platform.system() in os_compiler_opts:
+            os_flags = os_compiler_opts[platform.system()]
+            for o in opts:
+                o["extra_compile_args"].extend(os_flags["extra_compile_args"])
+                o["extra_link_args"].extend(os_flags["extra_compile_args"])
+                o["define_macros"].extend(os_flags["define_macros"])
+
         for e in self.extensions:
             for o in opts:
                 for attrib, value in o.items():
