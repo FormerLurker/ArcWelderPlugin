@@ -236,7 +236,7 @@ arc_welder_results results;
 			stream << "Parsing: " << line;
 			p_logger_->log(logger_type_, VERBOSE, stream.str());
 		}
-		parser_.try_parse_gcode(line.c_str(), cmd);
+		parser_.try_parse_gcode(line.c_str(), cmd, true);
 		bool has_gcode = false;
 		if (cmd.gcode.length() > 0)
 		{
@@ -648,7 +648,7 @@ std::string arc_welder::create_g92_e(double absolute_e)
 
 int arc_welder::write_gcode_to_file(std::string gcode)
 {
-	output_file_ << utilities::trim(gcode) << "\n";
+	output_file_ << gcode << "\n";
 	return 1;
 }
 

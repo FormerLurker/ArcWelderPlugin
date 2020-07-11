@@ -35,7 +35,9 @@ public:
 	gcode_parser();
 	~gcode_parser();
 	bool try_parse_gcode(const char * gcode, parsed_command & command);
+	bool try_parse_gcode(const char* gcode, parsed_command& command, bool preserve_format);
 	parsed_command parse_gcode(const char * gcode);
+	parsed_command parse_gcode(const char* gcode, bool preserve_format);
 private:
 	gcode_parser(const gcode_parser &source);
 	// Variables and lookups
