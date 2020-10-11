@@ -27,39 +27,39 @@ PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 	std::string segment_statistics = progress.segment_statistics.str();
 	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:s}",
 		u8"percent_complete",
-		progress.percent_complete,
+		progress.percent_complete,												//1
 		u8"seconds_elapsed",
-		progress.seconds_elapsed,
+		progress.seconds_elapsed,													//2
 		u8"seconds_remaining",
-		progress.seconds_remaining,
+		progress.seconds_remaining,												//3
 		u8"gcodes_processed",
-		progress.gcodes_processed,
+		progress.gcodes_processed,												//4
 		u8"lines_processed",
-		progress.lines_processed,
+		progress.lines_processed,													//5
 		u8"points_compressed",
-		progress.points_compressed,
+		progress.points_compressed,												//6
 		u8"arcs_created",
-		progress.arcs_created,
+		progress.arcs_created,														//7
 		u8"source_file_position",
-		progress.source_file_position,
+		progress.source_file_position,										//8
 		u8"source_file_size",
-		progress.source_file_size,
+		progress.source_file_size,												//9
 		u8"target_file_size",
-		progress.target_file_size,
+		progress.target_file_size,												//10
 		u8"compression_ratio",
-		progress.compression_ratio,
+		progress.compression_ratio,												//11
 		u8"compression_percent",
-		progress.compression_percent,
+		progress.compression_percent,											//12
 		u8"source_file_total_length",
-		progress.segment_statistics.total_length_source,
+		progress.segment_statistics.total_length_source,	//13
 		u8"target_file_total_length",
-		progress.segment_statistics.total_length_target,
+		progress.segment_statistics.total_length_target,	//14
 		u8"source_file_total_count",
-		progress.segment_statistics.total_count_source,
+		progress.segment_statistics.total_count_source,		//15
 		u8"target_file_total_count",
-		progress.segment_statistics.total_length_target,
-		u8"segment_statistics_text",
-		progress.segment_statistics.str().c_str()
+		progress.segment_statistics.total_length_target//,	//16
+		//u8"segment_statistics_text",
+		//segment_statistics.c_str()												//17
 	);
 	return py_progress;
 }
@@ -74,7 +74,7 @@ bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 	if (func_args == NULL)
 	{
 		Py_DECREF(py_dict);
-		return true;
+		return false;	// This was returning true, I think it was a typo.  Making a note just in case.
 	}
 		
 	PyGILState_STATE gstate = PyGILState_Ensure();
