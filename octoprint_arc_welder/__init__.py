@@ -189,6 +189,27 @@ class ArcWelderPlugin(
             self.is_cancelled = True
             return jsonify({"success": True})
 
+    @octoprint.plugin.BlueprintPlugin.route("/requestStats", methods=["POST"])
+    @restricted_access
+    def request_stats_requests(self):
+        with ArcWelderPlugin.admin_permission.require(http_exception=403):
+            job = self._printer.get_current_job()
+            # get the currently selected file
+            file = job.get("file", None)
+            if file:
+                name = file["name"]
+                path = file["path"]
+                origin = file["origin"]
+
+                if name and path and origin:
+                    statistics = self.get_statistics(name, path, origin)
+                    # return the metadata
+                    return jsonify({
+                        "filename": statistics["name"],
+                        "statistics": statistics["statistics"],
+                        "is_arcwelder": statistics["is_arcwelder"]
+                    })
+            return jsonify(False)
     @octoprint.plugin.BlueprintPlugin.route("/clearLog", methods=["POST"])
     @restricted_access
     def clear_log_request(self):
@@ -250,7 +271,30 @@ class ArcWelderPlugin(
             "close_keys": close_keys,
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
-        # return true to continue, false to terminate
+
+    def get_statistics(self, name, path, origin):
+        metadata = self._file_manager.get_metadata(origin, path)
+        return_value = {
+            'name': name,
+            'statistics': None,
+            'is_arcwelder': False
+        }
+        if "arc_welder" in metadata:
+            return_value['is_arcwelder'] = True
+            if "arc_welder_statistics" in metadata:
+                statistics = metadata["arc_welder_statistics"]
+                return_value['statistics'] = statistics
+
+        return return_value
+
+    def send_statistics(self, statistics):
+        data = {
+            "message_type": "statistics",
+            "filename": statistics["name"],
+            "statistics": statistics["statistics"],
+            "is_arcwelder": statistics["is_arcwelder"]
+        }
+        self._plugin_manager.send_plugin_message(self._identifier, data)
 
     # ~~ AssetPlugin mixin
     def get_assets(self):
@@ -403,7 +447,7 @@ class ArcWelderPlugin(
             "log_level": self._gcode_conversion_log_level
         }
 
-    def save_preprocessed_file(self, path, preprocessor_args):
+    def save_preprocessed_file(self, path, preprocessor_args, results):
         # get the file name and path
         new_path, new_name = self.get_storage_path_and_name(
             path, not self._overwrite_source_file
@@ -431,6 +475,34 @@ class ArcWelderPlugin(
         self._file_manager.set_additional_metadata(
             FileDestinations.LOCAL, new_path, "arc_welder", True, overwrite=True, merge=False
         )
+        progress = results["progress"]
+
+        self._file_manager.set_additional_metadata(
+            FileDestinations.LOCAL,
+            new_path,
+            "arc_welder_statistics",
+            {
+                "source_file_total_length": progress["source_file_total_length"],
+                "target_file_total_length": progress["target_file_total_length"],
+                "source_file_total_count": progress["source_file_total_count"],
+                "target_file_total_count": progress["target_file_total_count"],
+                "segment_statistics_text": progress["segment_statistics_text"],
+                "gcodes_processed": progress["gcodes_processed"],
+                "lines_processed": progress["lines_processed"],
+                "points_compressed": progress["points_compressed"],
+                "arcs_created": progress["arcs_created"],
+                "source_file_size": progress["source_file_size"],
+                "source_file_position": progress["source_file_position"],
+                "target_file_size": progress["target_file_size"],
+                "compression_ratio": progress["compression_ratio"],
+                "compression_percent": progress["compression_percent"],
+                "source_filename": results["source_filename"],
+                "target_filename": new_name,
+                "preprocessing_job_guid": self.preprocessing_job_guid
+            },
+            overwrite=True,
+            merge=False
+        )
 
     def preprocessing_started(self, path, preprocessor_args):
         new_path, new_name = self.get_storage_path_and_name(
@@ -439,6 +511,7 @@ class ArcWelderPlugin(
         self.preprocessing_job_guid = str(uuid.uuid4())
         self.preprocessing_job_source_file_path = path
         self.preprocessing_job_target_file_name = new_name
+        self.is_cancelled = False
 
         logger.info(
             "Starting pre-processing with the following arguments:"
@@ -510,7 +583,7 @@ class ArcWelderPlugin(
         # save the newly created file.  This must be done before
         # exiting this callback because the target file isn't
         # guaranteed to exist later.
-        self.save_preprocessed_file(path, preprocessor_args)
+        self.save_preprocessed_file(path, preprocessor_args, results)
         if self._show_completed_notification:
             data = {
                 "message_type": "preprocessing-success",
@@ -541,10 +614,11 @@ class ArcWelderPlugin(
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def on_event(self, event, payload):
-        if not self._enabled or not self._auto_pre_processing_enabled:
-            return
 
         if event == Events.UPLOAD:
+            if not self._enabled or not self._auto_pre_processing_enabled:
+                return
+
             #storage = payload["storage"]
             path = payload["path"]
             name = payload["name"]
@@ -566,6 +640,13 @@ class ArcWelderPlugin(
                 return
 
             self.add_file_to_preprocessor_queue(path)
+        elif event == Events.FILE_SELECTED:
+            # extract the payload
+            name = payload["name"]
+            path = payload["path"]
+            origin = payload["origin"]
+            statistics = self.get_statistics(name, path, origin)
+            self.send_statistics(statistics)
 
     def add_file_to_preprocessor_queue(self, path):
         # get the file by path
@@ -582,7 +663,7 @@ class ArcWelderPlugin(
 
         logger.info("Received a new gcode file for processing.  FileName: %s.", path)
 
-        self.is_cancelled = False
+        #self.is_cancelled = False
         path_on_disk = self._file_manager.path_on_disk(FileDestinations.LOCAL, path)
         preprocessor_args = self.get_preprocessor_arguments(path_on_disk)
         self._processing_queue.put((path, preprocessor_args))

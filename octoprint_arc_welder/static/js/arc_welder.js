@@ -27,6 +27,38 @@ $(function () {
     // ArcWelder Global
     ArcWelder = {};
     ArcWelder.PLUGIN_ID = "arc_welder";
+
+    ArcWelder.parseFloat = function (value) {
+        var ret = parseFloat(value);
+        if (!isNaN(ret))
+            return ret;
+        return null;
+    };
+    // extenders
+
+    ko.extenders.arc_welder_numeric = function (target, precision) {
+        var result = ko.dependentObservable({
+            read: function () {
+                var val = target();
+                val = ArcWelder.parseFloat(val);
+                if (val == null)
+                    return val;
+                try {
+                    // safari doesn't seem to like toFixed with a precision > 20
+                    if (precision > 20)
+                        precision = 20;
+                    return val.toFixed(precision);
+                } catch (e) {
+                    console.error("Error converting toFixed");
+                }
+
+            },
+            write: target
+        });
+
+        result.raw = target;
+        return result;
+    };
     //ArcWelder.pnotify = PNotifyExtensions({});
     ArcWelder.APIURL = function(fn){
         return "./plugin/" + ArcWelder.PLUGIN_ID + "/" + fn;
@@ -110,7 +142,20 @@ $(function () {
         self.pre_processing_progress = null;
         self.version = ko.observable();
         self.git_version = ko.observable();
+        self.selected_filename = ko.observable();
+        self.statistics = {};
+        self.statistics.gcodes_processed = ko.observable();
+        self.statistics.lines_processed = ko.observable();
+        self.statistics.points_compressed = ko.observable();
+        self.statistics.arcs_created = ko.observable();
+        self.statistics.source_file_size = ko.observable();
+        self.statistics.target_file_size = ko.observable();
+        self.statistics.compression_ratio = ko.observable().extend({arc_welder_numeric: 1});
+        self.statistics.compression_percent = ko.observable().extend({arc_welder_numeric: 1});
+        self.statistics.source_filename = ko.observable();
+        self.statistics.target_filename = ko.observable();
 
+        self.statistics.segment_statistics_text = ko.observable();
         self.current_files = null;
 
         self.auto_pre_processing_enabled = ko.pureComputed(function(){
@@ -160,6 +205,7 @@ $(function () {
             self.current_files = ko.computed( function() {
                 self.addProcessButtonToFileManager(self.files.listHelper.paginatedItems(), self.printer_state.isPrinting());
             }, this);
+            self.requestStats();
 
         };
 
@@ -171,12 +217,87 @@ $(function () {
             self.pre_processing_progress = null;
         };
 
+        self.toggleStatistics = function()
+        {
+            var $statsButton = $("#arc-welder-show-statistics-btn");
+            var $statsDiv = $("#arc-welder-stats");
+            var $statsContainer = $("#arc-welder-stats-container");
+
+            if ($statsDiv.css('display') != 'none')
+            {
+                if ($statsContainer.css('display') != 'none')
+                {
+                    $statsContainer.hide();
+                    $statsButton.text("Show Stats")
+                }
+                else
+                {
+                    $statsContainer.show();
+                    $statsButton.text("Hide Stats")
+                }
+            }
+        };
+
+        self.loadStats = function(data)
+        {
+            // Update the UI
+            var filename = data.filename;
+            var is_arcwelder = data.is_arcwelder;
+            var statistics = data.statistics;
+            self.selected_filename(filename);
+            if (statistics)
+            {
+                self.statistics.gcodes_processed(statistics.gcodes_processed);
+                self.statistics.lines_processed(statistics.lines_processed);
+                self.statistics.points_compressed(statistics.points_compressed);
+                self.statistics.arcs_created(statistics.arcs_created);
+                self.statistics.source_file_size(ArcWelder.toFileSizeString(statistics.source_file_size, 1));
+                self.statistics.target_file_size(ArcWelder.toFileSizeString(statistics.target_file_size));
+                self.statistics.compression_ratio(statistics.compression_ratio);
+                self.statistics.compression_percent(statistics.compression_percent);
+                self.statistics.source_filename(statistics.source_filename);
+                self.statistics.target_filename(statistics.target_filename);
+                self.statistics.segment_statistics_text(statistics.segment_statistics_text);
+
+            }
+
+            var $statsButton = $("#arc-welder-show-statistics-btn");
+            var $statsDiv = $("#arc-welder-stats");
+            var $statsNoStatsDiv = $statsDiv.find("#arc-welder-no-stats-div");
+            var $statsTextDiv = $statsDiv.find("#arc-welder-stats-text-div");
+
+            // Hide all the divs and clear text
+            $statsTextDiv.hide();
+            $statsDiv.hide();
+            $statsNoStatsDiv.hide();
+            $statsButton.hide();
+
+            if (is_arcwelder)
+            {
+                $statsDiv.show();
+                $statsButton.show();
+                if (statistics)
+                {
+                    $statsTextDiv.show();
+                }
+                else
+                {
+                    $statsNoStatsDiv.show();
+                }
+            }
+
+        };
+
         // Handle Plugin Messages from Server
         self.onDataUpdaterPluginMessage = function (plugin, data) {
             if (plugin !== "arc_welder") {
                 return;
             }
             switch (data.message_type) {
+                case "statistics":
+                    self.loadStats(data);
+
+                    break;
                 case "toast":
                     var options = {
                         title: data.title,
@@ -294,10 +415,10 @@ $(function () {
                     var points_compressed = progress.points_compressed;
                     var source_file_size = progress.source_file_size;
                     var target_file_size = progress.target_file_size;
-                    var source_file_position = progress.source_file_position;
                     var compression_ratio = progress.compression_ratio;
                     var compression_percent = progress.compression_percent;
-                    var space_saved_string = ArcWelder.toFileSizeString(source_file_position - target_file_size, 1);
+                    var source_file_position = progress.source_file_position;
+                    var space_saved_string = ArcWelder.toFileSizeString(source_file_size - target_file_size, 1);
                     var source_position_string = ArcWelder.toFileSizeString(source_file_position, 1);
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
 
@@ -362,6 +483,23 @@ $(function () {
         self.cancelPreprocessing = function () {
             self.cancelPreprocessingRequest(false);
         };
+
+        self.requestStats = function () {
+            $.ajax({
+                url: ArcWelder.APIURL("requestStats"),
+                type: "POST",
+                tryCount: 0,
+                retryLimit: 3,
+                contentType: "application/json",
+                dataType: "json",
+                success: function(data) {
+                    if (data)
+                    {
+                        self.loadStats(data);
+                    }
+                }
+            });
+        }
 
         self.cancelPreprocessingRequest = function(cancel_all){
             var data = {

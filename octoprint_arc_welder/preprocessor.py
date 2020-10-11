@@ -121,7 +121,7 @@ class PreProcessorWorker(threading.Thread):
             self._failed_callback(message)
             return
         shutil.copy(processor_args["path"], self._source_file_path)
-
+        source_filename = utilities.get_filename_from_path(processor_args["path"])
         # Add arguments to the processor_args dict
         processor_args["on_progress_received"] = self._progress_received
         processor_args["source_file_path"] = self._source_file_path
@@ -151,12 +151,14 @@ class PreProcessorWorker(threading.Thread):
         # the progress payload will all be in bytes (str for python 2) format.
         # Make sure everything is in unicode (str for python3) because mixed encoding
         # messes with things.
+
         encoded_results = utilities.dict_encode(results)
+        encoded_results["source_filename"] = source_filename
         if encoded_results["cancelled"]:
             logger.info("Preprocessing of %s has been cancelled.", processor_args["path"])
             self._cancel_callback(path, processor_args)
         elif encoded_results["success"]:
-            logger.info("Preprocessing of %s has been cancelled.", processor_args["path"])
+            logger.info("Preprocessing of %s completed.", processor_args["path"])
             # Save the produced gcode file
             self._success_callback(encoded_results, path, processor_args)
         else:

@@ -31,7 +31,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, gcode_position_args args) : current_arc_(DEFAULT_MIN_SEGMENTS, gcode_position_args_.position_buffer_size - 5, resolution_mm, max_radius)
+arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, gcode_position_args args) : current_arc_(DEFAULT_MIN_SEGMENTS, gcode_position_args_.position_buffer_size - 5, resolution_mm, max_radius), segment_statistics_(segment_statistic_lengths)
 {
 	p_logger_ = log;
 	debug_logging_enabled_ = false;
@@ -251,7 +251,7 @@ arc_welder_results results;
 		// Always process the command through the printer, even if no command is found
 		// This is important so that comments can be analyzed
 		//std::cout << "stabilization::process_file - updating position...";
-		process_gcode(cmd, false);
+		process_gcode(cmd, false, false);
 
 		// Only continue to process if we've found a command and either a progress_callback_ is supplied, or debug loggin is enabled.
 		if (has_gcode && (progress_callback_ != NULL || info_logging_enabled_))
@@ -271,7 +271,7 @@ arc_welder_results results;
 	if (current_arc_.is_shape() && waiting_for_arc_)
 	{
 		p_logger_->log(logger_type_, DEBUG, "The target file opened successfully.");
-		process_gcode(cmd, true);
+		process_gcode(cmd, true, false);
 	}
 	p_logger_->log(logger_type_, DEBUG, "Writing all unwritten gcodes to the target file.");
 	write_unwritten_gcodes_to_file();
@@ -329,20 +329,20 @@ arc_welder_progress arc_welder::get_progress_(long source_file_position, double 
 		progress.compression_percent = (1.0 - (static_cast<float>(progress.target_file_size) / static_cast<float>(source_file_position))) * 100.0f;
 	}
 
+	progress.segment_statistics = segment_statistics_;
 	return progress;
 	
 }
 
-int arc_welder::process_gcode(parsed_command cmd, bool is_end)
+int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess)
 {
 	// Update the position for the source gcode file
 	p_source_position_->update(cmd, lines_processed_, gcodes_processed_, -1);
-
 	position* p_cur_pos = p_source_position_->get_current_position_ptr();
 	position* p_pre_pos = p_source_position_->get_previous_position_ptr();
 	extruder extruder_current = p_cur_pos->get_current_extruder();
 	extruder previous_extruder = p_pre_pos->get_current_extruder();
-	point p(p_cur_pos->x, p_cur_pos->y, p_cur_pos->z, extruder_current.e_relative);
+	point p(p_cur_pos->get_gcode_x(), p_cur_pos->get_gcode_y(), p_cur_pos->get_gcode_z(), extruder_current.e_relative);
 	//std::cout << lines_processed_ << " - " << cmd.gcode << ", CurrentEAbsolute: " << cur_extruder.e <<", ExtrusionLength: " << cur_extruder.extrusion_length << ", Retraction Length: " << cur_extruder.retraction_length << ", IsExtruding: " << cur_extruder.is_extruding << ", IsRetracting: " << cur_extruder.is_retracting << ".\n";
 
 	int lines_written = 0;
@@ -351,12 +351,28 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 	bool arc_added = false;
 	bool clear_shapes = false;
 	
+	// Update the source file statistics
+	if (p_cur_pos->has_xy_position_changed && (extruder_current.is_extruding || extruder_current.is_retracting) && !is_reprocess)
+	{
+		double movement_length_mm = utilities::get_cartesian_distance(p_pre_pos->x, p_pre_pos->y, p_cur_pos->x, p_cur_pos->y);
+		if (movement_length_mm > 0)
+		{
+			segment_statistics_.update(movement_length_mm, true);
+		}
+	}
+
 	// We need to make sure the printer is using absolute xyz, is extruding, and the extruder axis mode is the same as that of the previous position
 	// TODO: Handle relative XYZ axis.  This is possible, but maybe not so important.
 	if (
 		!is_end && cmd.is_known_command && !cmd.is_empty && (
 			(cmd.command == "G0" || cmd.command == "G1") &&
 			utilities::is_equal(p_cur_pos->z, p_pre_pos->z) &&
+			utilities::is_equal(p_cur_pos->x_offset, p_pre_pos->x_offset) &&
+			utilities::is_equal(p_cur_pos->y_offset, p_pre_pos->y_offset) &&
+			utilities::is_equal(p_cur_pos->z_offset, p_pre_pos->z_offset) &&
+			utilities::is_equal(p_cur_pos->x_firmware_offset, p_pre_pos->x_firmware_offset) &&
+			utilities::is_equal(p_cur_pos->y_firmware_offset, p_pre_pos->y_firmware_offset) &&
+			utilities::is_equal(p_cur_pos->z_firmware_offset, p_pre_pos->z_firmware_offset) &&
 			!p_cur_pos->is_relative &&
 			(
 				!waiting_for_arc_ ||
@@ -378,7 +394,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 			}
 			write_unwritten_gcodes_to_file();
 			// add the previous point as the starting point for the current arc
-			point previous_p(p_pre_pos->x, p_pre_pos->y, p_pre_pos->z, previous_extruder.e_relative);
+			point previous_p(p_pre_pos->get_gcode_x(), p_pre_pos->get_gcode_y(), p_pre_pos->get_gcode_z(), previous_extruder.e_relative);
 			// Don't add any extrusion, or you will over extrude!
 			//std::cout << "Trying to add first point (" << p.x << "," << p.y << "," << p.z << ")...";
 			current_arc_.try_add_point(previous_p, 0);
@@ -488,6 +504,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 			}
 		}
 	}
+	
 	if (!arc_added)
 	{
 		if (current_arc_.get_num_segments() < current_arc_.get_min_segments()) {
@@ -507,9 +524,10 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 
 			if (current_arc_.is_shape())
 			{
-				// increment our statistics
+				// update our statistics
 				points_compressed_ += current_arc_.get_num_segments()-1;
-				arcs_created_++;
+				arcs_created_++; // increment the number of generated arcs
+
 				//std::cout << "Arc shape found.\n";
 				// Get the comment now, before we remove the previous comments
 				std::string comment = get_comment_for_arc();
@@ -553,8 +571,10 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 
 				// Get and alter the current position so we can add it to the unwritten commands list
 				parsed_command arc_command = parser_.parse_gcode(gcode.c_str());
+				double arc_extrusion_length = current_arc_.get_shape_length();
+				
 				unwritten_commands_.push_back(
-					unwritten_command(arc_command, p_cur_pos->is_extruder_relative)
+					unwritten_command(arc_command, p_cur_pos->is_extruder_relative, arc_extrusion_length)
 				);
 				
 				// write all unwritten commands (if we don't do this we'll mess up absolute e by adding an offset to the arc)
@@ -569,7 +589,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 				// Reprocess this line
 				if (!is_end)
 				{
-					return process_gcode(cmd, false);
+					return process_gcode(cmd, false, true);
 				}
 				else
 				{
@@ -597,17 +617,21 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end)
 		}
 
 	}
-	if (clear_shapes)
-	{
-		waiting_for_arc_ = false;
-		current_arc_.clear();
-		// The current command is unwritten, add it.
-		unwritten_commands_.push_back(unwritten_command(p_source_position_->get_current_position_ptr()));
-	}
-	else if (waiting_for_arc_ || !arc_added)
-	{
 
-		unwritten_commands_.push_back(unwritten_command(p_source_position_->get_current_position_ptr()));
+
+	if (waiting_for_arc_ || !arc_added)
+	{
+		position* cur_pos = p_source_position_->get_current_position_ptr();
+		extruder& cur_extruder = cur_pos->get_current_extruder();
+
+		double length = 0;
+		if (p_cur_pos->has_xy_position_changed && (cur_extruder.is_extruding || cur_extruder.is_retracting))
+		{
+			position* prev_pos = p_source_position_->get_previous_position_ptr();
+			length = utilities::get_cartesian_distance(cur_pos->x, cur_pos->y, prev_pos->x, prev_pos->y);
+		}
+		
+		unwritten_commands_.push_back(unwritten_command(cur_pos, length));
 		
 	}
 	if (!waiting_for_arc_)
@@ -662,6 +686,10 @@ int arc_welder::write_unwritten_gcodes_to_file()
 	{
 		// The the current unwritten position and remove it from the list
 		unwritten_command p = unwritten_commands_.pop_front();
+		if (p.extrusion_length > 0)
+		{
+			segment_statistics_.update(p.extrusion_length, false);
+		}
 		write_gcode_to_file(p.command.to_string());
 	}
 	

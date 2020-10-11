@@ -25,7 +25,7 @@
 
 PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 {
-	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f}",
+	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:s}",
 		u8"percent_complete",
 		progress.percent_complete,
 		u8"seconds_elapsed",
@@ -49,7 +49,17 @@ PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 		u8"compression_ratio",
 		progress.compression_ratio,
 		u8"compression_percent",
-		progress.compression_percent
+		progress.compression_percent,
+		u8"source_file_total_length",
+		progress.segment_statistics.total_length_source,
+		u8"target_file_total_length",
+		progress.segment_statistics.total_length_target,
+		u8"source_file_total_count",
+		progress.segment_statistics.total_count_source,
+		u8"target_file_total_count",
+		progress.segment_statistics.total_length_target,
+		u8"segment_statistics_text",
+		progress.segment_statistics.str().c_str()
 	);
 	return py_progress;
 }

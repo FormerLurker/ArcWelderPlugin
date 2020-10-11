@@ -31,20 +31,25 @@ struct unwritten_command
 		is_extruder_relative = false;
 		e_relative = 0;
 		offset_e = 0;
+		extrusion_length = 0;
 	}
-	unwritten_command(parsed_command &cmd, bool is_relative) {
-		is_relative = false;
+	unwritten_command(parsed_command &cmd, bool is_relative, double command_length) {
+		is_extruder_relative = is_relative;
 		command = cmd;
+		extrusion_length = command_length;
 	}
-	unwritten_command(position* p) {
+	unwritten_command(position* p, double command_length) {
+	  
 		e_relative = p->get_current_extruder().e_relative;
 		offset_e = p->get_current_extruder().get_offset_e();
 		is_extruder_relative = p->is_extruder_relative;
 		command = p->command;
+		extrusion_length = command_length;
 	}
 	bool is_extruder_relative;
 	double e_relative;
 	double offset_e;
+	double extrusion_length;
 	parsed_command command;
 
 	std::string to_string(bool rewrite, std::string additional_comment)

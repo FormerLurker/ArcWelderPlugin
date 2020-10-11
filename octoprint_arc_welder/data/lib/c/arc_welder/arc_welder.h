@@ -36,11 +36,266 @@
 #include "array_list.h"
 #include "unwritten_command.h"
 #include "logger.h"
+#include <cmath>
 
 #define DEFAULT_G90_G91_INFLUENCES_EXTREUDER false
 
+const std::vector<double> segment_statistic_lengths = { 0.002f, 0.005f, 0.01f, 0.05f, 0.1f, 0.5f, 1.0f, 5.0f, 10.0f, 20.0f, 50.0f, 100.0f };
+
+struct segment_statistic {
+	segment_statistic(double min_length_mm, double max_length_mm)
+	{
+		count = 0;
+		min_mm = min_length_mm;
+		max_mm = max_length_mm;
+	}
+
+	double min_mm;
+	double max_mm;
+	int count;
+};
+
+struct source_target_segment_statistics {
+	source_target_segment_statistics(const std::vector<double> segment_tracking_lengths) {
+		total_length_source = 0;
+		total_length_target = 0;
+		total_count_source = 0;
+		total_count_target = 0;
+		max_width = 0;
+		max_precision = 3;
+		double current_min = 0;
+		for (int index = 0; index < segment_tracking_lengths.size(); index++)
+		{
+			double current_max = segment_tracking_lengths[index];
+			source_segments.push_back(segment_statistic(current_min, segment_tracking_lengths[index]));
+			target_segments.push_back(segment_statistic(current_min, segment_tracking_lengths[index]));
+			current_min = current_max;
+		}
+		source_segments.push_back(segment_statistic(current_min, -1.0f));
+		target_segments.push_back(segment_statistic(current_min, -1.0f));
+		max_width = int(log10(current_min) + 1);
+	}
+
+	void update(double length, bool is_source)
+	{
+		if (length <= 0)
+			return;
+		
+		std::vector<segment_statistic> * stats;
+		if (is_source)
+		{
+			total_count_source++;
+			total_length_source += length;
+			stats = &source_segments;
+		}
+		else
+		{
+			total_count_target++;
+			total_length_target += length;
+			stats = &target_segments;
+		}
+		for (std::vector<segment_statistic>::iterator it = std::begin(*stats); it != std::end(*stats); ++it) {
+			segment_statistic& stat = *it;
+			if (stat.min_mm <= length && stat.max_mm > length || std::next(it) == std::end(*stats))
+			{
+				stat.count++;
+				break;
+			}
+		}
+	}
+
+	std::vector<segment_statistic> source_segments;
+	std::vector<segment_statistic> target_segments;
+	double total_length_source;
+	double total_length_target;
+	int max_width;
+	int max_precision;
+	int total_count_source;
+	int total_count_target;
+	std::string str() const{
+		
+		std::stringstream output_stream;
+		std::stringstream format_stream;
+		const int min_column_size = 8;
+		int mm_col_size = max_width + max_precision + 2; // Adding 2 for the mm
+		int min_max_label_col_size = 4;		
+		int percent_col_size = 9;
+		int totals_row_label_size = 22;
+		int count_col_size;
+
+		// Calculate the count column size
+		int max_count = 0;
+		for (int index = 0; index < source_segments.size(); index++)
+		{
+			int source_count = source_segments[index].count;
+			int target_count = target_segments[index].count;
+			if (max_count < source_count)
+			{
+				max_count = source_count;
+			}
+			if (max_count < target_count)
+			{
+				max_count = target_count;
+			}
+		}
+		// Get the number of digits in the max count
+		count_col_size = int(log10(max_count) + 1);
+		// enforce the minimum of 6
+		if (count_col_size < min_column_size)
+		{
+			count_col_size = min_column_size;
+		}
+
+		if (max_precision > 0)
+		{
+			// We need an extra space in our column for the decimal.
+			mm_col_size ++;
+		}
+
+		// enforce the min column size
+		if (mm_col_size < min_column_size)
+		{
+			mm_col_size = min_column_size;
+		}
+		// Get the table width
+		int table_width = mm_col_size + min_max_label_col_size + mm_col_size + count_col_size + count_col_size + percent_col_size;
+		// Add a separator for the statistics
+		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
+		// Output the column headers
+		// Center the min and max column.
+		output_stream << utilities::center("Min", mm_col_size);
+		output_stream << std::setw(min_max_label_col_size) << "";
+		output_stream << utilities::center("Max", mm_col_size);
+		// right align the source, target and change columns
+		output_stream << std::setw(count_col_size) << std::right << "Source";
+		output_stream << std::setw(count_col_size) << std::right << "Target";
+		output_stream << std::setw(percent_col_size) << std::right << "Change";
+		output_stream << std::endl;
+		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
+		output_stream << std::fixed << std::setprecision(max_precision);
+		
+		for (int index=0; index < source_segments.size(); index++) {
+			//extract the necessary variables from the source and target segments
+			double min_mm = source_segments[index].min_mm;
+			double max_mm = source_segments[index].max_mm;
+			int source_count = source_segments[index].count;
+			int target_count = target_segments[index].count;
+			// Calculate the percent change	and create the string
+			// Construct the percent_change_string
+			std::string percent_change_string = utilities::get_percent_change_string(source_count, target_count, 1);
+			
+			// Create the strings to hold the column values
+			std::string min_mm_string;
+			std::string max_mm_string;
+			std::string source_count_string;
+			std::string target_count_string;
+			
+			// Clear the format stream and construct the min_mm_string
+			format_stream.str(std::string());
+			format_stream << std::fixed << std::setprecision(max_precision) << min_mm << "mm";
+			min_mm_string = format_stream.str();
+			// Clear the format stream and construct the max_mm_string
+			format_stream.str(std::string());
+			format_stream << std::fixed << std::setprecision(max_precision) << max_mm << "mm";
+			max_mm_string = format_stream.str();
+			// Clear the format stream and construct the source_count_string
+			format_stream.str(std::string());
+			format_stream << std::fixed << std::setprecision(0) << source_count;
+			source_count_string = format_stream.str();
+			// Clear the format stream and construct the target_count_string
+			format_stream.str(std::string());
+			format_stream << std::fixed << std::setprecision(0) << target_count;
+			target_count_string = format_stream.str();
+			// The min and max columns and the label need to be handled differently if this is the last item
+			if (index == source_segments.size() - 1)
+			{
+				// If we are on the last setment item, the 'min' value is the max, and there is no end
+				// The is because the last item contains the count of all items above the max length provided
+				// in the constructor
+
+				// The 'min' column is empty here
+				output_stream << std::setw(mm_col_size) << std::internal << "";
+				// Add the min/max label
+				output_stream << std::setw(min_max_label_col_size) << " >= ";
+				// Add the min mm string
+				output_stream << std::setw(mm_col_size) << std::internal << min_mm_string;
+			}
+			else
+			{
+				// add the 'min' column
+				output_stream << std::setw(mm_col_size) << std::internal << min_mm_string;
+				// Add the min/max label
+				output_stream << std::setw(min_max_label_col_size) << " to ";
+				// Add the 'max' column				
+				output_stream << std::setw(mm_col_size) << std::internal << max_mm_string;
+			}
+			// Add the source count
+			output_stream << std::setw(count_col_size) << source_count_string;
+			// Add the target count
+			output_stream << std::setw(count_col_size) << target_count_string;
+			// Add the percent change string
+			output_stream << std::setw(percent_col_size) << percent_change_string;
+			// End the line
+			output_stream << std::endl;
+		}
+		// Add the total rows separator
+		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
+		// Add the total rows;
+		if (utilities::is_equal(total_length_source, total_length_target, 0.001))
+		{
+			std::string total_distance_string;
+			format_stream.str(std::string());
+			format_stream << std::fixed << std::setprecision(max_precision) << total_length_source << "mm";
+			total_distance_string = format_stream.str();
+
+			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance:";
+			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_distance_string << std::endl << std::setfill(' ');
+		}
+		else
+		{
+			// We need to output two different distances (this probably should never happen)
+			// Format the total source distance string
+			std::string total_source_distance_string;
+			format_stream.str(std::string());
+			format_stream << std::fixed << std::setprecision(max_precision) << total_length_source << "mm";
+			total_source_distance_string = format_stream.str();
+			// Add the total source distance row
+			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance source:";
+			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_source_distance_string << std::endl << std::setfill(' ');
+
+			// Format the total target distance string			
+			std::string total_target_distance_string;
+			format_stream.str(std::string());
+			format_stream << std::fixed << std::setprecision(max_precision) << total_length_target << "mm";
+			total_target_distance_string = format_stream.str();
+			// Add the total target distance row
+			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance target:";
+			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_target_distance_string << std::endl << std::setfill(' ');
+		}
+		
+		// Add the total count rows
+		// Add the source count
+		output_stream << std::setprecision(0) << std::setw(totals_row_label_size) << std::right << "Total count source:";
+		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_source << std::endl << std::setfill(' ');
+		// Add the target count
+		output_stream << std::setw(totals_row_label_size) << std::right << "Total count target:";
+		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_target << std::endl << std::setfill(' ');
+		// Add the total percent change row
+		std::string total_percent_change_string = utilities::get_percent_change_string(total_count_source, total_count_target, 1);
+		output_stream << std::setw(totals_row_label_size) << std::right << "Total percent change:";
+		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_percent_change_string << std::endl << std::setfill(' ');
+		// Add another final separator
+		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
+		
+
+		return output_stream.str();
+	}
+
+};
+
+// Struct to hold the progress, statistics, and return values
 struct arc_welder_progress {
-	arc_welder_progress() {
+	arc_welder_progress() : segment_statistics(segment_statistic_lengths){
 		percent_complete = 0.0;
 		seconds_elapsed = 0.0;
 		seconds_remaining = 0.0;
@@ -53,6 +308,7 @@ struct arc_welder_progress {
 		target_file_size = 0;
 		compression_ratio = 0;
 		compression_percent = 0;
+
 	}
 	double percent_complete;
 	double seconds_elapsed;
@@ -66,11 +322,12 @@ struct arc_welder_progress {
 	long source_file_position;
 	long source_file_size;
 	long target_file_size;
-
+	source_target_segment_statistics segment_statistics;
+	
 	std::string str() const {
 		std::stringstream stream;
 		stream << std::fixed << std::setprecision(2);
-			
+
 		stream << percent_complete << "% complete in " << seconds_elapsed << " seconds with " << seconds_remaining << " seconds remaining.";
 		stream << " Gcodes Processed: " << gcodes_processed;
 		stream << ", Current Line: " << lines_processed;
@@ -80,8 +337,12 @@ struct arc_welder_progress {
 		stream << ", Size Reduction: " << compression_percent << "% ";
 		return stream.str();
 	}
+	std::string detail_str() const {
+		std::stringstream stream;
+		stream << std::endl << "Extrusion/Retraction Counts" << std::endl << segment_statistics.str() << std::endl;
+		return stream.str();
+	}																	  
 };
-
 // define the progress callback type 
 typedef bool(*progress_callback)(arc_welder_progress);
 
@@ -116,7 +377,7 @@ private:
 	void reset();
 	static gcode_position_args get_args_(bool g90_g91_influences_extruder, int buffer_size);
 	progress_callback progress_callback_;
-	int process_gcode(parsed_command cmd, bool is_end);
+	int process_gcode(parsed_command cmd, bool is_end, bool is_reprocess);
 	int write_gcode_to_file(std::string gcode);
 	std::string get_arc_gcode_relative(double f, const std::string comment);
 	std::string get_arc_gcode_absolute(double e, double f, const std::string comment);
@@ -134,6 +395,7 @@ private:
 	int last_gcode_line_written_;
 	int points_compressed_;
 	int arcs_created_;
+	source_target_segment_statistics segment_statistics_;
 	long get_file_size(const std::string& file_path);
 	double get_time_elapsed(double start_clock, double end_clock);
 	double get_next_update_time() const;

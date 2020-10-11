@@ -35,6 +35,11 @@ def remove_extension_from_filename(filename):
     return os.path.splitext(filename)[0]
 
 
+def get_filename_from_path(filepath):
+    head, tail = ntpath.split(filepath)
+    return tail or ntpath.basename(head)
+
+
 def get_extension_from_filename(filename):
     head, tail = ntpath.split(filename)
     file_name = tail or ntpath.basename(head)

@@ -49,6 +49,8 @@ public:
 	static std::string rtrim(const std::string& s);
 	static std::string trim(const std::string& s);
 	static std::istream& safe_get_line(std::istream& is, std::string& t);
+	static std::string center(std::string input, int width);
+	static std::string get_percent_change_string(int v1, int v2, int precision);
 	
 protected:
 	static const std::string WHITESPACE_;
