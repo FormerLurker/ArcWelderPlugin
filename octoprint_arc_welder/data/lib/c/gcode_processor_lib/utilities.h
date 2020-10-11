@@ -44,6 +44,7 @@ public:
 	static double get_cartesian_distance(double x1, double y1, double x2, double y2);
 	static double get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2);
 	static std::string to_string(double value);
+	static std::string to_string(int value);
 	static char* to_string(double value, unsigned short precision, char* str);
 	static std::string ltrim(const std::string& s);
 	static std::string rtrim(const std::string& s);
@@ -51,7 +52,9 @@ public:
 	static std::istream& safe_get_line(std::istream& is, std::string& t);
 	static std::string center(std::string input, int width);
 	static std::string get_percent_change_string(int v1, int v2, int precision);
-	
+
+	static int get_num_digits(int x);
+	static int get_num_digits(double x);
 protected:
 	static const std::string WHITESPACE_;
 private:

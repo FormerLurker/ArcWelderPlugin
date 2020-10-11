@@ -22,6 +22,9 @@
 // You can contact the author at the following email address: 
 // FormerLurker@pm.me
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if _MSC_VER > 1200
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
 
 #include "arc_welder.h"
 #include <vector>
@@ -31,7 +34,9 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, gcode_position_args args) : current_arc_(DEFAULT_MIN_SEGMENTS, gcode_position_args_.position_buffer_size - 5, resolution_mm, max_radius), segment_statistics_(segment_statistic_lengths, log)
+
+
+arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback) : current_arc_(DEFAULT_MIN_SEGMENTS, buffer_size - 5, resolution_mm, max_radius), segment_statistics_(segment_statistic_lengths, segment_statistic_lengths_count, log)
 {
 	p_logger_ = log;
 	debug_logging_enabled_ = false;
@@ -40,12 +45,12 @@ arc_welder::arc_welder(std::string source_path, std::string target_path, logger 
 	verbose_logging_enabled_ = false;
 
 	logger_type_ = 0;
-	progress_callback_ = NULL;
+	progress_callback_ = callback;
 	verbose_output_ = false;
 	source_path_ = source_path;
 	target_path_ = target_path;
 	resolution_mm_ = resolution_mm;
-	gcode_position_args_ = args;
+	gcode_position_args_ = get_args_(g90_g91_influences_extruder, buffer_size);
 	notification_period_seconds = 1;
 	lines_processed_ = 0;
 	gcodes_processed_ = 0;
@@ -66,19 +71,8 @@ arc_welder::arc_welder(std::string source_path, std::string target_path, logger 
 	}
 
 	// We don't care about the printer settings, except for g91 influences extruder.
-	p_source_position_ = new gcode_position(gcode_position_args_); 
-}
-
-arc_welder::arc_welder(std::string source_path, std::string target_path, logger* log, double resolution_mm, double max_radius, bool g90_g91_influences_extruder, int buffer_size)
-	: arc_welder(source_path, target_path, log, resolution_mm, max_radius, arc_welder::get_args_(g90_g91_influences_extruder, buffer_size))
-{
 	
-}
-
-arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback)
-	: arc_welder(source_path, target_path, log, resolution_mm, max_radius, arc_welder::get_args_(g90_g91_influences_extruder, buffer_size))
-{
-	progress_callback_ = callback;
+	p_source_position_ = new gcode_position(gcode_position_args_); 
 }
 
 gcode_position_args arc_welder::get_args_(bool g90_g91_influences_extruder, int buffer_size)
@@ -569,7 +563,13 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 
 				if (debug_logging_enabled_)
 				{
-					p_logger_->log(logger_type_, DEBUG, "Arc created with " + std::to_string(current_arc_.get_num_segments()) + " segments: " + gcode);
+				  char buffer[20];
+					std::string message = "Arc created with ";
+					sprintf(buffer, "%d", current_arc_.get_num_segments());
+					message += buffer;
+					message += " segments: ";
+					message += gcode;
+					p_logger_->log(logger_type_, DEBUG, message);
 				}
 
 				// Get and alter the current position so we can add it to the unwritten commands list

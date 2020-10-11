@@ -22,59 +22,68 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "py_arc_welder.h"
 
-PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
+PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress)
 {
 	std::string segment_statistics = progress.segment_statistics.str();
-	PyObject* pyMessage = gcode_arc_converter::PyUnicode_SafeFromString(segment_statistics.c_str());
+	PyObject* pyMessage = gcode_arc_converter::PyUnicode_SafeFromString(segment_statistics);
 	if (pyMessage == NULL)
 		return NULL;
-
-	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:O}",
-		u8"percent_complete",
+	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i}",
+		"percent_complete",
 		progress.percent_complete,												//1
-		u8"seconds_elapsed",
+		"seconds_elapsed",
 		progress.seconds_elapsed,													//2
-		u8"seconds_remaining",
+		"seconds_remaining",
 		progress.seconds_remaining,												//3
-		u8"gcodes_processed",
+		"gcodes_processed",
 		progress.gcodes_processed,												//4
-		u8"lines_processed",
+		"lines_processed",
 		progress.lines_processed,													//5
-		u8"points_compressed",
+		"points_compressed",
 		progress.points_compressed,												//6
-		u8"arcs_created",
+		"arcs_created",
 		progress.arcs_created,														//7
-		u8"source_file_position",
+		"source_file_position",
 		progress.source_file_position,										//8
-		u8"source_file_size",
+		"source_file_size",
 		progress.source_file_size,												//9
-		u8"target_file_size",
+		"target_file_size",
 		progress.target_file_size,												//10
-		u8"compression_ratio",
+		"compression_ratio",
 		progress.compression_ratio,												//11
-		u8"compression_percent",
+		"compression_percent",
 		progress.compression_percent,											//12
-		u8"source_file_total_length",
+		"source_file_total_length",
 		progress.segment_statistics.total_length_source,	//13
-		u8"target_file_total_length",
+		"target_file_total_length",
 		progress.segment_statistics.total_length_target,	//14
-		u8"source_file_total_count",
+		"source_file_total_count",
 		progress.segment_statistics.total_count_source,		//15
-		u8"target_file_total_count",
-		progress.segment_statistics.total_length_target,	//16
-		u8"segment_statistics_text",
-		pyMessage												//17
+		"target_file_total_count",
+		progress.segment_statistics.total_length_target	//16
 	);
-	Py_DECREF(pyMessage);
+
+	if (py_progress == NULL)
+	{
+		return NULL;
+	}
+	// Due to a CRAZY issue, I have to add this item after building the py_progress object,
+	// else it crashes in python 2.7.  Looking forward to retiring this backwards 
+	// compatible code...
+	PyDict_SetItemString(py_progress, "segment_statistics_text", pyMessage);
 	return py_progress;
 }
 
 bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 {
-	
+	std::cout << "Creating progress message" << std::endl;
 	PyObject* py_dict = py_arc_welder::build_py_progress(progress);
 	if (py_dict == NULL)
+	{
+		std::cout << "py_dict is NONE, exiting" << std::endl;
 		return false;
+	}
+	std::cout << "Building func_args" << std::endl;
 	PyObject* func_args = Py_BuildValue("(O)", py_dict);
 	if (func_args == NULL)
 	{
@@ -83,6 +92,7 @@ bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 	}
 		
 	PyGILState_STATE gstate = PyGILState_Ensure();
+	std::cout << "Sending data back to python" << std::endl;
 	PyObject* pContinueProcessing = PyObject_CallObject(py_progress_callback_, func_args);
 	Py_DECREF(func_args);
 	Py_DECREF(py_dict);

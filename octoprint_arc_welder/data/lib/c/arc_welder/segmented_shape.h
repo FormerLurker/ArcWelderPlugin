@@ -174,7 +174,7 @@ double distance_from_segment(segment s, point p);
 class segmented_shape
 {
 public:
-	segmented_shape();
+	
 	segmented_shape(int min_segments, int max_segments, double resolution_mm);
 	segmented_shape& operator=(const segmented_shape& pos);
 	virtual ~segmented_shape();

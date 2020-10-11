@@ -124,6 +124,13 @@ std::string utilities::to_string(double value)
 	return os.str();
 }
 
+std::string utilities::to_string(int value)
+{
+	std::ostringstream os;
+	os << value;
+	return os.str();
+}
+
 char * utilities::to_string(double value, unsigned short precision, char * str)
 {
 	char reversed_int[20];
@@ -256,4 +263,24 @@ std::string utilities::get_percent_change_string(int v1, int v2, int precision)
 		format_stream << std::fixed << std::setprecision(precision) << percent_change << "%";
 	}
 	return format_stream.str();
+}
+
+int utilities::get_num_digits(int x)
+{
+	x = abs(x);
+	return (x < 10 ? 1 :
+		(x < 100 ? 2 :
+			(x < 1000 ? 3 :
+				(x < 10000 ? 4 :
+					(x < 100000 ? 5 :
+						(x < 1000000 ? 6 :
+							(x < 10000000 ? 7 :
+								(x < 100000000 ? 8 :
+									(x < 1000000000 ? 9 :
+										10)))))))));
+}
+
+int utilities::get_num_digits(double x)
+{
+	return get_num_digits((int) x);
 }

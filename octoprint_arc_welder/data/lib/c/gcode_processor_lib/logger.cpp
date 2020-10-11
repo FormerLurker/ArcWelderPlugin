@@ -19,7 +19,9 @@
 // You can contact the author at the following email address: 
 // FormerLurker@pm.me
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+#if _MSC_VER > 1200
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
 #include "logger.h"
 logger::logger(std::vector<std::string> names, std::vector<int> levels) {
 	// set to true by default, but can be changed by inheritance to support mandatory innitialization (for python or other integrations)
@@ -151,12 +153,19 @@ void logger::get_timestamp(std::string &timestamp)
 	clock_t t = std::clock();
 	int ms = static_cast<int>((t / CLOCKS_PER_MS)) % 1000;
 
-	std::string s_miliseconds = std::to_string(ms);
+	std::string s_miliseconds;
+	sprintf(buffer, "%d", ms) ;// std::to_string(ms);
+	s_miliseconds = buffer;
 	timestamp.append(std::string(3 - s_miliseconds.length(), '0') + s_miliseconds);
 	
 }
 
 /*
+
+Severity	Code	Description	Project	File	Line	Suppression State
+
+
+
 std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
 	std::chrono::milliseconds ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
 	const time_t now_time = std::chrono::system_clock::to_time_t(now);

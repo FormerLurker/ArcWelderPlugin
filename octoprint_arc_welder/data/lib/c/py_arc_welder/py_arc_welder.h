@@ -41,7 +41,7 @@ public:
 	virtual ~py_arc_welder() {
 		
 	}
-	static PyObject* build_py_progress(arc_welder_progress progress);
+	static PyObject* build_py_progress(const arc_welder_progress& progress);
 protected:
 	virtual bool on_progress_(const arc_welder_progress& progress);
 private:

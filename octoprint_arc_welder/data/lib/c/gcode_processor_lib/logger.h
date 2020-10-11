@@ -32,7 +32,9 @@
 #define LOG_LEVEL_COUNT 7
 #define CLOCKS_PER_MS (CLOCKS_PER_SEC / 1000.0)
 enum log_levels { NOSET, VERBOSE, DEBUG, INFO, WARNING , ERROR, CRITICAL};
-const std::array<std::string, 7> log_level_names = { {"NOSET", "VERBOSE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"} };
+//const std::array<std::string, 7> log_level_names = { {"NOSET", "VERBOSE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"} };
+static const int log_level_names_size = 7;
+static const char* log_level_names[] = {"NOSET", "VERBOSE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"};
 const static int log_level_values[LOG_LEVEL_COUNT] = { 0, 5, 10,  20,  30,  40,  50};
 
 class logger

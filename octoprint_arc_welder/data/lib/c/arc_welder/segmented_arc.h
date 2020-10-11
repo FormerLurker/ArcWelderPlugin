@@ -54,7 +54,6 @@ private:
 	bool try_get_arc_(const circle& c, arc& target_arc);
 	std::string get_shape_gcode_(bool has_e, double e, double f) const;
 	circle arc_circle_;
-	int test_count_ = 0;
 	double max_radius_mm_;
 };
 

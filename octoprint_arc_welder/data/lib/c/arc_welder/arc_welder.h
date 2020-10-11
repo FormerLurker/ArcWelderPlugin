@@ -38,9 +38,15 @@
 #include "logger.h"
 #include <cmath>
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+
 #define DEFAULT_G90_G91_INFLUENCES_EXTREUDER false
 
-const std::vector<double> segment_statistic_lengths = { 0.002f, 0.005f, 0.01f, 0.05f, 0.1f, 0.5f, 1.0f, 5.0f, 10.0f, 20.0f, 50.0f, 100.0f };
+static const int segment_statistic_lengths_count = 12;
+const double segment_statistic_lengths[] = { 0.002f, 0.005f, 0.01f, 0.05f, 0.1f, 0.5f, 1.0f, 5.0f, 10.0f, 20.0f, 50.0f, 100.0f };
 
 struct segment_statistic {
 	segment_statistic(double min_length_mm, double max_length_mm)
@@ -57,16 +63,17 @@ struct segment_statistic {
 
 struct source_target_segment_statistics {
 
-	
-	source_target_segment_statistics(const std::vector<double> segment_tracking_lengths) {
+
+	source_target_segment_statistics(const double segment_tracking_lengths[], const int num_lengths, logger* p_logger = NULL) {
 		total_length_source = 0;
 		total_length_target = 0;
 		total_count_source = 0;
 		total_count_target = 0;
 		max_width = 0;
 		max_precision = 3;
+		num_segment_tracking_lengths = num_lengths;
 		double current_min = 0;
-		for (int index = 0; index < segment_tracking_lengths.size(); index++)
+		for (int index = 0; index < num_lengths; index++)
 		{
 			double current_max = segment_tracking_lengths[index];
 			source_segments.push_back(segment_statistic(current_min, segment_tracking_lengths[index]));
@@ -75,13 +82,9 @@ struct source_target_segment_statistics {
 		}
 		source_segments.push_back(segment_statistic(current_min, -1.0f));
 		target_segments.push_back(segment_statistic(current_min, -1.0f));
-		max_width = int(log10(current_min) + 1);
-		p_logger_ = NULL;
+		max_width = utilities::get_num_digits(current_min);
+		p_logger_ = p_logger_;
 		logger_type_ = 0;
-	}
-	source_target_segment_statistics(const std::vector<double> segment_tracking_lengths, logger* p_logger) : source_target_segment_statistics(segment_tracking_lengths)  
-	{
-		p_logger_ = p_logger;
 	}
 
 	std::vector<segment_statistic> source_segments;
@@ -92,14 +95,14 @@ struct source_target_segment_statistics {
 	int max_precision;
 	int total_count_source;
 	int total_count_target;
-	
+	int num_segment_tracking_lengths;
 
 	void update(double length, bool is_source)
 	{
 		if (length <= 0)
 			return;
-		
-		std::vector<segment_statistic> * stats;
+
+		std::vector<segment_statistic>* stats;
 		if (is_source)
 		{
 			total_count_source++;
@@ -112,31 +115,33 @@ struct source_target_segment_statistics {
 			total_length_target += length;
 			stats = &target_segments;
 		}
-		for (std::vector<segment_statistic>::iterator it = std::begin(*stats); it != std::end(*stats); ++it) {
-			segment_statistic& stat = *it;
-			if (stat.min_mm <= length && stat.max_mm > length || std::next(it) == std::end(*stats))
+		for (int index = 0; index < (*stats).size(); index++)
+		{
+			segment_statistic& stat = (*stats)[index];
+			if (stat.min_mm <= length && stat.max_mm > length || (index + 1) == (*stats).size())
 			{
 				stat.count++;
 				break;
 			}
 		}
 	}
-	
-	std::string str() const{
-		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Building Segment Statistics.");
+
+	std::string str() const {
+		
+		//if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Building Segment Statistics.");
 
 		std::stringstream output_stream;
 		std::stringstream format_stream;
 		const int min_column_size = 8;
 		int mm_col_size = max_width + max_precision + 2; // Adding 2 for the mm
-		int min_max_label_col_size = 4;		
+		int min_max_label_col_size = 4;
 		int percent_col_size = 9;
 		int totals_row_label_size = 22;
 		int count_col_size;
 
 		// Calculate the count column size
 		int max_count = 0;
-		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Calculating Column Size.");
+		//if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Calculating Column Size.");
 
 		for (int index = 0; index < source_segments.size(); index++)
 		{
@@ -152,7 +157,7 @@ struct source_target_segment_statistics {
 			}
 		}
 		// Get the number of digits in the max count
-		count_col_size = int(log10(max_count) + 1);
+		count_col_size = utilities::get_num_digits(max_count);
 		// enforce the minimum of 6
 		if (count_col_size < min_column_size)
 		{
@@ -162,7 +167,7 @@ struct source_target_segment_statistics {
 		if (max_precision > 0)
 		{
 			// We need an extra space in our column for the decimal.
-			mm_col_size ++;
+			mm_col_size++;
 		}
 
 		// enforce the min column size
@@ -172,12 +177,9 @@ struct source_target_segment_statistics {
 		}
 		// Get the table width
 		int table_width = mm_col_size + min_max_label_col_size + mm_col_size + count_col_size + count_col_size + percent_col_size;
-		
 		// Add a separator for the statistics
-		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding column separators.");
-		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
+		//output_stream << std::setw(table_width) << std::setfill('-') << "-" << "\n" << std::setfill(' ') ;
 		// Output the column headers
-		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding column headers.");
 		// Center the min and max column.
 		output_stream << utilities::center("Min", mm_col_size);
 		output_stream << std::setw(min_max_label_col_size) << "";
@@ -189,24 +191,22 @@ struct source_target_segment_statistics {
 		output_stream << "\n";
 		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
 		output_stream << std::fixed << std::setprecision(max_precision);
-		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating Columns.");
-		for (int index=0; index < source_segments.size(); index++) {
+		for (int index = 0; index < source_segments.size(); index++) {
 			//extract the necessary variables from the source and target segments
 			double min_mm = source_segments[index].min_mm;
 			double max_mm = source_segments[index].max_mm;
 			int source_count = source_segments[index].count;
 			int target_count = target_segments[index].count;
 			// Calculate the percent change	and create the string
-			if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating column strings.");
 			// Construct the percent_change_string
 			std::string percent_change_string = utilities::get_percent_change_string(source_count, target_count, 1);
-			
+
 			// Create the strings to hold the column values
 			std::string min_mm_string;
 			std::string max_mm_string;
 			std::string source_count_string;
 			std::string target_count_string;
-			
+
 			// Clear the format stream and construct the min_mm_string
 			format_stream.str(std::string());
 			format_stream << std::fixed << std::setprecision(max_precision) << min_mm << "mm";
@@ -226,8 +226,6 @@ struct source_target_segment_statistics {
 			// The min and max columns and the label need to be handled differently if this is the last item
 			if (index == source_segments.size() - 1)
 			{
-				if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding final row text.");
-
 				// If we are on the last setment item, the 'min' value is the max, and there is no end
 				// The is because the last item contains the count of all items above the max length provided
 				// in the constructor
@@ -241,7 +239,7 @@ struct source_target_segment_statistics {
 			}
 			else
 			{
-				if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding row text.");
+				//if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding row text.");
 
 				// add the 'min' column
 				output_stream << std::setw(mm_col_size) << std::internal << min_mm_string;
@@ -262,22 +260,17 @@ struct source_target_segment_statistics {
 		// Add the total rows separator
 		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
 		// Add the total rows;
-		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating total rows.");
-
 		if (utilities::is_equal(total_length_source, total_length_target, 0.001))
 		{
-			if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating total distance row.");
 			std::string total_distance_string;
 			format_stream.str(std::string());
 			format_stream << std::fixed << std::setprecision(max_precision) << total_length_source << "mm";
 			total_distance_string = format_stream.str();
-
 			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance:";
 			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_distance_string << "\n" << std::setfill(' ');
 		}
 		else
 		{
-			if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating total distance rows.");
 			// We need to output two different distances (this probably should never happen)
 			// Format the total source distance string
 			std::string total_source_distance_string;
@@ -297,7 +290,7 @@ struct source_target_segment_statistics {
 			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance target:";
 			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_target_distance_string << "\n" << std::setfill(' ');
 		}
-		
+
 		// Add the total count rows
 		// Add the source count
 		output_stream << std::setprecision(0) << std::setw(totals_row_label_size) << std::right << "Total count source:";
@@ -309,24 +302,18 @@ struct source_target_segment_statistics {
 		std::string total_percent_change_string = utilities::get_percent_change_string(total_count_source, total_count_target, 1);
 		output_stream << std::setw(totals_row_label_size) << std::right << "Total percent change:";
 		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_percent_change_string << "\n" << std::setfill(' ');
-		// Add another final separator
-		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
-		
-		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating string from stream.");
 		std::string output_string = output_stream.str();
-		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, output_string);
-
 		return output_string;
 	}
 
-	 private:
-		 logger* p_logger_;
-		 int logger_type_;
+private:
+	logger* p_logger_;
+	int logger_type_;
 };
 
 // Struct to hold the progress, statistics, and return values
 struct arc_welder_progress {
-	arc_welder_progress() : segment_statistics(segment_statistic_lengths){
+	arc_welder_progress() : segment_statistics(segment_statistic_lengths, segment_statistic_lengths_count, NULL) {
 		percent_complete = 0.0;
 		seconds_elapsed = 0.0;
 		seconds_remaining = 0.0;
@@ -354,7 +341,7 @@ struct arc_welder_progress {
 	long source_file_size;
 	long target_file_size;
 	source_target_segment_statistics segment_statistics;
-	
+
 	std::string str() const {
 		std::stringstream stream;
 		stream << std::fixed << std::setprecision(2);
@@ -372,7 +359,7 @@ struct arc_welder_progress {
 		std::stringstream stream;
 		stream << "\n" << "Extrusion/Retraction Counts" << "\n" << segment_statistics.str() << "\n";
 		return stream.str();
-	}																	  
+	}
 };
 // define the progress callback type 
 typedef bool(*progress_callback)(arc_welder_progress);
@@ -393,9 +380,7 @@ struct arc_welder_results {
 class arc_welder
 {
 public:
-	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius_mm, gcode_position_args args);
-	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius_mm, bool g90_g91_influences_extruder, int buffer_size);
-	arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius_mm, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback);
+	arc_welder(std::string source_path, std::string target_path, logger* log, double resolution_mm, double max_radius, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback = NULL);
 	void set_logger_type(int logger_type);
 	virtual ~arc_welder();
 	arc_welder_results process();
@@ -403,7 +388,7 @@ public:
 protected:
 	virtual bool on_progress_(const arc_welder_progress& progress);
 private:
-  arc_welder_progress get_progress_(long source_file_position, double start_clock);
+	arc_welder_progress get_progress_(long source_file_position, double start_clock);
 	void add_arcwelder_comment_to_target();
 	void reset();
 	static gcode_position_args get_args_(bool g90_g91_influences_extruder, int buffer_size);
@@ -434,9 +419,9 @@ private:
 	array_list<unwritten_command> unwritten_commands_;
 	segmented_arc current_arc_;
 	std::ofstream output_file_;
-	
+
 	// We don't care about the printer settings, except for g91 influences extruder.
-	gcode_position * p_source_position_;
+	gcode_position* p_source_position_;
 	double previous_feedrate_;
 	bool previous_is_extruder_relative_;
 	gcode_parser parser_;

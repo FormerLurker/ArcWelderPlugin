@@ -31,11 +31,12 @@
 #include <stdio.h>
 #include <cmath>
 
-segmented_arc::segmented_arc() : segmented_arc(DEFAULT_MIN_SEGMENTS, DEFAULT_MAX_SEGMENTS, DEFAULT_RESOLUTION_MM, DEFAULT_MAX_RADIUS_MM)
+segmented_arc::segmented_arc() : segmented_shape(DEFAULT_MIN_SEGMENTS, DEFAULT_MAX_SEGMENTS, DEFAULT_RESOLUTION_MM)
 {
+	max_radius_mm_ = DEFAULT_MAX_RADIUS_MM;
 }
 
-segmented_arc::segmented_arc(int min_segments, int max_segments, double resolution_mm, double max_radius_mm) : segmented_shape(min_segments, max_segments, resolution_mm)
+segmented_arc::segmented_arc(int min_segments = DEFAULT_MIN_SEGMENTS, int max_segments = DEFAULT_MAX_SEGMENTS, double resolution_mm = DEFAULT_RESOLUTION_MM, double max_radius_mm = DEFAULT_MAX_RADIUS_MM) : segmented_shape(min_segments, max_segments, resolution_mm)
 {
 	if (max_radius_mm > DEFAULT_MAX_RADIUS_MM) max_radius_mm_ = DEFAULT_MAX_RADIUS_MM;
 	else max_radius_mm_ = max_radius_mm;
