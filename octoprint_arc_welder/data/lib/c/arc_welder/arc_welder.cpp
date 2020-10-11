@@ -275,15 +275,16 @@ arc_welder_results results;
 	}
 	p_logger_->log(logger_type_, DEBUG, "Writing all unwritten gcodes to the target file.");
 	write_unwritten_gcodes_to_file();
+	p_logger_->log(logger_type_, DEBUG, "Fetching the final progress struct.");
 
-	p_logger_->log(logger_type_, DEBUG, "Processing complete, closing source and target file.");
 	arc_welder_progress final_progress = get_progress_(static_cast<long>(file_size_), static_cast<double>(start_clock));
 	if (progress_callback_ != NULL || info_logging_enabled_)
 	{
 		// Sending final progress update message
+		p_logger_->log(logger_type_, VERBOSE, "Sending final progress update message.");
 		on_progress_(final_progress);
 	}
-	
+	p_logger_->log(logger_type_, DEBUG, "Processing complete, closing source and target file.");
 	output_file_.close();
 	gcodeFile.close();
 	const clock_t end_clock = clock();
@@ -291,6 +292,8 @@ arc_welder_results results;
 	results.success = continue_processing;
 	results.cancelled = !continue_processing;
 	results.progress = final_progress;
+	p_logger_->log(logger_type_, DEBUG, "Returning processing results.");
+
 	return results;
 }
 
