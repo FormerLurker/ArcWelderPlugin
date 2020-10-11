@@ -56,6 +56,8 @@ struct segment_statistic {
 };
 
 struct source_target_segment_statistics {
+
+	
 	source_target_segment_statistics(const std::vector<double> segment_tracking_lengths) {
 		total_length_source = 0;
 		total_length_target = 0;
@@ -74,7 +76,23 @@ struct source_target_segment_statistics {
 		source_segments.push_back(segment_statistic(current_min, -1.0f));
 		target_segments.push_back(segment_statistic(current_min, -1.0f));
 		max_width = int(log10(current_min) + 1);
+		p_logger_ = NULL;
+		logger_type_ = 0;
 	}
+	source_target_segment_statistics(const std::vector<double> segment_tracking_lengths, logger* p_logger) : source_target_segment_statistics(segment_tracking_lengths)  
+	{
+		p_logger_ = p_logger;
+	}
+
+	std::vector<segment_statistic> source_segments;
+	std::vector<segment_statistic> target_segments;
+	double total_length_source;
+	double total_length_target;
+	int max_width;
+	int max_precision;
+	int total_count_source;
+	int total_count_target;
+	
 
 	void update(double length, bool is_source)
 	{
@@ -103,17 +121,10 @@ struct source_target_segment_statistics {
 			}
 		}
 	}
-
-	std::vector<segment_statistic> source_segments;
-	std::vector<segment_statistic> target_segments;
-	double total_length_source;
-	double total_length_target;
-	int max_width;
-	int max_precision;
-	int total_count_source;
-	int total_count_target;
+	
 	std::string str() const{
-		
+		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Building Segment Statistics.");
+
 		std::stringstream output_stream;
 		std::stringstream format_stream;
 		const int min_column_size = 8;
@@ -125,6 +136,8 @@ struct source_target_segment_statistics {
 
 		// Calculate the count column size
 		int max_count = 0;
+		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Calculating Column Size.");
+
 		for (int index = 0; index < source_segments.size(); index++)
 		{
 			int source_count = source_segments[index].count;
@@ -159,9 +172,12 @@ struct source_target_segment_statistics {
 		}
 		// Get the table width
 		int table_width = mm_col_size + min_max_label_col_size + mm_col_size + count_col_size + count_col_size + percent_col_size;
+		
 		// Add a separator for the statistics
+		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding column separators.");
 		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
 		// Output the column headers
+		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding column headers.");
 		// Center the min and max column.
 		output_stream << utilities::center("Min", mm_col_size);
 		output_stream << std::setw(min_max_label_col_size) << "";
@@ -173,7 +189,7 @@ struct source_target_segment_statistics {
 		output_stream << std::endl;
 		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
 		output_stream << std::fixed << std::setprecision(max_precision);
-		
+		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating Columns.");
 		for (int index=0; index < source_segments.size(); index++) {
 			//extract the necessary variables from the source and target segments
 			double min_mm = source_segments[index].min_mm;
@@ -181,6 +197,7 @@ struct source_target_segment_statistics {
 			int source_count = source_segments[index].count;
 			int target_count = target_segments[index].count;
 			// Calculate the percent change	and create the string
+			if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating column strings.");
 			// Construct the percent_change_string
 			std::string percent_change_string = utilities::get_percent_change_string(source_count, target_count, 1);
 			
@@ -209,6 +226,8 @@ struct source_target_segment_statistics {
 			// The min and max columns and the label need to be handled differently if this is the last item
 			if (index == source_segments.size() - 1)
 			{
+				if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding final row text.");
+
 				// If we are on the last setment item, the 'min' value is the max, and there is no end
 				// The is because the last item contains the count of all items above the max length provided
 				// in the constructor
@@ -222,6 +241,8 @@ struct source_target_segment_statistics {
 			}
 			else
 			{
+				if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding row text.");
+
 				// add the 'min' column
 				output_stream << std::setw(mm_col_size) << std::internal << min_mm_string;
 				// Add the min/max label
@@ -241,6 +262,8 @@ struct source_target_segment_statistics {
 		// Add the total rows separator
 		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
 		// Add the total rows;
+		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating total rows.");
+
 		if (utilities::is_equal(total_length_source, total_length_target, 0.001))
 		{
 			std::string total_distance_string;
@@ -291,6 +314,9 @@ struct source_target_segment_statistics {
 		return output_stream.str();
 	}
 
+	 private:
+		 logger* p_logger_;
+		 int logger_type_;
 };
 
 // Struct to hold the progress, statistics, and return values

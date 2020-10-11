@@ -22,9 +22,9 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "py_arc_welder.h"
 
-
 PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 {
+	std::string segment_statistics = progress.segment_statistics.str();
 	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:s}",
 		u8"percent_complete",
 		progress.percent_complete,
@@ -66,6 +66,7 @@ PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 
 bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 {
+	
 	PyObject* py_dict = py_arc_welder::build_py_progress(progress);
 	if (py_dict == NULL)
 		return false;

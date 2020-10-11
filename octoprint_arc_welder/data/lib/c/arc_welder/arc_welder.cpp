@@ -31,7 +31,7 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, gcode_position_args args) : current_arc_(DEFAULT_MIN_SEGMENTS, gcode_position_args_.position_buffer_size - 5, resolution_mm, max_radius), segment_statistics_(segment_statistic_lengths)
+arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, gcode_position_args args) : current_arc_(DEFAULT_MIN_SEGMENTS, gcode_position_args_.position_buffer_size - 5, resolution_mm, max_radius), segment_statistics_(segment_statistic_lengths, log)
 {
 	p_logger_ = log;
 	debug_logging_enabled_ = false;
