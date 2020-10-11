@@ -25,7 +25,7 @@
 PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 {
 	std::string segment_statistics = progress.segment_statistics.str();
-	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i}", //,s:s}",
+	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:s}",
 		u8"percent_complete",
 		progress.percent_complete,												//1
 		u8"seconds_elapsed",
@@ -57,9 +57,9 @@ PyObject* py_arc_welder::build_py_progress(arc_welder_progress progress)
 		u8"source_file_total_count",
 		progress.segment_statistics.total_count_source,		//15
 		u8"target_file_total_count",
-		progress.segment_statistics.total_length_target//,	//16
-		//u8"segment_statistics_text",
-		//segment_statistics.c_str()												//17
+		progress.segment_statistics.total_length_target,	//16
+		u8"segment_statistics_text",
+		segment_statistics.c_str()												//17
 	);
 	return py_progress;
 }
