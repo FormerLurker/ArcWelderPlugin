@@ -266,6 +266,7 @@ struct source_target_segment_statistics {
 
 		if (utilities::is_equal(total_length_source, total_length_target, 0.001))
 		{
+			if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating total distance row.");
 			std::string total_distance_string;
 			format_stream.str(std::string());
 			format_stream << std::fixed << std::setprecision(max_precision) << total_length_source << "mm";
@@ -276,6 +277,7 @@ struct source_target_segment_statistics {
 		}
 		else
 		{
+			if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating total distance rows.");
 			// We need to output two different distances (this probably should never happen)
 			// Format the total source distance string
 			std::string total_source_distance_string;
@@ -310,7 +312,7 @@ struct source_target_segment_statistics {
 		// Add another final separator
 		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
 		
-
+		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating string from stream.");
 		return output_stream.str();
 	}
 
