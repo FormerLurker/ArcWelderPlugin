@@ -175,7 +175,7 @@ struct source_target_segment_statistics {
 		
 		// Add a separator for the statistics
 		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding column separators.");
-		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
+		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
 		// Output the column headers
 		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Adding column headers.");
 		// Center the min and max column.
@@ -186,8 +186,8 @@ struct source_target_segment_statistics {
 		output_stream << std::setw(count_col_size) << std::right << "Source";
 		output_stream << std::setw(count_col_size) << std::right << "Target";
 		output_stream << std::setw(percent_col_size) << std::right << "Change";
-		output_stream << std::endl;
-		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
+		output_stream << "\n";
+		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
 		output_stream << std::fixed << std::setprecision(max_precision);
 		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating Columns.");
 		for (int index=0; index < source_segments.size(); index++) {
@@ -257,10 +257,10 @@ struct source_target_segment_statistics {
 			// Add the percent change string
 			output_stream << std::setw(percent_col_size) << percent_change_string;
 			// End the line
-			output_stream << std::endl;
+			output_stream << "\n";
 		}
 		// Add the total rows separator
-		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
+		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
 		// Add the total rows;
 		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating total rows.");
 
@@ -273,7 +273,7 @@ struct source_target_segment_statistics {
 			total_distance_string = format_stream.str();
 
 			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance:";
-			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_distance_string << std::endl << std::setfill(' ');
+			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_distance_string << "\n" << std::setfill(' ');
 		}
 		else
 		{
@@ -286,7 +286,7 @@ struct source_target_segment_statistics {
 			total_source_distance_string = format_stream.str();
 			// Add the total source distance row
 			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance source:";
-			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_source_distance_string << std::endl << std::setfill(' ');
+			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_source_distance_string << "\n" << std::setfill(' ');
 
 			// Format the total target distance string			
 			std::string total_target_distance_string;
@@ -295,22 +295,22 @@ struct source_target_segment_statistics {
 			total_target_distance_string = format_stream.str();
 			// Add the total target distance row
 			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance target:";
-			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_target_distance_string << std::endl << std::setfill(' ');
+			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_target_distance_string << "\n" << std::setfill(' ');
 		}
 		
 		// Add the total count rows
 		// Add the source count
 		output_stream << std::setprecision(0) << std::setw(totals_row_label_size) << std::right << "Total count source:";
-		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_source << std::endl << std::setfill(' ');
+		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_source << "\n" << std::setfill(' ');
 		// Add the target count
 		output_stream << std::setw(totals_row_label_size) << std::right << "Total count target:";
-		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_target << std::endl << std::setfill(' ');
+		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_target << "\n" << std::setfill(' ');
 		// Add the total percent change row
 		std::string total_percent_change_string = utilities::get_percent_change_string(total_count_source, total_count_target, 1);
 		output_stream << std::setw(totals_row_label_size) << std::right << "Total percent change:";
-		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_percent_change_string << std::endl << std::setfill(' ');
+		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_percent_change_string << "\n" << std::setfill(' ');
 		// Add another final separator
-		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
+		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
 		
 		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating string from stream.");
 		std::string output_string = output_stream.str();
@@ -370,7 +370,7 @@ struct arc_welder_progress {
 	}
 	std::string detail_str() const {
 		std::stringstream stream;
-		stream << std::endl << "Extrusion/Retraction Counts" << std::endl << segment_statistics.str() << std::endl;
+		stream << "\n" << "Extrusion/Retraction Counts" << "\n" << segment_statistics.str() << "\n";
 		return stream.str();
 	}																	  
 };
