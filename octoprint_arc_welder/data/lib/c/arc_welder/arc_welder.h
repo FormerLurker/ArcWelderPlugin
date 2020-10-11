@@ -313,7 +313,10 @@ struct source_target_segment_statistics {
 		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << std::endl;
 		
 		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Creating string from stream.");
-		return output_stream.str();
+		std::string output_string = output_stream.str();
+		if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, output_string);
+
+		return output_string;
 	}
 
 	 private:
