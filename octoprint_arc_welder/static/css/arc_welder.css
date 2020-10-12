@@ -48,3 +48,13 @@ div.ui-pnotify.arc-welder {
     padding-right: 10px;
 }
 
+#tab_plugin_arc_welder .border
+{
+    border: 1px solid transparent;
+    border-color: inherit;
+}
+
+#tab_plugin_arc_welder .overflow-ellipsis {
+    text-overflow: ellipsis;
+    overflow: hidden;
+}

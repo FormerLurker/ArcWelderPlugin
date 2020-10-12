@@ -110,7 +110,7 @@
     <div class="row-fluid">
         <div class="span6">
             <p>
-                <button id="arc-welder-show-statistics-btn" class="btn" data-bind="click: toggleStatistics" style="display:none;">Show Stats</button>
+                <button id="arc-welder-show-statistics-btn" class="btn" data-bind="click: showHideStatsBtnClicked" style="display:none;">Show Stats</button>
             </p>
         </div>
         <div class="span6 text-right">
@@ -126,12 +126,12 @@
         <div id="arc-welder-stats" style="display:none;">
             <div class="row-fluid">
                 <div class="span12 text-center">
-                    <strong>Arc-Welder Statistics</strong>
+                    <h4>Arc-Welder Statistics</h4>
                 </div>
             </div>
             <div class="row-fluid">
                 <div class="span4 text-right">
-                    <strong>Selected Filename:</strong>
+                    <strong data-bind="text:selected_filename_title"></strong>
                 </div>
                 <div class="span8 center">
                     <span data-bind="text:selected_filename"></span>
@@ -139,48 +139,76 @@
             </div>
 
             <div id="arc-welder-no-stats-div" class="row-fluid" style="display:none;">
-                <div class="span12">
-                    <p>This file was previously processed with ArcWelder, but no statistics are available.</p>
+                <div class="span12 text-center">
+                    <div data-bind="visible: selected_file_is_new()" class="full-width">
+                        <span>Loading Statistics</span>
+                        <span class="fa-1x">
+                            <i class="fa fa-spinner fa-spin"></i>
+                        </span>
+                    </div>
+                    <div data-bind="visible: !selected_file_is_new()" class="span12">
+                        <p>This file was previously processed with ArcWelder, but no statistics are available.</p>
+                    </div>
                 </div>
+
             </div>
-            <div id="arc-welder-stats-text-div" class="row-fluid" style="display:none;">
+            <div id="arc-welder-stats-text-div" style="display:none;">
                 <div class="row-fluid">
-                    <div class="span6 text-center">
-                        <strong>Source File</strong><br/>
-                        <pre data-bind="text:statistics.source_filename"></pre>
+                    <div class="span6">
+                        <div class="text-center full-width">
+                            <strong>Source</strong><br/>
+                        </div>
                         <div class="row-fluid">
-                            <div class="span6 text-right">
+                            <div class="span2 text-right">
+                                <strong>Name:</strong>
+                            </div>
+                            <div class="span10 overflow-ellipsis">
+                                <sapn data-bind="text:statistics.source_filename, attr:{title:statistics.source_filename}"></sapn>
+                            </div>
+                        </div>
+                        <div class="row-fluid">
+                            <div class="span2 text-right">
                                 <strong>Lines:</strong>
                             </div>
-                            <div class="span6">
+                            <div class="span10">
                                 <span data-bind="text: statistics.lines_processed"></span>
                             </div>
                         </div>
                         <div class="row-fluid">
-                            <div class="span6 text-right">
+                            <div class="span2 text-right">
                                 <strong>Size:</strong>
                             </div>
-                            <div class="span6">
+                            <div class="span10">
                                 <span data-bind="text: statistics.source_file_size"></span>
                             </div>
                         </div>
                     </div>
-                    <div class="span6 text-center">
-                        <strong>Target File</strong><br/>
-                        <pre data-bind="text:statistics.target_filename"></pre>
+                    <div class="span6">
+                        <div class="text-center full-width">
+                            <strong>Target</strong><br/>
+                        </div>
                         <div class="row-fluid">
-                            <div class="span6 text-right">
+                            <div class="span2 text-right">
+                                <strong>Name:</strong>
+                            </div>
+                            <div class="span10 overflow-ellipsis">
+                                <span data-bind="text:statistics.target_filename, attr:{title:statistics.target_filename} " ></span>
+                            </div>
+                        </div>
+
+                        <div class="row-fluid">
+                            <div class="span2 text-right">
                                 <strong>Lines:</strong>
                             </div>
-                            <div class="span6">
+                            <div class="span10">
                                 <span data-bind="text: statistics.lines_processed() - statistics.points_compressed()"></span>
                             </div>
                         </div>
                         <div class="row-fluid">
-                            <div class="span6 text-right">
+                            <div class="span2 text-right">
                                 <strong>Size:</strong>
                             </div>
-                            <div class="span6">
+                            <div class="span10">
                                 <span data-bind="text: statistics.target_file_size"></span>
                             </div>
                         </div>

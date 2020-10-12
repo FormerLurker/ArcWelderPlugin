@@ -28,6 +28,14 @@ $(function () {
     ArcWelder = {};
     ArcWelder.PLUGIN_ID = "arc_welder";
 
+    ArcWelder.setLocalStorage = function (name, value) {
+        localStorage.setItem("arc_welder_" + name, value)
+    };
+
+    ArcWelder.getLocalStorage = function (name, value) {
+        return localStorage.getItem("arc_welder_" + name)
+    };
+
     ArcWelder.parseFloat = function (value) {
         var ret = parseFloat(value);
         if (!isNaN(ret))
@@ -143,6 +151,9 @@ $(function () {
         self.version = ko.observable();
         self.git_version = ko.observable();
         self.selected_filename = ko.observable();
+        self.selected_file_is_new = ko.observable(false);
+        self.statistics_shown = ko.observable(null);
+        self.current_statistics_file = ko.observable();
         self.statistics = {};
         self.statistics.gcodes_processed = ko.observable();
         self.statistics.lines_processed = ko.observable();
@@ -158,6 +169,26 @@ $(function () {
         self.statistics.segment_statistics_text = ko.observable();
         self.current_files = null;
 
+        self.statistics_shown.subscribe(
+        function(newValue)
+        {
+            self.toggleStatistics(newValue);
+        });
+        self.current_statistics_file.subscribe(
+        function(newValue) {
+            self.loadStats(newValue);
+            ArcWelder.setLocalStorage("stat_file_path", newValue.path)
+            ArcWelder.setLocalStorage("stat_file_origin", newValue.origin);
+        });
+
+        self.selected_filename_title = ko.pureComputed(function() {
+            var title = "Selected Filename:";
+            if (self.selected_file_is_new())
+            {
+                title = "Processed Filename:";
+            }
+            return title;
+        })
         self.auto_pre_processing_enabled = ko.pureComputed(function(){
             var file_processing_type = self.plugin_settings.feature_settings.file_processing();
             return file_processing_type === ArcWelder.FILE_PROCESSING_AUTO ||
@@ -202,11 +233,32 @@ $(function () {
         };
 
         self.onStartupComplete = function() {
+            var startupComplete = false;
             self.current_files = ko.computed( function() {
-                self.addProcessButtonToFileManager(self.files.listHelper.paginatedItems(), self.printer_state.isPrinting());
-            }, this);
-            self.requestStats();
 
+                if (self.current_statistics_file())
+                {
+                    // reload the currently selected stats
+                    self.loadStats(self.current_statistics_file());
+                }
+                // Add buttons to the file manager for arcwelder.
+                self.addProcessButtonToFileManager(self.files.listHelper.paginatedItems(), self.printer_state.isPrinting());
+                if (!startupComplete && self.files.allItems() && self.files.allItems().length > 0)
+                {
+                    startupComplete = true;
+                    var stat_data = {
+                        path: ArcWelder.getLocalStorage("stat_file_path") || self.printer_state.filepath(),
+                        origin: ArcWelder.getLocalStorage("stat_file_origin") || !self.printer_state.sd() ? 'local' : 'sdcard'
+                    };
+
+                    if (stat_data.origin == "local")
+                    {
+                        self.current_statistics_file(stat_data);
+                    }
+                }
+            }, this);
+            var show_stats = ArcWelder.getLocalStorage("show_stats") == "true";
+            self.statistics_shown(show_stats);
         };
 
         self.closePreprocessingPopup = function(){
@@ -217,34 +269,59 @@ $(function () {
             self.pre_processing_progress = null;
         };
 
-        self.toggleStatistics = function()
-        {
+        self.showHideStatsBtnClicked = function(){
+            var shown = !self.statistics_shown(); // what????
+            self.statistics_shown(shown);
+            ArcWelder.setLocalStorage("show_stats", shown);
+        };
+
+        self.toggleStatistics = function(show) {
             var $statsButton = $("#arc-welder-show-statistics-btn");
             var $statsDiv = $("#arc-welder-stats");
             var $statsContainer = $("#arc-welder-stats-container");
 
-            if ($statsDiv.css('display') != 'none')
+            if (show)
             {
-                if ($statsContainer.css('display') != 'none')
-                {
-                    $statsContainer.hide();
-                    $statsButton.text("Show Stats")
-                }
-                else
-                {
-                    $statsContainer.show();
-                    $statsButton.text("Hide Stats")
-                }
+                $statsContainer.hide();
+                $statsButton.text("Show Stats")
+
+            }
+            else
+            {
+                $statsContainer.show();
+                $statsButton.text("Hide Stats")
+
             }
         };
 
-        self.loadStats = function(data)
-        {
+        self.loadStats = function(file_data){
+            // Hide everything to start.
+            var $statsButton = $("#arc-welder-show-statistics-btn");
+            var $statsDiv = $("#arc-welder-stats");
+            var $statsNoStatsDiv = $statsDiv.find("#arc-welder-no-stats-div");
+            var $statsTextDiv = $statsDiv.find("#arc-welder-stats-text-div");
+
+            // Hide all the divs and clear text
+            $statsTextDiv.hide();
+            $statsDiv.hide();
+            $statsNoStatsDiv.hide();
+            $statsButton.hide();
+            var is_new = file_data.is_new == true;
+            var file = self.getFile(file_data);
+            if (!file)
+            {
+                self.toggleStatistics(false);
+                ArcWelder.setLocalStorage("show_stats", false);
+                return;
+            }
+
             // Update the UI
-            var filename = data.filename;
-            var is_arcwelder = data.is_arcwelder;
-            var statistics = data.statistics;
+            var filename = file.name;
+            var is_welded = file.arc_welder;
+            var statistics = file.arc_welder_statistics;
+
             self.selected_filename(filename);
+            self.selected_file_is_new(is_new);
             if (statistics)
             {
                 self.statistics.gcodes_processed(statistics.gcodes_processed);
@@ -258,21 +335,8 @@ $(function () {
                 self.statistics.source_filename(statistics.source_filename);
                 self.statistics.target_filename(statistics.target_filename);
                 self.statistics.segment_statistics_text(statistics.segment_statistics_text);
-
             }
-
-            var $statsButton = $("#arc-welder-show-statistics-btn");
-            var $statsDiv = $("#arc-welder-stats");
-            var $statsNoStatsDiv = $statsDiv.find("#arc-welder-no-stats-div");
-            var $statsTextDiv = $statsDiv.find("#arc-welder-stats-text-div");
-
-            // Hide all the divs and clear text
-            $statsTextDiv.hide();
-            $statsDiv.hide();
-            $statsNoStatsDiv.hide();
-            $statsButton.hide();
-
-            if (is_arcwelder)
+            if (is_welded)
             {
                 $statsDiv.show();
                 $statsButton.show();
@@ -288,16 +352,17 @@ $(function () {
 
         };
 
+        // receive events
+        self.onEventFileSelected = function(payload) {
+            self.current_statistics_file(payload);
+        }
         // Handle Plugin Messages from Server
+
         self.onDataUpdaterPluginMessage = function (plugin, data) {
             if (plugin !== "arc_welder") {
                 return;
             }
             switch (data.message_type) {
-                case "statistics":
-                    self.loadStats(data);
-
-                    break;
                 case "toast":
                     var options = {
                         title: data.title,
@@ -349,6 +414,9 @@ $(function () {
                     break;
                 case "preprocessing-success":
                     self.closePreprocessingPopup();
+                    //  Load all stats for the newly processed file
+                    self.current_statistics_file({path: data.path, origin: data.origin, is_new:true});
+
                     var progress = data.results.progress;
                     var seconds_elapsed = progress.seconds_elapsed;
                     var arcs_created = progress.arcs_created;
@@ -484,23 +552,6 @@ $(function () {
             self.cancelPreprocessingRequest(false);
         };
 
-        self.requestStats = function () {
-            $.ajax({
-                url: ArcWelder.APIURL("requestStats"),
-                type: "POST",
-                tryCount: 0,
-                retryLimit: 3,
-                contentType: "application/json",
-                dataType: "json",
-                success: function(data) {
-                    if (data)
-                    {
-                        self.loadStats(data);
-                    }
-                }
-            });
-        }
-
         self.cancelPreprocessingRequest = function(cancel_all){
             var data = {
                 "cancel_all": cancel_all,
@@ -585,19 +636,25 @@ $(function () {
                     title = "This file has already been processed by Arc Welder.";
                 }
                 // Create the button
-                var $button = $('\
+                /*var $button = $('\
                     <div class="btn btn-mini arc-welder ' + (button_disabled ? "disabled" : "") +'" title="' + title + '">\
+                        <i class="fa fa-compress"></i>\
+                    </div>\
+                ');*/
+                var $button = $('\
+                    <div class="btn btn-mini arc-welder" title="' + title + '">\
                         <i class="fa fa-compress"></i>\
                     </div>\
                 ');
                 // Add an on click event if the button is not disabled
-                if (!button_disabled)
-                {
-                    var data = {path: file.path};
+                //if (!button_disabled)
+                //{
+
+                    var data = {path: file.path, origin: file.origin};
                     $button.click(data, function(e) {
                         self.processButtonClicked(e);
                     });
-                }
+                //}
 
                 // Add the button to the file manager
                 $(file_element).find("a.btn-mini").after($button);
@@ -605,14 +662,62 @@ $(function () {
 
         };
 
+        self.recursiveFileSearch = function(root, path, origin) {
+            if (root === undefined) {
+                return false;
+            }
+
+            for (var index = 0; index < root.length; index++)
+            {
+                var file = root[index];
+                if ( file.type == "machinecode" && file.path == path && file.origin == origin)
+                    return file;
+                else if(file.type == "folder")
+                {
+                    var result = self.recursiveFileSearch(file.children, path, origin);
+                    if (result)
+                        return result;
+                }
+            }
+            return null;
+        };
+
+        self.getFile = function(data) {
+            var path = data.path;
+            if (!path)
+                return null;
+            if (path.length > 0 && path[0] == "/")
+                path = path.substring(1);
+            var origin = data.origin;
+            var allItems = self.files.allItems();
+            if (!allItems)
+            {
+                return;
+            }
+            return self.recursiveFileSearch(allItems, path, origin);
+        };
+
         self.processButtonClicked = function(event) {
             // Get the path
-            var path = event.data.path;
-            console.log("Button Clicked: " + path);
+            var file_data = event.data;
+            var element = self.getFile({path: file_data.path, origin: file_data.origin});
+            if (!element)
+            {
+                console.error("ArcWelder - Unable to find file: " + file_data.path);
+                return;
+            }
+            var is_welded = element.arc_welder;
+
+            if (is_welded)
+            {
+                self.current_statistics_file(file_data);
+                return;
+            }
+            console.log("Button Clicked: " + file_data.path);
             // disable the element
             $(event.target).addClass("disabled");
             // Request that the file be processed
-            var data = { "path": encodeURI(path)};
+            var data = { "path": encodeURI(file_data.path)};
             $.ajax({
                 url: ArcWelder.APIURL("process"),
                 type: "POST",
@@ -626,7 +731,7 @@ $(function () {
                     {
                         var options = {
                             title: 'Arc Welder File Queued',
-                            text: "The file '" + path + "' has been queued for processing.",
+                            text: "The file '" + file_data.path + "' has been queued for processing.",
                             type: 'info',
                             hide: true,
                             addclass: "arc-welder",
@@ -660,7 +765,7 @@ $(function () {
                     }
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
-                    var message = "Could not pre-process '"+ path +"'.  Check plugin_arc_welder.log for details.";
+                    var message = "Could not pre-process '"+ file_data.path +"'.  Check plugin_arc_welder.log for details.";
                     var options = {
                         title: 'Arc Welder Error',
                         text: message,

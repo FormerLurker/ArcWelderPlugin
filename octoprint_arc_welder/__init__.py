@@ -189,27 +189,6 @@ class ArcWelderPlugin(
             self.is_cancelled = True
             return jsonify({"success": True})
 
-    @octoprint.plugin.BlueprintPlugin.route("/requestStats", methods=["POST"])
-    @restricted_access
-    def request_stats_requests(self):
-        with ArcWelderPlugin.admin_permission.require(http_exception=403):
-            job = self._printer.get_current_job()
-            # get the currently selected file
-            file = job.get("file", None)
-            if file:
-                name = file["name"]
-                path = file["path"]
-                origin = file["origin"]
-
-                if name and path and origin:
-                    statistics = self.get_statistics(name, path, origin)
-                    # return the metadata
-                    return jsonify({
-                        "filename": statistics["name"],
-                        "statistics": statistics["statistics"],
-                        "is_arcwelder": statistics["is_arcwelder"]
-                    })
-            return jsonify(False)
     @octoprint.plugin.BlueprintPlugin.route("/clearLog", methods=["POST"])
     @restricted_access
     def clear_log_request(self):
@@ -272,27 +251,11 @@ class ArcWelderPlugin(
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
-    def get_statistics(self, name, path, origin):
-        metadata = self._file_manager.get_metadata(origin, path)
-        return_value = {
-            'name': name,
-            'statistics': None,
-            'is_arcwelder': False
-        }
-        if "arc_welder" in metadata:
-            return_value['is_arcwelder'] = True
-            if "arc_welder_statistics" in metadata:
-                statistics = metadata["arc_welder_statistics"]
-                return_value['statistics'] = statistics
-
-        return return_value
-
-    def send_statistics(self, statistics):
+    def send_show_statistics_message(self, statistics):
         data = {
-            "message_type": "statistics",
-            "filename": statistics["name"],
-            "statistics": statistics["statistics"],
-            "is_arcwelder": statistics["is_arcwelder"]
+            "message_type": "show-statistics",
+            "path": path,
+            "origin": origin
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
@@ -504,6 +467,8 @@ class ArcWelderPlugin(
             merge=False
         )
 
+        return new_path
+
     def preprocessing_started(self, path, preprocessor_args):
         new_path, new_name = self.get_storage_path_and_name(
             path, not self._overwrite_source_file
@@ -583,7 +548,7 @@ class ArcWelderPlugin(
         # save the newly created file.  This must be done before
         # exiting this callback because the target file isn't
         # guaranteed to exist later.
-        self.save_preprocessed_file(path, preprocessor_args, results)
+        new_path = self.save_preprocessed_file(path, preprocessor_args, results)
         if self._show_completed_notification:
             data = {
                 "message_type": "preprocessing-success",
@@ -591,6 +556,8 @@ class ArcWelderPlugin(
                 "source_filename": self.preprocessing_job_source_file_path,
                 "target_filename": self.preprocessing_job_target_file_name,
                 "preprocessing_job_guid": self.preprocessing_job_guid,
+                "path": new_path,
+                "origin": 'local'
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)
 
@@ -640,13 +607,6 @@ class ArcWelderPlugin(
                 return
 
             self.add_file_to_preprocessor_queue(path)
-        elif event == Events.FILE_SELECTED:
-            # extract the payload
-            name = payload["name"]
-            path = payload["path"]
-            origin = payload["origin"]
-            statistics = self.get_statistics(name, path, origin)
-            self.send_statistics(statistics)
 
     def add_file_to_preprocessor_queue(self, path):
         # get the file by path
