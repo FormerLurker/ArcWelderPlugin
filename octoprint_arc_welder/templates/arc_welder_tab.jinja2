@@ -132,14 +132,15 @@
             </div>
 
             <div id="arc-welder-no-stats-div" class="row-fluid" style="display:none;">
-                <div class="span12 text-center">
-                    <div data-bind="visible: selected_file_is_new()" class="full-width">
+                <div class="span12">
+                    <div data-bind="visible: selected_file_is_new()" class="full-width  text-center">
                         <span>Loading Statistics</span>
                         <span class="fa-1x">
                             <i class="fa fa-spinner fa-spin"></i>
                         </span>
                     </div>
                     <div data-bind="visible: !selected_file_is_new()" class="span12">
+                        File: <span data-bind="text:selected_filename, attr:{title:selected_filename}"></span><br/>
                         <p>This file was previously processed with ArcWelder, but no statistics are available.</p>
                     </div>
                 </div>
@@ -179,7 +180,7 @@
                                 <strong>Target:</strong>
                             </div>
                             <div class="span9 overflow-ellipsis">
-                                <span data-bind="text:selected_filename, attr:{title:selected_filename} " ></span>
+                                <span data-bind="text:selected_filename, attr:{title:selected_filename}"></span>
                             </div>
                         </div>
 
