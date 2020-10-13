@@ -51,7 +51,6 @@ class PreProcessorWorker(threading.Thread):
         data_folder,
         task_queue,
         is_printing_callback,
-        save_callback,
         start_callback,
         progress_callback,
         cancel_callback,
@@ -65,7 +64,6 @@ class PreProcessorWorker(threading.Thread):
         self._idle_sleep_seconds = 2.5 # wait at most 2.5 seconds for a rendering job from the queue
         self._task_queue = task_queue
         self._is_printing_callback = is_printing_callback
-        self._save_callback = save_callback
         self._start_callback = start_callback
         self._progress_callback = progress_callback
         self._cancel_callback = cancel_callback

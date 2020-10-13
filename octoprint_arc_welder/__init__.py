@@ -133,7 +133,6 @@ class ArcWelderPlugin(
             self.get_plugin_data_folder(),
             self._processing_queue,
             self._get_is_printing,
-            self.save_preprocessed_file,
             self.preprocessing_started,
             self.preprocessing_progress,
             self.preprocessing_cancelled,
@@ -420,10 +419,6 @@ class ArcWelderPlugin(
         else:
             logger.info("Arc compression complete, creating a new gcode file: %s", new_name)
 
-
-        # TODO:  Look through the analysis queue, and stop analysis if the file is being analyzed.  Perhaps we need
-        # to wait?
-        # Create the new file object
         new_file_object = octoprint.filemanager.util.DiskFileWrapper(
             new_name, preprocessor_args["target_file_path"], move=True
         )
@@ -439,35 +434,35 @@ class ArcWelderPlugin(
             FileDestinations.LOCAL, new_path, "arc_welder", True, overwrite=True, merge=False
         )
         progress = results["progress"]
-
+        metadata = {
+            "source_file_total_length": progress["source_file_total_length"],
+            "target_file_total_length": progress["target_file_total_length"],
+            "source_file_total_count": progress["source_file_total_count"],
+            "target_file_total_count": progress["target_file_total_count"],
+            "segment_statistics_text": progress["segment_statistics_text"],
+            "gcodes_processed": progress["gcodes_processed"],
+            "lines_processed": progress["lines_processed"],
+            "points_compressed": progress["points_compressed"],
+            "arcs_created": progress["arcs_created"],
+            "source_file_size": progress["source_file_size"],
+            "source_file_position": progress["source_file_position"],
+            "target_file_size": progress["target_file_size"],
+            "compression_ratio": progress["compression_ratio"],
+            "compression_percent": progress["compression_percent"],
+            "source_filename": results["source_filename"],
+            "target_filename": new_name,
+            "preprocessing_job_guid": self.preprocessing_job_guid
+        }
         self._file_manager.set_additional_metadata(
             FileDestinations.LOCAL,
             new_path,
             "arc_welder_statistics",
-            {
-                "source_file_total_length": progress["source_file_total_length"],
-                "target_file_total_length": progress["target_file_total_length"],
-                "source_file_total_count": progress["source_file_total_count"],
-                "target_file_total_count": progress["target_file_total_count"],
-                "segment_statistics_text": progress["segment_statistics_text"],
-                "gcodes_processed": progress["gcodes_processed"],
-                "lines_processed": progress["lines_processed"],
-                "points_compressed": progress["points_compressed"],
-                "arcs_created": progress["arcs_created"],
-                "source_file_size": progress["source_file_size"],
-                "source_file_position": progress["source_file_position"],
-                "target_file_size": progress["target_file_size"],
-                "compression_ratio": progress["compression_ratio"],
-                "compression_percent": progress["compression_percent"],
-                "source_filename": results["source_filename"],
-                "target_filename": new_name,
-                "preprocessing_job_guid": self.preprocessing_job_guid
-            },
+            metadata,
             overwrite=True,
             merge=False
         )
 
-        return new_path
+        return new_path, new_name, metadata
 
     def preprocessing_started(self, path, preprocessor_args):
         new_path, new_name = self.get_storage_path_and_name(
@@ -548,15 +543,13 @@ class ArcWelderPlugin(
         # save the newly created file.  This must be done before
         # exiting this callback because the target file isn't
         # guaranteed to exist later.
-        new_path = self.save_preprocessed_file(path, preprocessor_args, results)
+        new_path, new_name, metadata = self.save_preprocessed_file(path, preprocessor_args, results)
         if self._show_completed_notification:
             data = {
                 "message_type": "preprocessing-success",
-                "results": results,
-                "source_filename": self.preprocessing_job_source_file_path,
-                "target_filename": self.preprocessing_job_target_file_name,
-                "preprocessing_job_guid": self.preprocessing_job_guid,
+                "arc_welder_statistics": metadata,
                 "path": new_path,
+                "name": new_name,
                 "origin": 'local'
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)

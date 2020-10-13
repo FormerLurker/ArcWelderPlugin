@@ -182,10 +182,10 @@ $(function () {
         });
 
         self.selected_filename_title = ko.pureComputed(function() {
-            var title = "Selected Filename:";
+            var title = "Selected";
             if (self.selected_file_is_new())
             {
-                title = "Processed Filename:";
+                title = "Processed";
             }
             return title;
         })
@@ -294,7 +294,7 @@ $(function () {
             }
         };
 
-        self.loadStats = function(file_data){
+        self.loadStats = function(file_data) {
             // Hide everything to start.
             var $statsButton = $("#arc-welder-show-statistics-btn");
             var $statsDiv = $("#arc-welder-stats");
@@ -306,20 +306,31 @@ $(function () {
             $statsDiv.hide();
             $statsNoStatsDiv.hide();
             $statsButton.hide();
-            var is_new = file_data.is_new == true;
-            var file = self.getFile(file_data);
-            if (!file)
+
+            var filename, is_welded, statistics, is_new;
+
+            if (file_data.arc_welder_statistics) {
+                var filename = file_data.name;
+                var is_welded = true;
+                var statistics = file_data.arc_welder_statistics;
+                is_new = true;
+            } else
             {
-                self.toggleStatistics(false);
-                ArcWelder.setLocalStorage("show_stats", false);
-                return;
+                is_new = false;
+                var file = self.getFile(file_data);
+                if (!file)
+                {
+                    self.toggleStatistics(false);
+                    ArcWelder.setLocalStorage("show_stats", false);
+                    return;
+                }
+                filename = file.name;
+                is_welded = file.arc_welder;
+                statistics = file.arc_welder_statistics;
             }
 
-            // Update the UI
-            var filename = file.name;
-            var is_welded = file.arc_welder;
-            var statistics = file.arc_welder_statistics;
 
+            // Update the UI
             self.selected_filename(filename);
             self.selected_file_is_new(is_new);
             if (statistics)
@@ -415,16 +426,16 @@ $(function () {
                 case "preprocessing-success":
                     self.closePreprocessingPopup();
                     //  Load all stats for the newly processed file
-                    self.current_statistics_file({path: data.path, origin: data.origin, is_new:true});
+                    self.current_statistics_file(data);
 
-                    var progress = data.results.progress;
-                    var seconds_elapsed = progress.seconds_elapsed;
-                    var arcs_created = progress.arcs_created;
-                    var points_compressed = progress.points_compressed;
-                    var source_file_size = progress.source_file_size;
-                    var target_file_size = progress.target_file_size;
-                    var compression_ratio = progress.compression_ratio;
-                    var compression_percent = progress.compression_percent;
+                    var metadata = data.arc_welder_statistics;
+                    var seconds_elapsed = metadata.seconds_elapsed;
+                    var arcs_created = metadata.arcs_created;
+                    var points_compressed = metadata.points_compressed;
+                    var source_file_size = metadata.source_file_size;
+                    var target_file_size = metadata.target_file_size;
+                    var compression_ratio = metadata.compression_ratio;
+                    var compression_percent = metadata.compression_percent;
                     var space_saved_string = ArcWelder.toFileSizeString(source_file_size - target_file_size, 1);
                     var source_size_string = ArcWelder.toFileSizeString(source_file_size, 1);
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
@@ -591,7 +602,7 @@ $(function () {
         }
 
         self.removeEditButtons = function() {
-            $("#files div.gcode_files div.entry .action-buttons div.btn-mini.arc-welder").remove();
+            $("#files div.gcode_files div.entry .action-buttons div.arc-welder").remove();
         };
 
         self.getEntryId = function(file){
@@ -618,36 +629,32 @@ $(function () {
                 if (file_element.length !== 1)
                     continue;
 
-                var button_disabled = false;
+                var is_welded = false;
                 var title = "Weld Arcs";
                 if (is_printing)
                 {
-                    button_disabled = true;
+                    is_welded = true;
                     title = "Cannot weld arcs during a print, this would impact performance.";
                 }
                 else if (file.origin !== "local")
                 {
-                    button_disabled = true;
+                    is_welded = true;
                     title = "Cannot weld arcs for files stored on your printer's SD card.";
                 }
                 else if (file.arc_welder)
                 {
-                    button_disabled = true;
-                    title = "This file has already been processed by Arc Welder.";
+                    is_welded = true;
+                    title = "View Arc-Welder statistics for this file.";
                 }
                 // Create the button
-                /*var $button = $('\
-                    <div class="btn btn-mini arc-welder ' + (button_disabled ? "disabled" : "") +'" title="' + title + '">\
-                        <i class="fa fa-compress"></i>\
-                    </div>\
-                ');*/
+
                 var $button = $('\
                     <div class="btn btn-mini arc-welder" title="' + title + '">\
-                        <i class="fa fa-compress"></i>\
+                        <i class="fa ' + (is_welded ? "fa-file-text" : "fa-compress") + '"></i>\
                     </div>\
                 ');
                 // Add an on click event if the button is not disabled
-                //if (!button_disabled)
+                //if (!is_welded)
                 //{
 
                     var data = {path: file.path, origin: file.origin};
@@ -710,7 +717,10 @@ $(function () {
 
             if (is_welded)
             {
+                // Open the statistics for the file
                 self.current_statistics_file(file_data);
+                // Select the arc-welder tab
+                ArcWelder.openTab();
                 return;
             }
             console.log("Button Clicked: " + file_data.path);
@@ -799,6 +809,10 @@ $(function () {
             $(query).click();
         }
     };
+    ArcWelder.openTab = function()
+    {
+        $('#tab_plugin_arc_welder_link a').click();
+    }
 
     OCTOPRINT_VIEWMODELS.push([
         ArcWelder.ArcWelderViewModel,

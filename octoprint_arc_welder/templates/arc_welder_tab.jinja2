@@ -124,17 +124,10 @@
     </div>
     <div id="arc-welder-stats-container" style="display:none;">
         <div id="arc-welder-stats" style="display:none;">
+            <hr>
             <div class="row-fluid">
-                <div class="span12 text-center">
-                    <h4>Arc-Welder Statistics</h4>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right">
-                    <strong data-bind="text:selected_filename_title"></strong>
-                </div>
-                <div class="span8 center">
-                    <span data-bind="text:selected_filename"></span>
+                <div class="span12">
+                    <h4>Arc-Welder Statistics for <span data-bind="text:selected_filename_title"> File</span> File</h4>
                 </div>
             </div>
 
@@ -155,68 +148,62 @@
             <div id="arc-welder-stats-text-div" style="display:none;">
                 <div class="row-fluid">
                     <div class="span6">
-                        <div class="text-center full-width">
-                            <strong>Source</strong><br/>
-                        </div>
                         <div class="row-fluid">
-                            <div class="span2 text-right">
-                                <strong>Name:</strong>
+                            <div class="span3 text-right">
+                                <strong>Source:</strong>
                             </div>
-                            <div class="span10 overflow-ellipsis">
+                            <div class="span9 overflow-ellipsis">
                                 <sapn data-bind="text:statistics.source_filename, attr:{title:statistics.source_filename}"></sapn>
                             </div>
                         </div>
                         <div class="row-fluid">
-                            <div class="span2 text-right">
+                            <div class="span3 text-right">
                                 <strong>Lines:</strong>
                             </div>
-                            <div class="span10">
+                            <div class="span9">
                                 <span data-bind="text: statistics.lines_processed"></span>
                             </div>
                         </div>
                         <div class="row-fluid">
-                            <div class="span2 text-right">
+                            <div class="span3 text-right">
                                 <strong>Size:</strong>
                             </div>
-                            <div class="span10">
+                            <div class="span9">
                                 <span data-bind="text: statistics.source_file_size"></span>
                             </div>
                         </div>
                     </div>
                     <div class="span6">
-                        <div class="text-center full-width">
-                            <strong>Target</strong><br/>
-                        </div>
                         <div class="row-fluid">
-                            <div class="span2 text-right">
-                                <strong>Name:</strong>
+                            <div class="span3 text-right">
+                                <strong>Target:</strong>
                             </div>
-                            <div class="span10 overflow-ellipsis">
-                                <span data-bind="text:statistics.target_filename, attr:{title:statistics.target_filename} " ></span>
+                            <div class="span9 overflow-ellipsis">
+                                <span data-bind="text:selected_filename, attr:{title:selected_filename} " ></span>
                             </div>
                         </div>
 
                         <div class="row-fluid">
-                            <div class="span2 text-right">
+                            <div class="span3 text-right">
                                 <strong>Lines:</strong>
                             </div>
-                            <div class="span10">
+                            <div class="span9">
                                 <span data-bind="text: statistics.lines_processed() - statistics.points_compressed()"></span>
                             </div>
                         </div>
                         <div class="row-fluid">
-                            <div class="span2 text-right">
+                            <div class="span3 text-right">
                                 <strong>Size:</strong>
                             </div>
-                            <div class="span10">
+                            <div class="span9">
                                 <span data-bind="text: statistics.target_file_size"></span>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="row-fluid">
-                    <div class="span12 text-center">
-                        <strong>Compression</strong>
+                    <div class="span12">
+                        <h5>Compression</h5>
                     </div>
                 </div>
                 <div class="row-fluid">
@@ -264,9 +251,9 @@
                     </div>
                 </div>
                 <div class="row-fluid">
-                    <div class="span12 text-center">
-                        <strong>Segment Length Statistics</strong>
-                        <pre data-bind="text: statistics.segment_statistics_text"></pre>
+                    <div class="span12">
+                        <h5>Segment Length Statistics</h5>
+                        <pre class="text-center" data-bind="text: statistics.segment_statistics_text"></pre>
                     </div>
                 </div>
 

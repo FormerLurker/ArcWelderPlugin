@@ -76,14 +76,11 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress)
 
 bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 {
-	std::cout << "Creating progress message" << std::endl;
 	PyObject* py_dict = py_arc_welder::build_py_progress(progress);
 	if (py_dict == NULL)
 	{
-		std::cout << "py_dict is NONE, exiting" << std::endl;
 		return false;
 	}
-	std::cout << "Building func_args" << std::endl;
 	PyObject* func_args = Py_BuildValue("(O)", py_dict);
 	if (func_args == NULL)
 	{
@@ -92,7 +89,6 @@ bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 	}
 		
 	PyGILState_STATE gstate = PyGILState_Ensure();
-	std::cout << "Sending data back to python" << std::endl;
 	PyObject* pContinueProcessing = PyObject_CallObject(py_progress_callback_, func_args);
 	Py_DECREF(func_args);
 	Py_DECREF(py_dict);
