@@ -91,13 +91,18 @@ class PreProcessorWorker(threading.Thread):
             try:
                 # see if there are any rendering tasks.
                 time.sleep(self._idle_sleep_seconds)
+
+                if not self._task_queue.empty():
+                    # add an additional sleep in case this file was uploaded
+                    # from cura to give the printer state a chance to catch up.
+                    time.sleep(0.1)
                 if self._is_printing_callback():
                     continue
 
-                path, processor_args = self._task_queue.get(False)
+                path, processor_args, additional_metadata = self._task_queue.get(False)
                 success = False
                 try:
-                    self._process(path, processor_args)
+                    self._process(path, processor_args, additional_metadata)
                 except Exception as e:
                     logger.exception("An unhandled exception occurred while preprocessing the gcode file.")
                     message = "An error occurred while preprocessing {0}.  Check plugin_arc_welder.log for details.".\
@@ -108,7 +113,7 @@ class PreProcessorWorker(threading.Thread):
             except queue.Empty:
                 pass
             
-    def _process(self, path, processor_args):
+    def _process(self, path, processor_args, additional_metadata):
         self._start_callback(path, processor_args)
         logger.info(
             "Copying source gcode file at %s to %s for processing.", processor_args["path"], self._source_file_path
@@ -158,7 +163,7 @@ class PreProcessorWorker(threading.Thread):
         elif encoded_results["success"]:
             logger.info("Preprocessing of %s completed.", processor_args["path"])
             # Save the produced gcode file
-            self._success_callback(encoded_results, path, processor_args)
+            self._success_callback(encoded_results, path, processor_args, additional_metadata)
         else:
             self._failed_callback(encoded_results["message"])
 

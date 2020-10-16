@@ -453,33 +453,33 @@ $(function () {
                             file_name_html + "<div><strong>Time:</strong> " + ArcWelder.ToTimer(seconds_elapsed) + "</div><div class='row-fluid'><span class='span5'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
                             + "<span class='span7'><strong>Points Compressed</strong><br/>" + points_compressed.toString() + "</span></div>"
                             + "<div class='row-fluid'><div class='span5'><strong>Compression</strong><br/> Ratio: " + compression_ratio.toFixed(1) + " - " + compression_percent.toFixed(1) + "%</div><div class='span7'><strong>Space</strong><br/>"+ source_size_string + " - " + space_saved_string + " = " + target_size_string + "</div></div>";
-                        var options = {
-                            title: "Arc Welder Preprocessing Complete",
-                            text: progress_text,
-                            type: "success",
-                            hide: false,
-                            addclass: "arc-welder",
+                    var options = {
+                        title: "Arc Welder Preprocessing Complete",
+                        text: progress_text,
+                        type: "success",
+                        hide: true,
+                        addclass: "arc-welder",
 
-                        };
-                        PNotifyExtensions.displayPopupForKey(options, ArcWelder.PopupKey("preprocessing-success"));
-                        progress_text =
-                            "Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.  " + arcs_created.toString() + " arcs were created and "
-                            + points_compressed.toString() + " points were compressed.";
-                        options = {
-                            title: "Arc Welder Preprocessing Complete",
-                            text: "Preprocessing Completed",
-                            type: "success",
-                            hide: false,
-                            desktop: {
-                                desktop: true,
-                                fallback: false
-                            }
-                        };
-                        PNotifyExtensions.displayPopupForKey(
-                            options,
-                            ArcWelder.PopupKey("preprocessing-success-desktop"),
-                            []
-                        );
+                    };
+                    PNotifyExtensions.displayPopupForKey(options, ArcWelder.PopupKey("preprocessing-success"));
+                    progress_text =
+                        "Preprocessing completed in " + ArcWelder.ToTimer(seconds_elapsed) + " seconds.  " + arcs_created.toString() + " arcs were created and "
+                        + points_compressed.toString() + " points were compressed.";
+                    options = {
+                        title: "Arc Welder Preprocessing Complete",
+                        text: "Preprocessing Completed",
+                        type: "success",
+                        hide: false,
+                        desktop: {
+                            desktop: true,
+                            fallback: false
+                        }
+                    };
+                    PNotifyExtensions.displayPopupForKey(
+                        options,
+                        ArcWelder.PopupKey("preprocessing-success-desktop"),
+                        []
+                    );
                     break;
                 case "preprocessing-complete":
                     self.closePreprocessingPopup();
@@ -727,7 +727,7 @@ $(function () {
             // disable the element
             $(event.target).addClass("disabled");
             // Request that the file be processed
-            var data = { "path": encodeURI(file_data.path)};
+            var data = { "path": encodeURI(file_data.path), "origin": file_data.origin};
             $.ajax({
                 url: ArcWelder.APIURL("process"),
                 type: "POST",

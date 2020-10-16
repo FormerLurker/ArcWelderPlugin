@@ -28,14 +28,17 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import time
+import datetime
 import uuid
 import threading
 from distutils.version import LooseVersion
+from six import string_types
 from flask import request, jsonify
 import os
 import sys
 import octoprint.plugin
 import tornado
+from shutil import copyfile
 from octoprint.server.util.tornado import LargeResponseHandler
 from octoprint.server import util, app
 from octoprint.filemanager import FileDestinations
@@ -210,10 +213,17 @@ class ArcWelderPlugin(
             if self._enabled:
                 request_values = request.get_json()
                 path = request_values["path"]
+                origin = request_values["origin"]
                 # decode the path
                 path = urllibparse.unquote(path)
-                self.add_file_to_preprocessor_queue(path)
-                return jsonify({"success": True})
+                # get the metadata for the file
+                metadata = self._file_manager.get_metadata(origin, path)
+                if "arc_welder" not in metadata:
+                    # Extract only the supported metadata from the added file
+                    additional_metadata = self.get_additional_metadata(metadata)
+                    # add the file and metadata to the processor queue
+                    self.add_file_to_preprocessor_queue(path, additional_metadata)
+                    return jsonify({"success": True})
             return jsonify({"success": False, "message": "Arc Welder is Disabled."})
 
     @octoprint.plugin.BlueprintPlugin.route("/restoreDefaultSettings", methods=["POST"])
@@ -409,7 +419,7 @@ class ArcWelderPlugin(
             "log_level": self._gcode_conversion_log_level
         }
 
-    def save_preprocessed_file(self, path, preprocessor_args, results):
+    def save_preprocessed_file(self, path, preprocessor_args, results, additional_metadata):
         # get the file name and path
         new_path, new_name = self.get_storage_path_and_name(
             path, not self._overwrite_source_file
@@ -453,6 +463,7 @@ class ArcWelderPlugin(
             "target_filename": new_name,
             "preprocessing_job_guid": self.preprocessing_job_guid
         }
+
         self._file_manager.set_additional_metadata(
             FileDestinations.LOCAL,
             new_path,
@@ -462,7 +473,90 @@ class ArcWelderPlugin(
             merge=False
         )
 
+        # Add compatibility for ultimaker thumbnail package
+        has_ultimaker_format_package_thumbnail = (
+            "thumbnail" in additional_metadata
+            and isinstance(additional_metadata['thumbnail'], string_types)
+            and additional_metadata['thumbnail'].startswith('plugin/UltimakerFormatPackage/thumbnail/')
+        )
+        # Add compatibility for PrusaSlicer thumbnail package
+        has_prusa_slicer_thumbnail = (
+                "thumbnail" in additional_metadata
+                and isinstance(additional_metadata['thumbnail'], string_types)
+                and additional_metadata['thumbnail'].startswith('plugin/prusaslicerthumbnails/thumbnail/')
+        )
+
+        # delete the thumbnail src element if it exists, we will add it later if necessary
+        if "thumbnail_src" in additional_metadata:
+            del additional_metadata["thumbnail_src"]
+
+        if has_ultimaker_format_package_thumbnail and not "thumbnail_src" in additional_metadata:
+            additional_metadata["thumbnail_src"] = "UltimakerFormatPackage"
+        elif has_prusa_slicer_thumbnail and not "thumbnail_src" in additional_metadata:
+            additional_metadata["thumbnail_src"] = "prusaslicerthumbnails"
+
+        # add the additional metadata
+        if "thumbnail" in additional_metadata:
+            current_path = additional_metadata["thumbnail"]
+            thumbnail_src = None
+            thumbnail = None
+            if has_ultimaker_format_package_thumbnail:
+                thumbnail_src = "UltimakerFormatPackage"
+            elif has_prusa_slicer_thumbnail:
+                thumbnail_src = "prusaslicerthumbnails"
+
+            if thumbnail_src is not None:
+                thumbnail = self.copy_thumbnail(thumbnail_src, current_path, new_name)
+            # set the thumbnail path and src.  It will not be copied to the final metadata if the value is none
+            additional_metadata["thumbnail"] = thumbnail
+            additional_metadata["thumbnail_src"] = thumbnail_src
+
+        # add all the metadata items
+        for key, value in additional_metadata.items():
+            if value is not None:
+                self._file_manager.set_additional_metadata(
+                    FileDestinations.LOCAL,
+                    new_path,
+                    key,
+                    value,
+                    overwrite=True,
+                    merge=False
+                )
+
         return new_path, new_name, metadata
+
+    def copy_thumbnail(self, thumbnail_src, thumbnail_path, gcode_filename):
+        # get the plugin implementation
+        plugin_implementation = self._plugin_manager.get_plugin_info(thumbnail_src, True)
+        if plugin_implementation:
+            thumbnail_uri_root = 'plugin/' + thumbnail_src + '/thumbnail/'
+            data_folder = plugin_implementation.implementation.get_plugin_data_folder()
+            # extract the file name from the path
+            path = thumbnail_path.replace(thumbnail_uri_root, '')
+            querystring_index = path.rfind('?')
+            if querystring_index > -1:
+                path = path[0: querystring_index]
+
+            path = os.path.join(data_folder, path)
+            # see if the thumbnail exists
+            if os.path.isfile(path):
+                # create a new path
+                pre, ext = os.path.splitext(gcode_filename)
+                new_thumb_name = pre + ".png"
+                new_path = os.path.join(data_folder, new_thumb_name)
+                new_metadata = (
+                    thumbnail_uri_root + new_thumb_name + "?" + "{:%Y%m%d%H%M%S}".format(
+                        datetime.datetime.now()
+                    )
+                )
+                if path != new_path:
+                    try:
+                        copyfile(path, new_path)
+                    except (IOError, OSError) as e:
+                        logger.exception("An error occurred copying thumbnail from '%s' to '%s'", path, new_path)
+                        new_metadata = None
+                return new_metadata
+        return None
 
     def preprocessing_started(self, path, preprocessor_args):
         new_path, new_name = self.get_storage_path_and_name(
@@ -539,11 +633,11 @@ class ArcWelderPlugin(
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
-    def preprocessing_success(self, results, path, preprocessor_args):
+    def preprocessing_success(self, results, path, preprocessor_args, additional_metadata):
         # save the newly created file.  This must be done before
         # exiting this callback because the target file isn't
         # guaranteed to exist later.
-        new_path, new_name, metadata = self.save_preprocessed_file(path, preprocessor_args, results)
+        new_path, new_name, metadata = self.save_preprocessed_file(path, preprocessor_args, results, additional_metadata)
         if self._show_completed_notification:
             data = {
                 "message_type": "preprocessing-success",
@@ -575,14 +669,14 @@ class ArcWelderPlugin(
 
     def on_event(self, event, payload):
 
-        if event == Events.UPLOAD:
+        # Need to use file added event to catch uploads and other non-upload methods of adding a file.
+        if event == Events.FILE_ADDED:
             if not self._enabled or not self._auto_pre_processing_enabled:
                 return
-
-            #storage = payload["storage"]
+            # Note, 'target' is the key for FILE_UPLOADED, but 'storage' is the key for FILE_ADDED
+            target = payload["storage"]
             path = payload["path"]
             name = payload["name"]
-            target = payload["target"]
 
             if path == self.preprocessing_job_source_file_path or name == self.preprocessing_job_target_file_name:
                 return
@@ -598,28 +692,38 @@ class ArcWelderPlugin(
             metadata = self._file_manager.get_metadata(target, path)
             if "arc_welder" in metadata:
                 return
+            # Extract only the supported metadata from the added file
+            additional_metadata = self.get_additional_metadata(metadata)
+            # Add this file to the processor queue.
+            self.add_file_to_preprocessor_queue(path, additional_metadata)
 
-            self.add_file_to_preprocessor_queue(path)
+    def get_additional_metadata(self, metadata):
+        # list of supported metadata
+        supported_metadata_keys = ['thumbnail', 'thumbnail_src']
+        additional_metadata = {}
+        # Create the additional metadata from the supported keys
+        for key in supported_metadata_keys:
+            if key in metadata:
+                additional_metadata[key] = metadata[key]
+        return additional_metadata
 
-    def add_file_to_preprocessor_queue(self, path):
+    def add_file_to_preprocessor_queue(self, path, additional_metadata):
         # get the file by path
         # file = self._file_manager.get_file(FileDestinations.LOCAL, path)
         if self._printer.is_printing():
             self.send_notification_toast(
-                "error", "Arc-Welder: Unable to Process",
+                "warning", "Arc-Welder: Unable to Process",
                 "Cannot preprocess gcode while a print is in progress because print quality may be affected.  The "
                 "gcode will be processed as soon as the print has completed.",
-                False,
+                True,
                 key="unable_to_process", close_keys=["unable_to_process"]
             )
-            return
 
         logger.info("Received a new gcode file for processing.  FileName: %s.", path)
 
-        #self.is_cancelled = False
         path_on_disk = self._file_manager.path_on_disk(FileDestinations.LOCAL, path)
         preprocessor_args = self.get_preprocessor_arguments(path_on_disk)
-        self._processing_queue.put((path, preprocessor_args))
+        self._processing_queue.put((path, preprocessor_args, additional_metadata))
 
     def register_custom_routes(self, server_routes, *args, **kwargs):
         # version specific permission validator
