@@ -88,7 +88,7 @@
                                 <label class="control-label" for="arc_welder_file_processing"><strong>File Processing
                                     Type</strong></label>
                                 <div class="controls">
-                                    <select data-bind="options: ArcWelder.FILE_PROCESSING_OPTIONS,
+                                    <select id="arc_welder_file_processing" data-bind="options: ArcWelder.FILE_PROCESSING_OPTIONS,
                                         optionsText: 'name',
                                         optionsValue: 'value',
                                         value: plugin_settings().feature_settings.file_processing"></select>
@@ -96,6 +96,7 @@
                                        data-help-title="File Processing Options"></a>
                                 </div>
                             </div>
+
                         </fieldset>
                         <fieldset>
                             <legend>Output File Settings</legend>
@@ -129,6 +130,20 @@
                                            data-bind="value: plugin_settings().target_postfix">
                                     <a class="arc_welder_help" data-help-url="settings.target_postfix.md"
                                        data-help-title="Target File Postfix"></a>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset>
+                            <legend>Source File Options</legend>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_source_file_delete"><strong>Source File Deletion</strong></label>
+                                <div class="controls">
+                                    <select id="arc_welder_source_file_delete" data-bind="options: ArcWelder.SOURCE_FILE_DELETE_OPTIONS,
+                                        optionsText: 'name',
+                                        optionsValue: 'value',
+                                        value: plugin_settings().feature_settings.delete_source"></select>
+                                    <a class="arc_welder_help" data-help-url="settings.delete_source.md"
+                                       data-help-title="Source File Deletion Options"></a>
                                 </div>
                             </div>
                         </fieldset>

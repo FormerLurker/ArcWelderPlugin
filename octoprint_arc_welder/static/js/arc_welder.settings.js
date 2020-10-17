@@ -81,6 +81,7 @@ $(function() {
             }
             return -1;
         };
+
         self.loggerNameSort = function (observable) {
             return observable().sort(
                 function (left, right) {
@@ -89,7 +90,6 @@ $(function() {
                     return leftName === rightName ? 0 : (leftName < rightName ? -1 : 1);
                 });
         };
-
 
         self.removeLogger = function (logger) {
             //console.log("removing logger.");
@@ -153,6 +153,7 @@ $(function() {
                 }
             );
         };
+
         self.clearLog = function (clear_all) {
             var title;
             var message;

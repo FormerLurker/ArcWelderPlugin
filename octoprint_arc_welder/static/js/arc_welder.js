@@ -136,6 +136,22 @@ $(function () {
         {name:"Manual Processing Only", value: ArcWelder.FILE_PROCESSING_MANUAL}
     ];
 
+    SOURCE_FILE_DELETE_BOTH = "both"
+    SOURCE_FILE_DELETE_AUTO = "auto-only"
+    SOURCE_FILE_DELETE_MANUAL = "manual-only"
+    SOURCE_FILE_DELETE_NONE = "none"
+
+    ArcWelder.SOURCE_FILE_DELETE_BOTH = "both";
+    ArcWelder.SOURCE_FILE_DELETE_AUTO = "auto-only";
+    ArcWelder.SOURCE_FILE_DELETE_MANUAL = "manual-only";
+    ArcWelder.SOURCE_FILE_DELETE_DISABLED = "disabled";
+    ArcWelder.SOURCE_FILE_DELETE_OPTIONS = [
+        {name:"Always Delete Source File", value: ArcWelder.SOURCE_FILE_DELETE_BOTH},
+        {name:"Delete After Automatic Processing", value: ArcWelder.SOURCE_FILE_DELETE_AUTO},
+        {name:"Delete After Manual Processing", value: ArcWelder.SOURCE_FILE_DELETE_MANUAL},
+        {name:"Disabled", value: ArcWelder.SOURCE_FILE_DELETE_DISABLED}
+    ];
+
     ArcWelder.ArcWelderViewModel = function (parameters) {
         var self = this;
         // variable to hold the settings view model.
@@ -199,6 +215,21 @@ $(function () {
             var file_processing_type = self.plugin_settings.feature_settings.file_processing();
             return file_processing_type === ArcWelder.FILE_PROCESSING_MANUAL ||
                 file_processing_type === ArcWelder.FILE_PROCESSING_BOTH;
+        });
+
+        self.source_file_delete_description = ko.pureComputed(function(){
+            delete_setting = self.plugin_settings.feature_settings.delete_source();
+            switch(delete_setting)
+            {
+                case ArcWelder.SOURCE_FILE_DELETE_AUTO:
+                    return "Only automatically processed source files will be deleted.";
+                case ArcWelder.SOURCE_FILE_DELETE_MANUAL:
+                    return "Only manually processed source files will be deleted.";
+                case ArcWelder.SOURCE_FILE_DELETE_BOTH:
+                    return "The source file will be deleted.";
+                default:
+                   return "The source file will not be deleted";
+            }
         });
 
         self.github_link = ko.pureComputed(function(){

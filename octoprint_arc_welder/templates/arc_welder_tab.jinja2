@@ -97,6 +97,20 @@
                         data-bind="text: plugin_settings.g90_g91_influences_extruder"></span></span>
             </div>
         </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>Source File Deletion:</strong>
+            </div>
+            <div class="span8">
+                <div data-bind="visible: plugin_settings.overwrite_source_file() || (plugin_settings.target_postfix() == '' && plugin_settings.target_prefix() == '')">
+                    <span>The source file will be overwritten, based on other the other plugin settings.</span>
+                </div>
+                <div data-bind="visible: !(plugin_settings.overwrite_source_file() || (plugin_settings.target_postfix() == '' && plugin_settings.target_prefix() == ''))">
+                    <span data-bind="text: source_file_delete_description"></span>
+                </div>
+
+            </div>
+        </div>
 
     </div>
     <div data-bind="visible: !plugin_settings.enabled()">

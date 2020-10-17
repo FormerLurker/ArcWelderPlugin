@@ -93,6 +93,11 @@ class ArcWelderPlugin(
     FILE_PROCESSING_AUTO = "auto-only"
     FILE_PROCESSING_MANUAL = "manual-only"
 
+    SOURCE_FILE_DELETE_BOTH = "both"
+    SOURCE_FILE_DELETE_AUTO = "auto-only"
+    SOURCE_FILE_DELETE_MANUAL = "manual-only"
+    SOURCE_FILE_DELETE_DISABLED = "disabled"
+
     def __init__(self):
         super(ArcWelderPlugin, self).__init__()
         self.preprocessing_job_guid = None
@@ -114,7 +119,8 @@ class ArcWelderPlugin(
                 show_completed_notification=True
             ),
             feature_settings=dict(
-                file_processing=ArcWelderPlugin.FILE_PROCESSING_BOTH
+                file_processing=ArcWelderPlugin.FILE_PROCESSING_BOTH,
+                delete_source=ArcWelderPlugin.SOURCE_FILE_DELETE_DISABLED
             ),
             enabled=True,
             logging_configuration=dict(
@@ -222,7 +228,7 @@ class ArcWelderPlugin(
                     # Extract only the supported metadata from the added file
                     additional_metadata = self.get_additional_metadata(metadata)
                     # add the file and metadata to the processor queue
-                    self.add_file_to_preprocessor_queue(path, additional_metadata)
+                    self.add_file_to_preprocessor_queue(path, additional_metadata, True)
                     return jsonify({"success": True})
             return jsonify({"success": False, "message": "Arc Welder is Disabled."})
 
@@ -231,7 +237,8 @@ class ArcWelderPlugin(
     def restore_default_settings_request(self):
         with ArcWelderPlugin.admin_permission.require(http_exception=403):
             self._settings.set([], self.settings_default)
-            self._settings.save()
+            # force save the settings and trigger a SettingsUpdated event
+            self._settings.save(trigger_event=True)
             return jsonify({"success": True})
 
     # Callback Handler for /downloadFile
@@ -260,14 +267,6 @@ class ArcWelderPlugin(
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
-    def send_show_statistics_message(self, statistics):
-        data = {
-            "message_type": "show-statistics",
-            "path": path,
-            "origin": origin
-        }
-        self._plugin_manager.send_plugin_message(self._identifier, data)
-
     # ~~ AssetPlugin mixin
     def get_assets(self):
         # Define your plugin's asset files to automatically include in the
@@ -283,8 +282,22 @@ class ArcWelderPlugin(
             css=["css/arc_welder.css"],
         )
 
-    def _get_is_printing(self):
-        return self._printer.is_printing()
+    def _get_is_printing(self, path=None):
+        # If the printer is NOT printing, always return false
+        if not self._printer.is_printing():
+            return False
+        # If the path parameter is provided, check for a locally printing file of the same path
+        if path:
+            current_job = self._printer.get_current_job()
+            current_file = current_job.get("file", {'path': "", "origin": ""})
+            current_file_path = current_file["path"]
+            # ensure the current file path starts with a /
+            if current_file_path and current_file_path[0] != '/':
+                current_file_path = '/' + current_file_path
+            current_file_origin = current_file["origin"]
+            return path == current_file_path and FileDestinations.LOCAL == current_file_origin
+
+        return False
     # Properties
 
     @property
@@ -318,6 +331,18 @@ class ArcWelderPlugin(
         if enabled is None:
             enabled = self.settings_default["enabled"]
         return enabled
+
+    @property
+    def _delete_source_after_manual_processing(self):
+        return self._settings.get(["feature_settings", "delete_source"]) in [
+            ArcWelderPlugin.SOURCE_FILE_DELETE_BOTH, ArcWelderPlugin.SOURCE_FILE_DELETE_MANUAL
+        ] and not self._overwrite_source_file
+
+    @property
+    def _delete_source_after_automatic_processing(self):
+        return self._settings.get(["feature_settings", "delete_source"]) in [
+            ArcWelderPlugin.SOURCE_FILE_DELETE_BOTH, ArcWelderPlugin.SOURCE_FILE_DELETE_AUTO
+        ] and not self._overwrite_source_file
 
     @property
     def _auto_pre_processing_enabled(self):
@@ -399,6 +424,10 @@ class ArcWelderPlugin(
     def _show_completed_notification(self):
         return self._settings.get(["notification_settings", "show_completed_notification"])
 
+    @property
+    def _delete_source_after_processing(self):
+        return self._settings.get(["delete_source_after_processing"])
+
     def get_storage_path_and_name(self, storage_path, add_prefix_and_postfix):
         path, name = self._file_manager.split_path(FileDestinations.LOCAL, storage_path)
         if add_prefix_and_postfix:
@@ -424,6 +453,10 @@ class ArcWelderPlugin(
         new_path, new_name = self.get_storage_path_and_name(
             path, not self._overwrite_source_file
         )
+
+        if self._get_is_printing(new_path):
+            raise TargetFileSaveError("The source file will be overwritten, but it is currently printing, cannot overwrite.")
+
         if self._overwrite_source_file:
             logger.info("Overwriting source file at %s with the processed file.", path)
         else:
@@ -633,18 +666,48 @@ class ArcWelderPlugin(
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
-    def preprocessing_success(self, results, path, preprocessor_args, additional_metadata):
+    def preprocessing_success(self, results, path, preprocessor_args, additional_metadata, is_manual_request):
         # save the newly created file.  This must be done before
         # exiting this callback because the target file isn't
         # guaranteed to exist later.
-        new_path, new_name, metadata = self.save_preprocessed_file(path, preprocessor_args, results, additional_metadata)
+        try:
+            new_path, new_name, metadata = self.save_preprocessed_file(
+                path, preprocessor_args, results, additional_metadata
+            )
+        except TargetFileSaveError as e:
+            data = {
+                "message_type": "preprocessing-failed",
+                "source_filename": self.preprocessing_job_source_file_path,
+                "target_filename": self.preprocessing_job_target_file_name,
+                "preprocessing_job_guid": self.preprocessing_job_guid,
+                "message": 'Unable to save the target file.  A file with the same name may be currently printing.'
+            }
+            self._plugin_manager.send_plugin_message(self._identifier, data)
+            return
+
+        if (
+            (
+                (is_manual_request and self._delete_source_after_manual_processing)
+                or (not is_manual_request and self._delete_source_after_automatic_processing)
+            )
+            and self._file_manager.file_exists(FileDestinations.LOCAL, path)
+            and not self._get_is_printing(path)
+            and not path == new_path
+        ):
+            # delete the source file
+            logger.info("Deleting source file at %s.", path)
+            try:
+                self._file_manager.remove_file(FileDestinations.LOCAL, path)
+            except octoprint.filemanager.storage.StorageError:
+                logger.exception("Unable to delete the source file at '%s'", path)
+
         if self._show_completed_notification:
             data = {
                 "message_type": "preprocessing-success",
                 "arc_welder_statistics": metadata,
                 "path": new_path,
                 "name": new_name,
-                "origin": 'local'
+                "origin": FileDestinations.LOCAL
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)
 
@@ -695,7 +758,7 @@ class ArcWelderPlugin(
             # Extract only the supported metadata from the added file
             additional_metadata = self.get_additional_metadata(metadata)
             # Add this file to the processor queue.
-            self.add_file_to_preprocessor_queue(path, additional_metadata)
+            self.add_file_to_preprocessor_queue(path, additional_metadata, False)
 
     def get_additional_metadata(self, metadata):
         # list of supported metadata
@@ -707,10 +770,10 @@ class ArcWelderPlugin(
                 additional_metadata[key] = metadata[key]
         return additional_metadata
 
-    def add_file_to_preprocessor_queue(self, path, additional_metadata):
+    def add_file_to_preprocessor_queue(self, path, additional_metadata, is_manual_request):
         # get the file by path
         # file = self._file_manager.get_file(FileDestinations.LOCAL, path)
-        if self._printer.is_printing():
+        if self._get_is_printing():
             self.send_notification_toast(
                 "warning", "Arc-Welder: Unable to Process",
                 "Cannot preprocess gcode while a print is in progress because print quality may be affected.  The "
@@ -720,10 +783,14 @@ class ArcWelderPlugin(
             )
 
         logger.info("Received a new gcode file for processing.  FileName: %s.", path)
-
         path_on_disk = self._file_manager.path_on_disk(FileDestinations.LOCAL, path)
+
+        # make sure the path starts with a / for compatibility
+        if path[0] != '/':
+            path = '/' + path
+
         preprocessor_args = self.get_preprocessor_arguments(path_on_disk)
-        self._processing_queue.put((path, preprocessor_args, additional_metadata))
+        self._processing_queue.put((path, preprocessor_args, additional_metadata, is_manual_request))
 
     def register_custom_routes(self, server_routes, *args, **kwargs):
         # version specific permission validator
@@ -755,6 +822,7 @@ class ArcWelderPlugin(
 
         # ~~ software update hook
 
+
     arc_welder_update_info = dict(
         displayName="Arc Welder: Anti-Stutter",
         # version check: github repository
@@ -778,29 +846,34 @@ class ArcWelderPlugin(
         ],
     )
 
-    def get_release_info(self):
-        # get the checkout type from the software updater
-        prerelease_channel = None
-        is_prerelease = False
-        # get this for reference.  Eventually I'll have to use it!
-        # is the software update set to prerelease?
 
-        if self._settings.global_get(["plugins", "softwareupdate", "checks", "octoprint", "prerelease"]):
-            # If it's a prerelease, look at the channel and configure the proper branch for Arc Welder
-            prerelease_channel = self._settings.global_get(
-                ["plugins", "softwareupdate", "checks", "octoprint", "prerelease_channel"]
-            )
-            if prerelease_channel == "rc/maintenance":
-                is_prerelease = True
-                prerelease_channel = "rc/maintenance"
-            elif prerelease_channel == "rc/devel":
-                is_prerelease = True
-                prerelease_channel = "rc/devel"
-        ArcWelderPlugin.arc_welder_update_info["displayVersion"] = self._plugin_version
-        ArcWelderPlugin.arc_welder_update_info["current"] = self._plugin_version
-        ArcWelderPlugin.arc_welder_update_info["prerelease"] = is_prerelease
-        if prerelease_channel is not None:
-            ArcWelderPlugin.arc_welder_update_info["prerelease_channel"] = prerelease_channel
+
+    def get_release_info(self):
+        # Starting with V1.5.0 prerelease branches are supported!
+        if LooseVersion(octoprint.server.VERSION) < LooseVersion("1.5.0"):
+            # Hack to attempt to get pre-release branches to work prior to 1.5.0
+            # get the checkout type from the software updater
+            prerelease_channel = None
+            is_prerelease = False
+            # get this for reference.  Eventually I'll have to use it!
+            # is the software update set to prerelease?
+
+            if self._settings.global_get(["plugins", "softwareupdate", "checks", "octoprint", "prerelease"]):
+                # If it's a prerelease, look at the channel and configure the proper branch for Arc Welder
+                prerelease_channel = self._settings.global_get(
+                    ["plugins", "softwareupdate", "checks", "octoprint", "prerelease_channel"]
+                )
+                if prerelease_channel == "rc/maintenance":
+                    is_prerelease = True
+                    prerelease_channel = "rc/maintenance"
+                elif prerelease_channel == "rc/devel":
+                    is_prerelease = True
+                    prerelease_channel = "rc/devel"
+            ArcWelderPlugin.arc_welder_update_info["displayVersion"] = self._plugin_version
+            ArcWelderPlugin.arc_welder_update_info["current"] = self._plugin_version
+            ArcWelderPlugin.arc_welder_update_info["prerelease"] = is_prerelease
+            if prerelease_channel is not None:
+                ArcWelderPlugin.arc_welder_update_info["prerelease_channel"] = prerelease_channel
 
         return dict(
             arc_welder=ArcWelderPlugin.arc_welder_update_info
@@ -872,3 +945,7 @@ class ArcWelderLargeResponseHandler(LargeResponseHandler):
 
             if self._after_request_callback:
                 self._after_request_callback()
+
+
+class TargetFileSaveError(Exception):
+    pass
