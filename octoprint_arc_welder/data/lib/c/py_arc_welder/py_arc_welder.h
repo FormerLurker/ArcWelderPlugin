@@ -43,7 +43,7 @@ public:
 	}
 	static PyObject* build_py_progress(const arc_welder_progress& progress);
 protected:
-	virtual bool on_progress_(const arc_welder_progress& progress);
+	virtual bool on_progress_(const arc_welder_progress& progress, logger* p_logger, int logger_type);
 private:
 	PyObject* py_progress_callback_;
 };

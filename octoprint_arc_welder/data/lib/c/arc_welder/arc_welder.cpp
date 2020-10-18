@@ -162,10 +162,10 @@ arc_welder_results results;
 
 	std::stringstream stream;
 	stream << std::fixed << std::setprecision(5);
-	stream << "py_gcode_arc_converter.ConvertFile - Parameters received: source_file_path: '" <<
+	stream << "arc_welder::process - Parameters received: source_file_path: '" <<
 		source_path_ << "', target_file_path:'" << target_path_ << "', resolution_mm:" <<
 		resolution_mm_ << "mm (+-" << current_arc_.get_resolution_mm() << "mm), max_radius_mm:" << current_arc_.get_max_radius()
-		 << "mm, g90_91_influences_extruder: " << (p_source_position_->get_g90_91_influences_extruder() ? "True" : "False") << "\n";
+		 << "mm, g90_91_influences_extruder: " << (p_source_position_->get_g90_91_influences_extruder() ? "True" : "False");
 	p_logger_->log(logger_type_, INFO, stream.str());
 
 
@@ -295,7 +295,7 @@ bool arc_welder::on_progress_(const arc_welder_progress& progress)
 {
 	if (progress_callback_ != NULL)
 	{
-		return progress_callback_(progress);
+		return progress_callback_(progress, p_logger_, logger_type_);
 	}
 	else if (info_logging_enabled_)
 	{

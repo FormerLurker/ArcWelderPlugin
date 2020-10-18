@@ -661,26 +661,30 @@ $(function () {
                     continue;
 
                 var is_welded = false;
+                var disable = false;
                 var title = "Weld Arcs";
                 if (is_printing)
                 {
-                    is_welded = true;
                     title = "Cannot weld arcs during a print, this would impact performance.";
                 }
                 else if (file.origin !== "local")
                 {
-                    is_welded = true;
+                    disable = true;
                     title = "Cannot weld arcs for files stored on your printer's SD card.";
                 }
-                else if (file.arc_welder)
-                {
-                    is_welded = true;
-                    title = "View Arc-Welder statistics for this file.";
+                else {
+
+                    if (file.arc_welder)
+                    {
+                        is_welded = true;
+                        title = "View Arc-Welder statistics for this file.";
+                    }
                 }
+
                 // Create the button
 
                 var $button = $('\
-                    <div class="btn btn-mini arc-welder" title="' + title + '">\
+                    <div class="btn btn-mini arc-welder' + (disable ? " disable" : "") + '" title="' + title + '">\
                         <i class="fa ' + (is_welded ? "fa-file-text" : "fa-compress") + '"></i>\
                     </div>\
                 ');

@@ -28,6 +28,8 @@
 // Had to increase the zero tolerance because prusa slicer doesn't always retract enough while wiping.
 const double ZERO_TOLERANCE = 0.000005;
 const std::string utilities::WHITESPACE_ = " \n\r\t\f\v";
+const char utilities::GUID_RANGE[] = "0123456789abcdef";
+const bool utilities::GUID_DASHES[] = { 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0 };
 
 bool utilities::is_zero(double x)
 {
@@ -283,4 +285,68 @@ int utilities::get_num_digits(int x)
 int utilities::get_num_digits(double x)
 {
 	return get_num_digits((int) x);
+}
+
+// Nice utility function found here: https://stackoverflow.com/questions/8520560/get-a-file-name-from-a-path
+std::vector<std::string> utilities::splitpath(const std::string& str)
+{
+	std::vector<std::string> result;
+
+	char const* pch = str.c_str();
+	char const* start = pch;
+	for (; *pch; ++pch)
+	{
+		if (*pch == PATH_SEPARATOR_)
+		{
+			if (start != pch)
+			{
+				std::string str(start, pch);
+				result.push_back(str);
+			}
+			else
+			{
+				result.push_back("");
+			}
+			start = pch + 1;
+		}
+	}
+	result.push_back(start);
+
+	return result;
+}
+
+bool utilities::get_file_path(const std::string& file_path, std::string & path)
+{
+	std::vector<std::string> file_parts = splitpath(file_path);
+	if (file_parts.size() == 0)
+		return false;
+	for (int index = 0; index < file_parts.size() - 1; index++)
+	{
+		path += file_parts[index];
+		path += PATH_SEPARATOR_;
+	}
+	return true;
+}
+
+std::string utilities::create_uuid() {
+	std::string res;
+	for (int i = 0; i < 16; i++) {
+		if (GUID_DASHES[i]) res += "-";
+		res += GUID_RANGE[(int)(rand() % 16)];
+		res += GUID_RANGE[(int)(rand() % 16)];
+	}
+	return res;
+}
+
+bool utilities::get_temp_file_path_for_file(const std::string& file_path, std::string& temp_file_path)
+{
+	temp_file_path = "";
+	if (!utilities::get_file_path(file_path, temp_file_path))
+	{
+		return false;
+	}
+	temp_file_path = temp_file_path;
+	temp_file_path += utilities::create_uuid();
+	temp_file_path += ".tmp";
+	return true;
 }

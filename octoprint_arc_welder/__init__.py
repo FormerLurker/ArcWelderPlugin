@@ -282,20 +282,23 @@ class ArcWelderPlugin(
             css=["css/arc_welder.css"],
         )
 
+    def _is_file_selected(self, path, origin):
+        current_job = self._printer.get_current_job()
+        current_file = current_job.get("file", {'path': "", "origin": ""})
+        current_file_path = current_file["path"]
+        # ensure the current file path starts with a /
+        if current_file_path and current_file_path[0] != '/':
+            current_file_path = '/' + current_file_path
+        current_file_origin = current_file["origin"]
+        return path == current_file_path and origin == current_file_origin
+
     def _get_is_printing(self, path=None):
         # If the printer is NOT printing, always return false
         if not self._printer.is_printing():
             return False
         # If the path parameter is provided, check for a locally printing file of the same path
         if path:
-            current_job = self._printer.get_current_job()
-            current_file = current_job.get("file", {'path': "", "origin": ""})
-            current_file_path = current_file["path"]
-            # ensure the current file path starts with a /
-            if current_file_path and current_file_path[0] != '/':
-                current_file_path = '/' + current_file_path
-            current_file_origin = current_file["origin"]
-            return path == current_file_path and FileDestinations.LOCAL == current_file_origin
+            return self._is_file_selected(path, FileDestinations.LOCAL)
 
         return False
     # Properties
@@ -691,15 +694,20 @@ class ArcWelderPlugin(
                 or (not is_manual_request and self._delete_source_after_automatic_processing)
             )
             and self._file_manager.file_exists(FileDestinations.LOCAL, path)
-            and not self._get_is_printing(path)
             and not path == new_path
         ):
-            # delete the source file
-            logger.info("Deleting source file at %s.", path)
-            try:
-                self._file_manager.remove_file(FileDestinations.LOCAL, path)
-            except octoprint.filemanager.storage.StorageError:
-                logger.exception("Unable to delete the source file at '%s'", path)
+            if not self._get_is_printing(path):
+                # if the file is selected, deselect it.
+                if self._is_file_selected(path, FileDestinations.LOCAL):
+                    self._printer.unselect_file()
+                # delete the source file
+                logger.info("Deleting source file at %s.", path)
+                try:
+                    self._file_manager.remove_file(FileDestinations.LOCAL, path)
+                except octoprint.filemanager.storage.StorageError:
+                    logger.exception("Unable to delete the source file at '%s'", path)
+            else:
+                logger.exception("Unable to delete the source file at '%s'.  It is currently printing.", path)
 
         if self._show_completed_notification:
             data = {

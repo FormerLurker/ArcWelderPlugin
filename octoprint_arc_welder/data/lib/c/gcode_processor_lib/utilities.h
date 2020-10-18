@@ -22,6 +22,8 @@
 
 #pragma once
 #include <string>
+#include <vector>
+#include <set>
 class utilities{
 public:
 	static bool is_zero(double x);
@@ -55,8 +57,23 @@ public:
 
 	static int get_num_digits(int x);
 	static int get_num_digits(double x);
+
+	static std::vector<std::string> splitpath(const std::string& str);
+	static bool get_file_path(const std::string& file_path, std::string& path);
+	static bool get_temp_file_path_for_file(const std::string& file_path, std::string& temp_file_path);
+	static std::string create_uuid();
+
+	
 protected:
 	static const std::string WHITESPACE_;
+	static const char PATH_SEPARATOR_ =
+#ifdef _WIN32
+		'\\';
+#else
+		'/';
+#endif
+	static const char GUID_RANGE[];
+	static const bool GUID_DASHES[];
 private:
 	utilities();
 

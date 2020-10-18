@@ -62,8 +62,6 @@ struct segment_statistic {
 };
 
 struct source_target_segment_statistics {
-
-
 	source_target_segment_statistics(const double segment_tracking_lengths[], const int num_lengths, logger* p_logger = NULL) {
 		total_length_source = 0;
 		total_length_target = 0;
@@ -301,7 +299,7 @@ struct source_target_segment_statistics {
 		// Add the total percent change row
 		std::string total_percent_change_string = utilities::get_percent_change_string(total_count_source, total_count_target, 1);
 		output_stream << std::setw(totals_row_label_size) << std::right << "Total percent change:";
-		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_percent_change_string << "\n" << std::setfill(' ');
+		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_percent_change_string << std::setfill(' ');
 		std::string output_string = output_stream.str();
 		return output_string;
 	}
@@ -361,8 +359,9 @@ struct arc_welder_progress {
 		return stream.str();
 	}
 };
+
 // define the progress callback type 
-typedef bool(*progress_callback)(arc_welder_progress);
+typedef bool(*progress_callback)(arc_welder_progress, logger* p_logger, int logger_type);
 
 struct arc_welder_results {
 	arc_welder_results() : progress()
