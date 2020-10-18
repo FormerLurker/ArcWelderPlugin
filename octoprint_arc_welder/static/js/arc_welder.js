@@ -471,14 +471,14 @@ $(function () {
                     var source_size_string = ArcWelder.toFileSizeString(source_file_size, 1);
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
                     var file_name_html = "";
-                    if (data.source_filename == data.target_filename)
+                    if (metadata.source_filename == metadata.target_filename)
                     {
-                        file_name_html = "<div><strong>File:</strong> " + data.source_filename + "<div>";
+                        file_name_html = "<div><strong>File:</strong> " + metadata.source_filename + "<div>";
                     }
                     else
                     {
-                        file_name_html = "<div><strong>Source File:</strong> " + data.source_filename + "<div>" +
-                            "<div><strong>Target File:</strong> " + data.target_filename + "<div>";
+                        file_name_html = "<div><strong>Source File:</strong> " + metadata.source_filename + "<div>" +
+                            "<div><strong>Target File:</strong> " + metadata.target_filename + "<div>";
                     }
                     var progress_text =
                             file_name_html + "<div><strong>Time:</strong> " + ArcWelder.ToTimer(seconds_elapsed) + "</div><div class='row-fluid'><span class='span5'><strong>Arcs Created</strong><br/>" + arcs_created.toString() + "</span>"
@@ -684,7 +684,7 @@ $(function () {
                 // Create the button
 
                 var $button = $('\
-                    <div class="btn btn-mini arc-welder' + (disable ? " disable" : "") + '" title="' + title + '">\
+                    <div class="btn btn-mini arc-welder' + (disable ? " disabled" : "") + '" title="' + title + '">\
                         <i class="fa ' + (is_welded ? "fa-file-text" : "fa-compress") + '"></i>\
                     </div>\
                 ');
@@ -743,6 +743,11 @@ $(function () {
             // Get the path
             var file_data = event.data;
             var element = self.getFile({path: file_data.path, origin: file_data.origin});
+
+            if (element.origin != 'local') {
+                // Ignore non-local files
+                return
+            }
             if (!element)
             {
                 console.error("ArcWelder - Unable to find file: " + file_data.path);

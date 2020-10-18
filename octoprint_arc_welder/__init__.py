@@ -486,6 +486,7 @@ class ArcWelderPlugin(
             "source_file_total_count": progress["source_file_total_count"],
             "target_file_total_count": progress["target_file_total_count"],
             "segment_statistics_text": progress["segment_statistics_text"],
+            "seconds_elapsed": progress["seconds_elapsed"],
             "gcodes_processed": progress["gcodes_processed"],
             "lines_processed": progress["lines_processed"],
             "points_compressed": progress["points_compressed"],
