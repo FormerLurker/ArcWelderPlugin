@@ -57,7 +57,7 @@ Once a file has been converted, the Arc Welder tab will show detailed statistics
 
 ### Settings and Setup
 
-**Arc welder** is pre-configured and will work with no settings changes for most people.  However, there are a few settings you may want to investigate.  You can navigate to the settings either by navigating to the **Arc Welder** tab and clicking on the *Edit Settings* button, or by opening the OctoPrint settings and finding the **Arc Welder** plugin in the left side menu.
+**Arc welder** is pre-configured and will work with no settings changes for most people.  However, there are a few settings you may want to investigate (see the *Use Octoprint Settings* and *G90/G91 Influence Extruder* extruder settings in particular).  You can navigate to the settings either by navigating to the **Arc Welder** tab and clicking on the *Edit Settings* button, or by opening the OctoPrint settings and finding the **Arc Welder** plugin in the left side menu.
 
 #### Preprocessor Settings
 These settings control the main aspects of the plugin and how your gcode file will be compressed.
@@ -91,7 +91,7 @@ Note:  You can combine prefixes and postfixes if you like.
 #### Printer Settings
 Arc welder needs to know one property of your printer's firmware to guarantee accurate results in all slicers and with all start/end gcode: G90/G91 influences extruder.
 
-* **Use Octoprint Printer Settings** -  Octoprint has a setting for *G90/G91 influences extruder*  in the *Features* tab.  Enabling *Use Octoprint Printer Settings* will cause **Arc Welder** to use OctoPrint's setting.  Default: Enabled
+* **Use Octoprint Settings** -  Octoprint has a setting for *G90/G91 influences extruder*  in the *Features* tab.  Enabling *Use Octoprint Printer Settings* will cause **Arc Welder** to use OctoPrint's setting.  Default: Enabled
 * **G90/G91 Influence Extruder** - If *Use Octoprint Feature Settings* is unchecked, **Arc Welder** will use this setting to determine if the G90/G91 command influences your extruder's axis mode.  In general, Marlin 2.0 and forks should have this box checked.  Many forks of Marlin 1.x should have this unchecked, like the Prusa MK2 and MK3.  I will try to add a list of printers and the proper value for this setting at some point, as well as a gcode test script you can use to determine what setting to use.  Keep in mind that most slicers produce code that will work fine no matter what setting you choose here.  Default: Disabled
 
 #### Notification Settings
