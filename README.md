@@ -140,6 +140,23 @@ If your printer supports arc commands, it should move across a small arc from th
 
 **Warning**:  The above gcode has not been tested on all printers.  Please use it with caution and [report any issues here](https://github.com/FormerLurker/ArcWelderPlugin/issues).
 
+## Release Channel Support
+
+If you are interested in testing release candidates (which I really appreciate), you can easily do so via the built in *Software Update* plugin.
+
+### Change Release Channel for OctoPrint 1.5.x and above
+Starting with Octoprint 1.5.0, release channels can be selected on a per-plugin basis.  I have not seen this feature in action, but I believe *Arc Welder* is properly configured to use it once it becomes available.  I will will add instructions as soon as the feature becomes available as a release candidate.
+
+### Change Release Channel for OctoPrint 1.4.x and below
+
+1. Open the Octoprint Settings (wrench/spanner icon).
+2. Click on the *Software Update* link in the left menu.  This will open the *Software Update* plugin.
+3. Edit the *Software Update* settings by clicking on the wrench/spanner icon in the upper right hand corner of the *Software Update* plugin.
+4. Switch the *Octoprint Release Channel* drop down box to one of the following options:
+ * *Stable* The default option - automatically update to the most stable release version.  This is recommmended for most users.
+ * *Maintenance RCs* - Well tested, but not perfected.  This branch often contains hot-fixes and new features.  Recommended for advanced users that want to help improve *Arc Welder*, knowing there may be some additional bugs.
+ * *Devel RCs* - Contains less tested code, but bleeding edge features and fixes.  Not recommended for most users.  If you submit a feature request or a bug, I may direct you to install from this branch at some point.
+
 ## Troubleshooting
 
 Arc Welder is a pretty new concept, so it is likely there are some undiscovered issues.  However, there are a few known problems that are described below.
