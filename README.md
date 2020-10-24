@@ -153,9 +153,9 @@ Starting with Octoprint 1.5.0, release channels can be selected on a per-plugin 
 2. Click on the *Software Update* link in the left menu.  This will open the *Software Update* plugin.
 3. Edit the *Software Update* settings by clicking on the wrench/spanner icon in the upper right hand corner of the *Software Update* plugin.
 4. Switch the *Octoprint Release Channel* drop down box to one of the following options:
-  * *Stable* The default option - automatically update to the most stable release version.  This is recommmended for most users.
-  * *Maintenance RCs* - Well tested, but not perfected.  This branch often contains hot-fixes and new features.  Recommended for advanced users that want to help improve *Arc Welder*, knowing there may be some additional bugs.
-  * *Devel RCs* - Contains less tested code, but bleeding edge features and fixes.  Not recommended for most users.  If you submit a feature request or a bug, I may direct you to install from this branch at some point.
+   * *Stable* - Automatically update to the most stable release version.  This is recommended for most users.
+   * *Maintenance RCs* - Well tested, but not perfected.  This branch often contains hot-fixes and new features.  Recommended for advanced users that want to help improve *Arc Welder*, knowing there may be some additional bugs.
+   * *Devel RCs* - Contains less tested code, but bleeding edge features and fixes.  Not recommended for most users.  If you submit a feature request or a bug, I may direct you to install from this branch at some point.
 
 ## Troubleshooting
 
