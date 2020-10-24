@@ -175,7 +175,7 @@ class segmented_shape
 {
 public:
 	
-	segmented_shape(int min_segments, int max_segments, double resolution_mm);
+	segmented_shape(int min_segments = DEFAULT_MIN_SEGMENTS, int max_segments = DEFAULT_MAX_SEGMENTS, double resolution_mm = DEFAULT_RESOLUTION_MM);
 	segmented_shape& operator=(const segmented_shape& pos);
 	virtual ~segmented_shape();
 	int get_num_segments();

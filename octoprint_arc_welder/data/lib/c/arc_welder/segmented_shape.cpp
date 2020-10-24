@@ -306,7 +306,7 @@ bool arc::try_create_arc(const circle& c, const array_list<point>& points, doubl
 }
 #pragma endregion
 
-segmented_shape::segmented_shape(int min_segments = DEFAULT_MIN_SEGMENTS, int max_segments = DEFAULT_MAX_SEGMENTS, double resolution_mm = DEFAULT_RESOLUTION_MM) : points_(max_segments)
+segmented_shape::segmented_shape(int min_segments, int max_segments, double resolution_mm) : points_(max_segments)
 {
 	
 	max_segments_ = max_segments;

@@ -35,7 +35,7 @@ class segmented_arc :
 {
 public:
 	segmented_arc();
-	segmented_arc(int min_segments, int max_segments, double resolution_mm, double max_radius);
+	segmented_arc(int min_segments = DEFAULT_MIN_SEGMENTS, int max_segments = DEFAULT_MAX_SEGMENTS, double resolution_mm = DEFAULT_RESOLUTION_MM, double max_radius_mm = DEFAULT_MAX_RADIUS_MM);
 	virtual ~segmented_arc();
 	virtual bool try_add_point(point p, double e_relative);
 	std::string get_shape_gcode_absolute(double e, double f);

@@ -81,7 +81,7 @@ struct source_target_segment_statistics {
 		source_segments.push_back(segment_statistic(current_min, -1.0f));
 		target_segments.push_back(segment_statistic(current_min, -1.0f));
 		max_width = utilities::get_num_digits(current_min);
-		p_logger_ = p_logger_;
+		p_logger_ = p_logger;
 		logger_type_ = 0;
 	}
 
@@ -116,7 +116,7 @@ struct source_target_segment_statistics {
 		for (int index = 0; index < (*stats).size(); index++)
 		{
 			segment_statistic& stat = (*stats)[index];
-			if (stat.min_mm <= length && stat.max_mm > length || (index + 1) == (*stats).size())
+			if ( (stat.min_mm <= length && stat.max_mm > length) || (index + 1) == (*stats).size())
 			{
 				stat.count++;
 				break;
