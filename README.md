@@ -51,9 +51,11 @@ Eventually another branch, rc/maintenance, will be added for maintenance release
 
 ### Using Arc-Welder
 
-By default, Arc-Welder will automatically convert any newly uploaded gcode files and will create a new file containing the converted gcode.  Using the default settings, this new file will end with **.aw.gcode**.  If your gcode file was called **print.gcode** the converted file will be **print.aw.gcode**.
+By default, Arc-Welder will automatically convert any newly added GCode files and will create a new file containing the converted gcode.  Using the default settings, this new file will end with **.aw.gcode**.  If your gcode file was called **print.gcode** the converted file will be **print.aw.gcode**.
 
-You can also convert existing files from the file manager by clicking a new icon (compress icon - two arrows pointing towards eachother) that will be available within the file manager.  Note:  You cannot convert files that have already been converted by **Arc Welder**!  
+You can also convert existing files from the file manager by clicking a new icon (compress icon - two arrows pointing towards each other) that will be available within the file manager.  Note:  You cannot convert files that have already been converted by **Arc Welder**!
+
+Once a file has been converted, the Arc Welder tab will show detailed statistics about the conversion, including before/after file sizes, compression information, before and after segment length statistics, and more.  You can view these statistics at any time by selecting a welded file, or by clicking the statistics icon in the file manager.
 
 ### Settings and Setup
 
@@ -81,11 +83,18 @@ Here you can control how **Arc Welder** will handle the output file.  It can eit
 
 Note:  You can combine prefixes and postfixes if you like.
 
+#### Source File Options
+* **Source File Deletion** - Arc welder can delete the source file in most situations.  It will never delete the source file if it is currently printing, or if the source file is overwritten by the welded gcode.  The options are:
+  * *Disabled* - The source file will never be deleted.
+  * *Always Delete Source File* - The source file will always be deleted if possible.
+  * *Delete After Automatic Processing* - Files that are automatically processed (see the *File Preprocessing Type* setting) will be automatically deleted when possible.
+  * *Delete After Manual Processing* - Files that are manually processed (see the *File Preprocessing Type* setting) will be automatically deleted when possible.
+
 #### Printer Settings
 Arc welder needs to know one property of your printer's firmware to guarantee accurate results in all slicers and with all start/end gcode: G90/G91 influences extruder.
 
 * **Use Octoprint Printer Settings** -  Octoprint has a setting for *G90/G91 influences extruder*  in the *Features* tab.  Enabling *Use Octoprint Printer Settings* will cause **Arc Welder** to use OctoPrint's setting.  Default: Enabled
-* **G90/G91 Influence Extruder** - If *Use Octoprint Printer Settings* is unchecked, **Arc Welder** will use this setting to determine if the G90/G91 command influences your extruder's axis mode.  In general, Marlin 2.0 and forks should have this box checked.  Many forks of Marlin 1.x should have this unchecked, like the Prusa MK2 and MK3.  I will try to add a list of printers and the proper value for this setting at some point, as well as a gcode test script you can use to determine what setting to use.  Keep in mind that most slicers produce code that will work fine no matter what setting you choose here.  Default: Disabled
+* **G90/G91 Influence Extruder** - If *Use Octoprint Feature Settings* is unchecked, **Arc Welder** will use this setting to determine if the G90/G91 command influences your extruder's axis mode.  In general, Marlin 2.0 and forks should have this box checked.  Many forks of Marlin 1.x should have this unchecked, like the Prusa MK2 and MK3.  I will try to add a list of printers and the proper value for this setting at some point, as well as a gcode test script you can use to determine what setting to use.  Keep in mind that most slicers produce code that will work fine no matter what setting you choose here.  Default: Disabled
 
 #### Notification Settings
 These settings allow you to control the notification toasts and progress display.
