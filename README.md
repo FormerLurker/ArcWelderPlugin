@@ -28,7 +28,7 @@ Typically, you will want to install *Arc Welder* from the plugin repository.  Th
 3. Click on the plugin manager in the left menu.
 4. Within the plugin manager, click **Get More...**.
 5. Enter *Arc Welder* in the search box, and click the *Install* button next to the plugin.  If you do not see the plugin listed in the search results, please see the next section to install from a specific URL.
-6. After installation is complete (**it will take a lot longer than most other plugins** since **Arc Welcer** must compile a custom python extension written in c++), reboot your pi when prompted.
+6. After installation is complete (**it will take a lot longer than most other plugins** since **Arc Welder** must compile a custom python extension written in c++), reboot your pi when prompted.
 
 #### Installing a Specific Version of Arc Welder
 
@@ -37,7 +37,7 @@ You can install a specific version of *Arc Welder* from a URL within the plugin 
 ##### Installation from a URL
 
 1. Navigate to the [releases on Github](https://github.com/FormerLurker/ArcWelderPlugin/releases).
-2. Select the release you are interested in (the most recent release is at the top), and click on the version number.  Note that **Pre-Release** will be tagged, so avoid those if you are only interested in stable versions.
+2. Select the release you are interested in (the most recent release is at the top), and click on the version number.  Note that **Pre-Releases** will be tagged, so avoid those if you are only interested in stable versions.
 3. Read the release notes carefully.  It may contain important information!
 4. Scroll to the bottom of the release page and ensure the **Assets** are expanded.
 5. Right-click on the **Source code (zip)** and copy the link into your clipboard.
@@ -45,13 +45,13 @@ You can install a specific version of *Arc Welder* from a URL within the plugin 
 7. Click on the plugin manager in the left menu.
 8. Within the plugin manager, click **Get More...** .
 9. Paste the installation URL you copied into the **... from URL** text box and click the **Install** button to the right of the text box.
-10. After installation is complete (**it will take longer than average** since **Arc Welcer** must compile a c++ package).  Reboot your pi.
+10. After installation is complete (**it will take longer than average** since **Arc Welder** must compile a c++ package).  Reboot your pi.
 
 ### Using Arc-Welder
 
 By default, Arc-Welder will automatically convert any newly added GCode files and will create a new file containing the converted GCode.  Using the default settings, this new file will end with **.aw.gcode**.  If your GCode file was called **print.gcode**, the converted file will be **print.aw.gcode**.
 
-You can also convert existing files from the file manager by clicking a new icon (compress icon - two arrows pointing towards each other) that will now be available within the file manager.  Note:  You cannot convert files that have already been converted by *Arc Welder*!
+You can also convert existing files from the file manager by clicking a new icon (compress icon - two arrows pointing towards each other) that will now be available within the file manager.  Note: You cannot convert files that have already been converted by *Arc Welder*!
 
 Once a file has been converted, the *Arc Welder* tab will show detailed statistics about the conversion, including before/after file sizes, compression information, before and after segment length statistics, and more.  You can view these statistics at any time by selecting a welded file or by clicking the statistics icon in the file manager.
 
@@ -59,12 +59,12 @@ Once a file has been converted, the *Arc Welder* tab will show detailed statisti
 
 *Arc Welder* is pre-configured and will work with no settings changes for most people.  However, there are a few settings you may want to investigate (see the *Use Octoprint Settings* and *G90/G91 Influence Extruder* extruder settings in particular).  You can navigate to the settings either by navigating to the *Arc Welder* tab and clicking on the *Edit Settings* button or by opening the OctoPrint settings and finding the *Arc Welder* plugin in the left side menu.
 
-#### Pre-processor Settings
+#### Pre-Processor Settings
 These settings control the main aspects of the plugin and how your GCode file will be compressed.
 
 * **Arc Welder Enabled** - Check or uncheck to enable or disable the plugin.  This prevents *Arc Welder* from converting any files and adding buttons to the file browser.  It will not remove the plugin from the tabs or settings pages.  If you want to truly disable *Arc Welder*, please do so in the plugin manager.
-* **Resolution in MM** - This setting controls how much play *Arc Welder* has in converting GCode points into arcs.  If the arc deviates from the original points by + or - 1/2 of the resolution, the points will **not** be converted.  The default setting is 0.05 which means the arcs may not deviate by more than +- 0.025mm (that's a **really** tiny deviation).  Increasing the resolution will result in more arcs being converted but will make the tool paths less accurate.  Decreasing the resolution will result in fewer arcs but more accurate toolpaths.  I don't recommend going above 0.1MM.  Higher values than that may result in print failure.
-* **Maximum Arc Radius** - This is a safety feature to prevent unusually large arcs from being generated.  Internally, *Arc Welder* uses a constant to prevent arcs with a very large radius from being generated where the path is essentially (but not exactly) a straight line.  If it is not perfectly straight and if my constant isn't conservative enough, an extremely large arc could be created that may have the wrong direction of rotation.  The default value works fine for all of the gCode I've tested (it is about 1/7th of the radius of the worst errant arc I've encountered).  If you discover that you need to adjust this setting because of errant arcs, please [create an issue](https://github.com/FormerLurker/ArcWelderPlugin/issues/new) and let me know!  The default setting is **1000000 mm** or **1KM**.
+* **Resolution in MM** - This setting controls how much play *Arc Welder* has in converting GCode points into arcs.  If the arc deviates from the original points by + or - 1/2 of the resolution, the points will **not** be converted.  The default setting is 0.05 which means the arcs may not deviate by more than +- 0.025mm (that's a **really** tiny deviation).  Increasing the resolution will result in more arcs being converted but will make the tool paths less accurate.  Decreasing the resolution will result in fewer arcs but more accurate tool paths.  I don't recommend going above 0.1MM.  Higher values than that may result in print failure.
+* **Maximum Arc Radius** - This is a safety feature to prevent unusually large arcs from being generated.  Internally, *Arc Welder* uses a constant to prevent an arc with a very large radius from being generated where the path is essentially (but not exactly) a straight line.  If it is not perfectly straight and if my constant isn't conservative enough, an extremely large arc could be created that may have the wrong direction of rotation.  The default value works fine for all of the gCode I've tested (it is about 1/7th of the radius of the worst errant arc I've encountered).  If you discover that you need to adjust this setting because of errant arcs, please [create an issue](https://github.com/FormerLurker/ArcWelderPlugin/issues/new) and let me know!  The default setting is **1000000 mm** or **1KM**.
 * **File Processing Type** - There are three options here:
   * *Automatic Processing Only* - Newly uploaded files will be compressed automatically.
   * *Manual Processing Only* - Convert files by clicking on the compress button in the file manager.  Files that are already compressed will have the compress button disabled.
@@ -79,7 +79,7 @@ Here you can control how *Arc Welder* will handle the output file.  It can eithe
 * **Target File Prefix** - When *Overwrite Source File* is disabled, *Arc Welder* will produce a new file with this prefix.  For example, if you use **AW_** as your prefix and your source file is called **print.gcode** the output file would be called **AW_print.gcode**.  Default:  NO PREFIX
 * **Target File Postfix** - When *Overwrite Source File* is disabled, *Arc Welder* will produce a new file with this postfix before the file extension.  For example, if you use **.aw** for your postfix and your source file is called **print.gcode**, the resulting file would be called **print.aw.gcode**.  Default: .aw
 
-Note:  You can combine prefixes and postfixes if you like.
+Note: You can combine prefixes and postfixes if you like.
 
 #### Source File Options
 * **Source File Deletion** - *Arc Welder* can delete the source file in most situations.  It will never delete the source file if it is currently printing or if the source file is overwritten by the welded GCode.  The options are:
@@ -160,10 +160,10 @@ G2/G3 support is not perfect at the moment, but I suspect things will start to i
 
 If you are interested in testing release candidates (which I really appreciate), you can easily do so via the built-in *Software Update* plugin.
 
-### Change Release Channel for OctoPrint 1.5.x and above
+### Change Release Channel for OctoPrint 1.5.x and Above
 Starting with Octoprint 1.5.0, release channels can be selected on a per-plugin basis.  I have not seen this feature in action, but I believe *Arc Welder* is properly configured to use it once it becomes available.  I will will add instructions as soon as the feature becomes available as a release candidate.
 
-### Change Release Channel for OctoPrint 1.4.x and below
+### Change Release Channel for OctoPrint 1.4.x and Below
 
 1. Open the Octoprint Settings (wrench/spanner icon).
 2. Click on the *Software Update* link in the left menu.  This will open the *Software Update* plugin.
@@ -197,7 +197,7 @@ Verify that you have enough memory to enable this feature if it is disabled.  Yo
 
 If you are running Python 3, confirm that you have the dev package installed.  Please see the installation instructions above for details.
 
-If you are still having problems, please (create an issue)[https://github.com/FormerLurker/ArcWelderPlugin/issues/new] and be sure to include the plugin_pluginmanageer_console.log file, which you can find by opening the Octoprint Settings (wrench/spanner icon), clicking on the **Logging** menu, then finding and downloading the proper log file.  Please upload the log file to (gist.github.com)[https://gist.github.com] and place a link within the issue.  Also include the OctoPrint version, the version of python you are running, and the OS version. If you are using OctoPi, please include that version as well.
+If you are still having problems, please (create an issue)[https://github.com/FormerLurker/ArcWelderPlugin/issues/new] and be sure to include the plugin_pluginmanager_console.log file, which you can find by opening the Octoprint Settings (wrench/spanner icon), clicking on the **Logging** menu, then finding and downloading the proper log file.  Please upload the log file to (gist.github.com)[https://gist.github.com] and place a link within the issue.  Also include the OctoPrint version, the version of python you are running, and the OS version. If you are using OctoPi, please include that version as well.
 
 **4.  I see no improvement in my prints.**
 
@@ -205,7 +205,7 @@ If you did not have any problems running the original GCode, *Arc Welder* isn't 
 
 **5.  My print failed when using *Arc Welder*, but the original GCode printed fine.**
 
-I recommend running the GCode through an analyzer that supports arcs (Simplify3D does, and [nc viewer](https://ncviewer.com) is a good online tools, though it has some problems) to see if there are any obvious issues with the GCode.
+I recommend running the GCode through an analyzer that supports arcs (Simplify3D does, and [nc viewer](https://ncviewer.com) is a good online tool, though it has some problems) to see if there are any obvious issues with the GCode.
 
 If the code looks good, please try printing *Arc Welder* GCode again to see if it fails in the same spot.  If it does, please report the issue!  See the *Reporting Issues* section below for info.
 
