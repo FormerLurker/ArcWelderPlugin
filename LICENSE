@@ -616,8 +616,8 @@ an absolute waiver of all civil liability in connection with the
 Program, unless a warranty or assumption of liability accompanies a
 copy of the Program in return for a fee.
 
-Octolapse - A plugin for OctoPrint for making stabilized timelapse videos.
-    Copyright (C) 2017  Brad Hochgesang
+Arc Welder: Anti-Stutter and GCode Compression - Replaces G0/G1 with G2/G3 where possible.
+    Copyright (C) 2020  Brad Hochgesang
 
                      END OF TERMS AND CONDITIONS
 
