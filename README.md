@@ -118,17 +118,16 @@ Your printer's firmware must be capable of printing G2/G3 commands to use the GC
 
 For recent versions of Marlin (2.0.6 and above), you can send an ```M115``` to see if your firmware has *ARC_SUPPORT* enabled.  For earlier versions you can send an empty ```G2``` or ```G3``` command.  If your printer responds with ```unknown command``` arc support is not enabled.
 
-If your printer is running a fork of Marlin, but arc support is not enabled, or is buggy, I recommend creating an issue on the fork's repository.
+If your printer is running a fork of Marlin, but arc support is not enabled, or is buggy, I recommend creating an issue withing the fork's repository.
 
 > "A plugin that can convert curves into arcs will be massively welcome and should make a great improvement in performance and print results."
 >
 > **[`Scott Lahteine`](https://www.patreon.com/thinkyhead)** - _Creator of [Marlin Firmware](https://github.com/MarlinFirmware/Marlin/)_
 
-
 ### Prusa Firmware
 [Prusa's fork of Marlin](https://github.com/prusa3d/Prusa-Firmware) does support G2/G3 commands, however the default settings can produce sharp corners for very small arcs.  I've only noticed this in a few of my test prints, so it is not a particularly common issue.  You should be able to see it on the roof of a Benchy if you look closely.  Reducing the *MM_PER_ARC_SEGMENT* setting slightly can correct this, but can also introduce stuttering.  Reducing the value massively (say to 0.1mm) will introduce a LOT of stutter and is NOT recommended.  Please note that adjusting this setting currently requires a manual firmware recompile.
 
-I have been toying with the firmware and have submitted a pull request to enhance the capabilities, but it hasn't made it into the firmware yet and may require further modifications.  I am planning to add some enhancements from Marlin 2.0.6 as well.  I also added some new GCodes for adjusting arc interpolating, and for retrieving the firmware settings for arc generation.  You can view the pull request [here](https://github.com/prusa3d/Prusa-Firmware/pull/2657).  Feel free to give this pull request a thumbs up, but realize that it needs some work, and that the good folks at [Prusa Research]([https://www.prusa3d.com/) have a lot on their plates.
+I have been toying with the firmware and have submitted a pull request to enhance the capabilities, but it hasn't made it into the firmware yet and may require further modifications.  I am planning to add some enhancements from Marlin 2.0.6 as well.  I also added some new GCodes for adjusting arc interpolating and for retrieving the firmware settings for arc generation.  You can view the pull request [here](https://github.com/prusa3d/Prusa-Firmware/pull/2657).  Feel free to give this pull request a thumbs up, but realize that it needs some work, and that the good folks at [Prusa Research]([https://www.prusa3d.com/) have a lot on their plates.
 
 Also, some very old versions of Prusa's firmware (I'm not sure exactly how old) do not support bed leveling adjustments during arc movements.  Please make sure you are using a recent version of the firmware so that interpolated movements are properly leveled.
 
