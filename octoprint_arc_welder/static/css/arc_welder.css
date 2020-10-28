@@ -58,3 +58,7 @@ div.ui-pnotify.arc-welder {
     text-overflow: ellipsis;
     overflow: hidden;
 }
+
+#tab_plugin_arc_welder_controls .no_underline:link {
+ text-decoration:none;
+}

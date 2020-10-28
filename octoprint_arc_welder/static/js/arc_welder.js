@@ -27,7 +27,89 @@ $(function () {
     // ArcWelder Global
     ArcWelder = {};
     ArcWelder.PLUGIN_ID = "arc_welder";
+    ArcWelder.toggleContentFunction = function ($elm, options, updateObservable) {
 
+        if (options.toggle_observable) {
+            //console.log("Toggling element.");
+            if (updateObservable) {
+                options.toggle_observable(!options.toggle_observable());
+                //console.log("Observable updated - " + options.toggle_observable())
+            }
+            if (options.toggle_observable()) {
+                if (options.class_showing) {
+                    $elm.children('[class^="icon-"]').addClass(options.class_showing);
+                    $elm.children('[class^="fa"]').addClass(options.class_showing);
+                }
+                if (options.class_hiding) {
+                    $elm.children('[class^="icon-"]').removeClass(options.class_hiding);
+                    $elm.children('[class^="fa"]').removeClass(options.class_hiding);
+                }
+                if (options.container) {
+                    if (options.parent) {
+                        $elm.parents(options.parent).find(options.container).stop().slideDown('fast', options.onComplete);
+                    } else {
+                        $(options.container).stop().slideDown('fast', options.onComplete);
+                    }
+                }
+            } else {
+                if (options.class_hiding) {
+                    $elm.children('[class^="icon-"]').addClass(options.class_hiding);
+                    $elm.children('[class^="fa"]').addClass(options.class_hiding);
+                }
+                if (options.class_showing) {
+                    $elm.children('[class^="icon-"]').removeClass(options.class_showing);
+                    $elm.children('[class^="fa"]').removeClass(options.class_showing);
+                }
+                if (options.container) {
+                    if (options.parent) {
+                        $elm.parents(options.parent).find(options.container).stop().slideUp('fast', options.onComplete);
+                    } else {
+                        $(options.container).stop().slideUp('fast', options.onComplete);
+                    }
+                }
+            }
+        } else {
+            if (options.class) {
+                $elm.children('[class^="icon-"]').toggleClass(options.class_hiding + ' ' + options.class_showing);
+                $elm.children('[class^="fa"]').toggleClass(options.class_hiding + ' ' + options.class_showing);
+            }
+            if (options.container) {
+                if (options.parent) {
+                    $elm.parents(options.parent).find(options.container).stop().slideToggle('fast', options.onComplete);
+                } else {
+                    $(options.container).stop().slideToggle('fast', options.onComplete);
+                }
+            }
+        }
+
+    };
+    ArcWelder.toggle = {
+        init: function (element, valueAccessor) {
+            var $elm = $(element),
+                options = $.extend({
+                    class_showing: null,
+                    class_hiding: null,
+                    container: null,
+                    parent: null,
+                    toggle_observable: null,
+                    onComplete: function () {
+                        $(document).trigger("slideCompleted");
+                    }
+                }, valueAccessor());
+
+            if (options.toggle_observable) {
+                ArcWelder.toggleContentFunction($elm, options, false);
+            }
+
+
+            $elm.on("click", function (e) {
+                e.preventDefault();
+                ArcWelder.toggleContentFunction($elm, options, true);
+
+            });
+        }
+    };
+    ko.bindingHandlers.arc_welder_toggle = ArcWelder.toggle;
     ArcWelder.setLocalStorage = function (name, value) {
         localStorage.setItem("arc_welder_" + name, value)
     };
@@ -152,6 +234,28 @@ $(function () {
         {name:"Disabled", value: ArcWelder.SOURCE_FILE_DELETE_DISABLED}
     ];
 
+    ArcWelder.PRINT_AFTER_PROCESSING_BOTH = "both";
+    ArcWelder.PRINT_AFTER_PROCESSING_AUTO = "auto-only";
+    ArcWelder.PRINT_AFTER_PROCESSING_MANUAL = "manual-only";
+    ArcWelder.PRINT_AFTER_PROCESSING_DISABLED = "disabled";
+    ArcWelder.PRINT_AFTER_PROCESSING_OPTIONS = [
+        {name:"Always Print After Processing", value: ArcWelder.PRINT_AFTER_PROCESSING_BOTH},
+        {name:"Print After Automatic Processing", value: ArcWelder.PRINT_AFTER_PROCESSING_AUTO},
+        {name:"Print After Manual Processing", value: ArcWelder.PRINT_AFTER_PROCESSING_MANUAL},
+        {name:"Disabled", value: ArcWelder.PRINT_AFTER_PROCESSING_DISABLED}
+    ];
+
+    ArcWelder.SELECT_FILE_AFTER_PROCESSING_BOTH = "both";
+    ArcWelder.SELECT_FILE_AFTER_PROCESSING_AUTO = "auto-only";
+    ArcWelder.SELECT_FILE_AFTER_PROCESSING_MANUAL = "manual-only";
+    ArcWelder.SELECT_FILE_AFTER_PROCESSING_DISABLED = "disabled";
+    ArcWelder.SELECT_FILE_AFTER_PROCESSING_OPTIONS = [
+        {name:"Always Select File After Processing", value: ArcWelder.SELECT_FILE_AFTER_PROCESSING_BOTH},
+        {name:"Select File After Automatic Processing", value: ArcWelder.SELECT_FILE_AFTER_PROCESSING_AUTO},
+        {name:"Select File After Manual Processing", value: ArcWelder.SELECT_FILE_AFTER_PROCESSING_MANUAL},
+        {name:"Disabled", value: ArcWelder.SELECT_FILE_AFTER_PROCESSING_DISABLED}
+    ];
+
     ArcWelder.ArcWelderViewModel = function (parameters) {
         var self = this;
         // variable to hold the settings view model.
@@ -181,7 +285,12 @@ $(function () {
         self.statistics.compression_percent = ko.observable().extend({arc_welder_numeric: 1});
         self.statistics.source_filename = ko.observable();
         self.statistics.target_filename = ko.observable();
-
+        var initial_run_configuration_visible = ArcWelder.getLocalStorage("run_configuration_visible") !== "false";
+        self.run_configuration_visible = ko.observable(initial_run_configuration_visible);
+        self.run_configuration_visible.subscribe(function(newValue){
+            var storage_value = newValue ? 'true' : 'false';
+            ArcWelder.setLocalStorage("run_configuration_visible", storage_value);
+        })
         self.statistics.segment_statistics_text = ko.observable();
         self.current_files = null;
 
@@ -216,19 +325,45 @@ $(function () {
             return file_processing_type === ArcWelder.FILE_PROCESSING_MANUAL ||
                 file_processing_type === ArcWelder.FILE_PROCESSING_BOTH;
         });
+        // Auto Select
+        self.select_auto_processed_file = ko.pureComputed(function(){
+            var auto_select_type = self.plugin_settings.feature_settings.select_after_processing();
+            return auto_select_type === ArcWelder.SELECT_FILE_AFTER_PROCESSING_AUTO ||
+                auto_select_type === ArcWelder.SELECT_FILE_AFTER_PROCESSING_BOTH;
+        });
+
+        self.select_manual_processed_file = ko.pureComputed(function(){
+            var auto_select_type = self.plugin_settings.feature_settings.select_after_processing();
+            return auto_select_type === ArcWelder.SELECT_FILE_AFTER_PROCESSING_MANUAL ||
+                auto_select_type === ArcWelder.SELECT_FILE_AFTER_PROCESSING_BOTH;
+        });
+        // Auto Print
+        self.print_auto_processed_file = ko.pureComputed(function(){
+            var auto_select_type = self.plugin_settings.feature_settings.select_after_processing();
+            return auto_select_type === ArcWelder.PRINT_AFTER_PROCESSING_AUTO ||
+                auto_select_type === ArcWelder.PRINT_AFTER_PROCESSING_BOTH;
+        });
+
+        self.print_manual_processed_file = ko.pureComputed(function(){
+            var auto_select_type = self.plugin_settings.feature_settings.select_after_processing();
+            return auto_select_type === ArcWelder.PRINT_AFTER_PROCESSING_MANUAL ||
+                auto_select_type === ArcWelder.PRINT_AFTER_PROCESSING_BOTH;
+        });
+
+
 
         self.source_file_delete_description = ko.pureComputed(function(){
             delete_setting = self.plugin_settings.feature_settings.delete_source();
             switch(delete_setting)
             {
                 case ArcWelder.SOURCE_FILE_DELETE_AUTO:
-                    return "Only automatically processed source files will be deleted.";
+                    return "After Automatic Processing Only";
                 case ArcWelder.SOURCE_FILE_DELETE_MANUAL:
-                    return "Only manually processed source files will be deleted.";
+                    return "After Manual Processing Only";
                 case ArcWelder.SOURCE_FILE_DELETE_BOTH:
-                    return "The source file will be deleted.";
+                    return "Always";
                 default:
-                   return "The source file will not be deleted";
+                   return "Disabled";
             }
         });
 
@@ -666,20 +801,21 @@ $(function () {
                 if (is_printing)
                 {
                     title = "Cannot weld arcs during a print, this would impact performance.";
+                    disable = true;
                 }
-                else if (file.origin !== "local")
+
+                if (file.origin !== "local")
                 {
                     disable = true;
                     title = "Cannot weld arcs for files stored on your printer's SD card.";
                 }
-                else {
-
-                    if (file.arc_welder)
-                    {
-                        is_welded = true;
-                        title = "View Arc-Welder statistics for this file.";
-                    }
+                if (file.arc_welder)
+                {
+                    disable = false;
+                    is_welded = true;
+                    title = "View Arc-Welder statistics for this file.";
                 }
+
 
                 // Create the button
 
@@ -688,15 +824,16 @@ $(function () {
                         <i class="fa ' + (is_welded ? "fa-file-text" : "fa-compress") + '"></i>\
                     </div>\
                 ');
-                // Add an on click event if the button is not disabled
-                //if (!is_welded)
-                //{
 
-                    var data = {path: file.path, origin: file.origin};
+                // Add an on click handler for the arc welder filemanager if it is not disabled
+                var data = {path: file.path, origin: file.origin};
+                if (!disable)
+                {
                     $button.click(data, function(e) {
                         self.processButtonClicked(e);
                     });
-                //}
+                }
+
 
                 // Add the button to the file manager
                 $(file_element).find("a.btn-mini").after($button);
@@ -797,21 +934,23 @@ $(function () {
                     }
                     else
                     {
-                        var options = {
-                            title: 'Arc Welder Error',
-                            text: results.message,
-                            type: 'error',
-                            hide: false,
-                            addclass: "arc-welder",
-                            desktop: {
-                                desktop: true
-                            }
-                        };
-                        PNotifyExtensions.displayPopupForKey(
-                            options,
-                            ArcWelder.PopupKey("process-error"),
-                            ArcWelder.PopupKey(["process-error"])
-                        );
+                        if (results.message) {
+                            var options = {
+                                title: 'Arc Welder Error',
+                                text: results.message,
+                                type: 'error',
+                                hide: false,
+                                addclass: "arc-welder",
+                                desktop: {
+                                    desktop: true
+                                }
+                            };
+                            PNotifyExtensions.displayPopupForKey(
+                                options,
+                                ArcWelder.PopupKey("process-error"),
+                                ArcWelder.PopupKey(["process-error"])
+                            );
+                        }
                     }
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {

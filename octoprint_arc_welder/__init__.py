@@ -33,6 +33,7 @@ import uuid
 import threading
 from distutils.version import LooseVersion
 from six import string_types
+from past.builtins import xrange
 from flask import request, jsonify
 import os
 import sys
@@ -98,12 +99,25 @@ class ArcWelderPlugin(
     SOURCE_FILE_DELETE_MANUAL = "manual-only"
     SOURCE_FILE_DELETE_DISABLED = "disabled"
 
+    PRINT_AFTER_PROCESSING_BOTH = "both"
+    PRINT_AFTER_PROCESSING_MANUAL = "manual-only"
+    PRINT_AFTER_PROCESSING_AUTO = "auto-only"
+    PRINT_AFTER_PROCESSING_DISABLED = "disabled"
+
+    SELECT_FILE_AFTER_PROCESSING_BOTH = "both"
+    SELECT_FILE_AFTER_PROCESSING_MANUAL = "manual-only"
+    SELECT_FILE_AFTER_PROCESSING_AUTO = "auto-only"
+    SELECT_FILE_AFTER_PROCESSING_DISABLED = "disabled"
+
     def __init__(self):
         super(ArcWelderPlugin, self).__init__()
         self.preprocessing_job_guid = None
         self.preprocessing_job_source_file_path = ""
         self.preprocessing_job_target_file_name = ""
         self.is_cancelled = False
+        # Note, you cannot count the number of items left to process using the
+        # _processing_queue.  Items put into this queue will be inserted into
+        # an internal dequeue by the preprocessor
         self._processing_queue = queue.Queue()
         self.settings_default = dict(
             use_octoprint_settings=True,
@@ -120,7 +134,9 @@ class ArcWelderPlugin(
             ),
             feature_settings=dict(
                 file_processing=ArcWelderPlugin.FILE_PROCESSING_BOTH,
-                delete_source=ArcWelderPlugin.SOURCE_FILE_DELETE_DISABLED
+                delete_source=ArcWelderPlugin.SOURCE_FILE_DELETE_DISABLED,
+                select_after_processing=ArcWelderPlugin.SELECT_FILE_AFTER_PROCESSING_BOTH,
+                print_after_processing=ArcWelderPlugin.PRINT_AFTER_PROCESSING_DISABLED
             ),
             enabled=True,
             logging_configuration=dict(
@@ -131,8 +147,12 @@ class ArcWelderPlugin(
             version=__version__,
             git_version=__git_version__,
         )
-        # start the preprocessor worker
+        # preprocessor worker
         self._preprocessor_worker = None
+        # track removed files to handle moves
+        self._recently_moved_files = []
+        # a wait period for clearing recently moved files
+        self._recently_moved_file_wait_ms = 1000
 
     def on_after_startup(self):
         logging_configurator.configure_loggers(
@@ -228,8 +248,11 @@ class ArcWelderPlugin(
                     # Extract only the supported metadata from the added file
                     additional_metadata = self.get_additional_metadata(metadata)
                     # add the file and metadata to the processor queue
-                    self.add_file_to_preprocessor_queue(path, additional_metadata, True)
-                    return jsonify({"success": True})
+                    success = self.add_file_to_preprocessor_queue(path, additional_metadata, True)
+                    if success:
+                        return jsonify({"success": True})
+                    else:
+                        return jsonify({"success": False})
             return jsonify({"success": False, "message": "Arc Welder is Disabled."})
 
     @octoprint.plugin.BlueprintPlugin.route("/restoreDefaultSettings", methods=["POST"])
@@ -282,7 +305,12 @@ class ArcWelderPlugin(
             css=["css/arc_welder.css"],
         )
 
-    def _is_file_selected(self, path, origin):
+    def _select_file(self, path):
+        if path and len(path) > 1 and path[0] == '/':
+            path = path[1:]
+        self._printer.select_file(path, False)
+
+    def _get_is_file_selected(self, path, origin):
         current_job = self._printer.get_current_job()
         current_file = current_job.get("file", {'path': "", "origin": ""})
         current_file_path = current_file["path"]
@@ -298,11 +326,10 @@ class ArcWelderPlugin(
             return False
         # If the path parameter is provided, check for a locally printing file of the same path
         if path:
-            return self._is_file_selected(path, FileDestinations.LOCAL)
+            return self._get_is_file_selected(path, FileDestinations.LOCAL)
+        return True
 
-        return False
     # Properties
-
     @property
     def _log_file_path(self):
         return self._settings.get_plugin_logfile_path()
@@ -416,6 +443,39 @@ class ArcWelderPlugin(
         return target_postfix
 
     @property
+    def _select_file_after_automatic_processing(self):
+        return self._settings.get(
+            ["feature_settings", "select_after_processing"]
+        ) in [
+            ArcWelderPlugin.SELECT_FILE_AFTER_PROCESSING_BOTH, ArcWelderPlugin.SELECT_FILE_AFTER_PROCESSING_AUTO
+        ]
+
+
+    @property
+    def _select_file_after_manual_processing(self):
+        return self._settings.get(
+            ["feature_settings", "select_after_processing"]
+        ) in [
+           ArcWelderPlugin.SELECT_FILE_AFTER_PROCESSING_BOTH, ArcWelderPlugin.SELECT_FILE_AFTER_PROCESSING_MANUAL
+        ]
+
+    @property
+    def _print_after_manual_processing(self):
+        return self._settings.get(
+            ["feature_settings", "print_after_processing"]
+        ) in [
+            ArcWelderPlugin.PRINT_AFTER_PROCESSING_BOTH, ArcWelderPlugin.PRINT_AFTER_PROCESSING_MANUAL
+        ]
+
+    @property
+    def _print_after_automatic_processing(self):
+        return self._settings.get(
+            ["feature_settings", "print_after_processing"]
+        ) in [
+            ArcWelderPlugin.PRINT_AFTER_PROCESSING_BOTH, ArcWelderPlugin.PRINT_AFTER_PROCESSING_AUTO
+        ]
+
+    @property
     def _show_started_notification(self):
         return self._settings.get(["notification_settings", "show_started_notification"])
 
@@ -430,6 +490,18 @@ class ArcWelderPlugin(
     @property
     def _delete_source_after_processing(self):
         return self._settings.get(["delete_source_after_processing"])
+
+    def _get_print_after_processing(self, is_manual):
+        if is_manual:
+            return self._print_after_manual_processing
+        else:
+            return self._print_after_automatic_processing
+
+    def _get_select_file_after_processing(self, is_manual):
+        if is_manual:
+            return self._select_file_after_manual_processing
+        else:
+            return self._select_file_after_automatic_processing
 
     def get_storage_path_and_name(self, storage_path, add_prefix_and_postfix):
         path, name = self._file_manager.split_path(FileDestinations.LOCAL, storage_path)
@@ -595,7 +667,10 @@ class ArcWelderPlugin(
                 return new_metadata
         return None
 
-    def preprocessing_started(self, path, preprocessor_args):
+    def preprocessing_started(self, task):
+        path = task["path"]
+        preprocessor_args = task["preprocessor_args"]
+        print_after_processing = task["print_after_processing"]
         new_path, new_name = self.get_storage_path_and_name(
             path, not self._overwrite_source_file
         )
@@ -615,6 +690,9 @@ class ArcWelderPlugin(
             preprocessor_args["g90_g91_influences_extruder"],
             preprocessor_args["log_level"]
         )
+
+        if print_after_processing:
+            logger.info("The queued file will be printed after processing is complete.")
 
         if self._show_started_notification:
             # A bit of a hack.  Need to rethink the start notification.
@@ -656,11 +734,23 @@ class ArcWelderPlugin(
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)
             time.sleep(0.01)
-        # return true if processing should continue.  This is set by the cancelled blueprint plugin.
+        # return true if processing should continue.
+        # If self.is_cancelled is true (This is set by the cancelled blueprint plugin)
+        # or the we are currently printing, return false
         return not self.is_cancelled
 
-    def preprocessing_cancelled(self, path, preprocessor_args):
-        message = "Preprocessing has been cancelled for '{0}'.".format(path)
+    def preprocessing_cancelled(self, task, auto_cancelled):
+
+        path = task["path"]
+        preprocessor_args = task["preprocessor_args"]
+
+        if auto_cancelled:
+            message = "Cannot process while printing.  Arc Welding has been cancelled for '{0}'.  The file will be " \
+                      "processed once printing has completed. "
+        else:
+            message = "Preprocessing has been cancelled for '{0}'."
+
+        message = message.format(path)
         data = {
             "message_type": "preprocessing-cancelled",
             "source_filename": self.preprocessing_job_source_file_path,
@@ -670,7 +760,16 @@ class ArcWelderPlugin(
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
-    def preprocessing_success(self, results, path, preprocessor_args, additional_metadata, is_manual_request):
+    def preprocessing_success(
+            self, results, task
+    ):
+        # extract the task data
+        path = task["path"]
+        preprocessor_args = task["preprocessor_args"]
+        additional_metadata = task["additional_metadata"]
+        is_manual_request = task["is_manual_request"]
+        print_after_processing = task["print_after_processing"]
+        select_file_after_processing = task["select_file_after_processing"]
         # save the newly created file.  This must be done before
         # exiting this callback because the target file isn't
         # guaranteed to exist later.
@@ -688,7 +787,6 @@ class ArcWelderPlugin(
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)
             return
-
         if (
             (
                 (is_manual_request and self._delete_source_after_manual_processing)
@@ -699,7 +797,7 @@ class ArcWelderPlugin(
         ):
             if not self._get_is_printing(path):
                 # if the file is selected, deselect it.
-                if self._is_file_selected(path, FileDestinations.LOCAL):
+                if self._get_is_file_selected(path, FileDestinations.LOCAL):
                     self._printer.unselect_file()
                 # delete the source file
                 logger.info("Deleting source file at %s.", path)
@@ -720,6 +818,21 @@ class ArcWelderPlugin(
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)
 
+        if select_file_after_processing or print_after_processing:
+            try:
+                self._select_file(new_path)
+                # make sure the file is selected
+                if (
+                        self._get_is_file_selected(new_path, FileDestinations.LOCAL)
+                        and print_after_processing
+                        and not self._get_is_printing()
+                ):
+                    self._printer.start_print(tags=set('arc_welder'))
+            except (octoprint.printer.InvalidFileType, octoprint.printer.InvalidFileLocation):
+                # we don't care too much if OctoPrint can't select the file.  There's nothing
+                # we can do about it anyway
+                pass
+
     def preprocessing_completed(self):
         data = {
             "message_type": "preprocessing-complete"
@@ -729,7 +842,7 @@ class ArcWelderPlugin(
         self.preprocessing_job_target_file_name = None
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
-    def preprocessing_failed(self, message):
+    def preprocessing_failed(self, message, task):
         data = {
             "message_type": "preprocessing-failed",
             "source_filename": self.preprocessing_job_source_file_path,
@@ -739,10 +852,58 @@ class ArcWelderPlugin(
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
+    def _clean_removed_files(self):
+        # get the current date and time so we can remove old files
+        cutoff_date_time = (
+            datetime.datetime.now() -
+            datetime.timedelta(milliseconds=self._recently_moved_file_wait_ms)
+        )
+        # iterate over the list in reverse, so we can remove elements
+        for i in xrange(len(self._recently_moved_files) - 1, -1, -1):
+            current_file = self._recently_moved_files[i]
+            if current_file["date_removed"] < cutoff_date_time:
+                del self._recently_moved_files[i]
+
+    # first remove any old moved files
+    def _add_removed_file(self, file_name):
+        # first, clean up the removed file list
+        self._clean_removed_files()
+        # now, add the file
+        self._recently_moved_files.append({
+            "file_name": file_name,
+            "date_removed": datetime.datetime.now()
+        })
+
+    # see if a file was recently removed to handle file move
+    def _is_file_moved(self, file_name):
+        # first, clean up the removed file list
+        self._clean_removed_files()
+        # now, iterate the list and see if the file_name exists
+        for item in self._recently_moved_files:
+            if item["file_name"] == file_name:
+                return True
+        return False
+
     def on_event(self, event, payload):
 
-        # Need to use file added event to catch uploads and other non-upload methods of adding a file.
-        if event == Events.FILE_ADDED:
+        if event == Events.PRINT_STARTED:
+            printing_stopped = self._preprocessor_worker.prevent_printing_for_existing_jobs()
+            if printing_stopped:
+                self.send_notification_toast(
+                    "warning", "Arc-Welder: Cannot Print",
+                    "A print is running, but processing tasks are in the queue that are marked 'Print After "
+                    "Processing'.  To protect your printer, Arc Welder will not automatically print when processing "
+                    "is completed.",
+                    True,
+                    key="auto_print_cancelled", close_keys=["auto_print_cancelled"]
+                )
+        elif event == Events.FILE_ADDED:
+            # Need to use file added event to catch uploads and other non-upload methods of adding a file.
+            # skip the file if it was recently moved.  This COULD cause problems due to potential
+            # race conditions, but in most cases it will not.
+            if self._is_file_moved(payload["name"]):
+                return
+
             if not self._enabled or not self._auto_pre_processing_enabled:
                 return
             # Note, 'target' is the key for FILE_UPLOADED, but 'storage' is the key for FILE_ADDED
@@ -768,6 +929,9 @@ class ArcWelderPlugin(
             additional_metadata = self.get_additional_metadata(metadata)
             # Add this file to the processor queue.
             self.add_file_to_preprocessor_queue(path, additional_metadata, False)
+        elif event == Events.FILE_REMOVED:
+            # add the file to the removed list
+            self._add_removed_file(payload["name"])
 
     def get_additional_metadata(self, metadata):
         # list of supported metadata
@@ -782,7 +946,8 @@ class ArcWelderPlugin(
     def add_file_to_preprocessor_queue(self, path, additional_metadata, is_manual_request):
         # get the file by path
         # file = self._file_manager.get_file(FileDestinations.LOCAL, path)
-        if self._get_is_printing():
+        is_printing = self._get_is_printing()
+        if is_printing:
             self.send_notification_toast(
                 "warning", "Arc-Welder: Unable to Process",
                 "Cannot preprocess gcode while a print is in progress because print quality may be affected.  The "
@@ -799,7 +964,26 @@ class ArcWelderPlugin(
             path = '/' + path
 
         preprocessor_args = self.get_preprocessor_arguments(path_on_disk)
-        self._processing_queue.put((path, preprocessor_args, additional_metadata, is_manual_request))
+        print_after_processing = not is_printing and self._get_print_after_processing(is_manual_request)
+        select_after_processing = self._get_select_file_after_processing(is_manual_request)
+        task = {
+            "path": path,
+            "preprocessor_args": preprocessor_args,
+            "additional_metadata": additional_metadata,
+            "is_manual_request": is_manual_request,
+            "print_after_processing": print_after_processing,
+            "select_file_after_processing": select_after_processing
+        }
+        results = self._preprocessor_worker.add_task(task)
+        if not results["success"]:
+            self.send_notification_toast(
+                "warning", "Arc-Welder: Unable To Queue File",
+                results["error_message"],
+                True,
+                key="unable_to_queue", close_keys=["unable_to_queue"]
+            )
+            return False
+        return True
 
     def register_custom_routes(self, server_routes, *args, **kwargs):
         # version specific permission validator
@@ -831,7 +1015,6 @@ class ArcWelderPlugin(
 
         # ~~ software update hook
 
-
     arc_welder_update_info = dict(
         displayName="Arc Welder: Anti-Stutter",
         # version check: github repository
@@ -854,8 +1037,6 @@ class ArcWelderPlugin(
             )
         ],
     )
-
-
 
     def get_release_info(self):
         # Starting with V1.5.0 prerelease branches are supported!

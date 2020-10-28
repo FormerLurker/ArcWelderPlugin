@@ -1,0 +1,1 @@
+When enabled, Arc Welder will select the output file after processing is complete.  This is only possible if you are not currently printing.

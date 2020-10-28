@@ -24,8 +24,13 @@
 # following email address: FormerLurker@pm.me
 ##################################################################################-->
 <div id="tab_plugin_arc_welder_controls" class="form-horizontal">
-    <H4>Current Run Configuration</H4>
-    <div data-bind="visible: plugin_settings.enabled">
+    <H4>
+        <a href="#" class="no_underline" data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_current_run_configuration', toggle_observable: run_configuration_visible }">
+            Current Run Configuration <i class="fa fa-no-shadow fa-caret-down"></i>
+        </a>
+    </H4>
+    <div id="arc_welder_current_run_configuration">
+        <div data-bind="visible: plugin_settings.enabled">
 
         <div class="row-fluid">
             <div class="span4 text-right">
@@ -47,6 +52,17 @@
         </div>
         <div class="row-fluid">
             <div class="span4 text-right">
+                <strong>G90/G91 Influences Extruder:</strong>
+            </div>
+            <div class="span8">
+                <span data-bind="visible: plugin_settings.use_octoprint_settings"><span
+                        data-bind="text: settings.settings.feature.g90InfluencesExtruder"></span> (using octoprint settings)</span>
+                <span data-bind="visible: !plugin_settings.use_octoprint_settings()"><span
+                        data-bind="text: plugin_settings.g90_g91_influences_extruder"></span></span>
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
                 <strong>Resolution:</strong>
             </div>
             <div class="span8">
@@ -63,7 +79,7 @@
         </div>
         <div class="row-fluid">
             <div class="span4 text-right">
-                <strong>Output File:</strong>
+                <strong>Output File Name:</strong>
             </div>
             <div class="span8">
                 <span data-bind="visible: plugin_settings.overwrite_source_file">Gcode files will be overwritten after processing.</span>
@@ -88,18 +104,7 @@
         </div>
         <div class="row-fluid">
             <div class="span4 text-right">
-                <strong>G90 Influences Extruder:</strong>
-            </div>
-            <div class="span8">
-                <span data-bind="visible: plugin_settings.use_octoprint_settings"><span
-                        data-bind="text: settings.settings.feature.g90InfluencesExtruder"></span> (using octoprint settings)</span>
-                <span data-bind="visible: !plugin_settings.use_octoprint_settings()"><span
-                        data-bind="text: plugin_settings.g90_g91_influences_extruder"></span></span>
-            </div>
-        </div>
-        <div class="row-fluid">
-            <div class="span4 text-right">
-                <strong>Source File Deletion:</strong>
+                <strong>Delete Output File:</strong>
             </div>
             <div class="span8">
                 <div data-bind="visible: plugin_settings.overwrite_source_file() || (plugin_settings.target_postfix() == '' && plugin_settings.target_prefix() == '')">
@@ -111,6 +116,28 @@
 
             </div>
         </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>Select After Processing:</strong>
+            </div>
+            <div class="span8">
+                <span data-bind="visible: select_auto_processed_file() && !select_manual_processed_file()">After Automatic Processing Only</span>
+                <span data-bind="visible: !select_auto_processed_file() && select_manual_processed_file()">After Manual Processing Only</span>
+                <span data-bind="visible: select_auto_processed_file() && select_manual_processed_file()">Always</span>
+                <span data-bind="visible: !select_auto_processed_file() && !select_manual_processed_file()">Disabled</span>
+            </div>
+        </div>
+        <div class="row-fluid">
+            <div class="span4 text-right">
+                <strong>Print After Processing:</strong>
+            </div>
+            <div class="span8">
+                <span data-bind="visible: print_auto_processed_file() && !print_manual_processed_file()">After Automatic Processing Only</span>
+                <span data-bind="visible: !print_auto_processed_file() && print_manual_processed_file()">After Manual Processing Only</span>
+                <span data-bind="visible: print_auto_processed_file() && print_manual_processed_file()">Always</span>
+                <span data-bind="visible: !print_auto_processed_file() && !print_manual_processed_file()">Disabled</span>
+            </div>
+        </div>
 
     </div>
     <div data-bind="visible: !plugin_settings.enabled()">
@@ -120,6 +147,7 @@
                 Disabled - Arc Welder is completely disabled
             </div>
         </dl>
+    </div>
     </div>
     <div class="row-fluid">
         <div class="span6">
