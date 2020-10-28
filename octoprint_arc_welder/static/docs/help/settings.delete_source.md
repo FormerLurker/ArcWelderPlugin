@@ -1,4 +1,4 @@
- Arcwelder can automatically delete the source file for you.  The available options are:
+ Arc Welder can automatically delete the source file for you.  The available options are:
 
  * *Always Delete Source File* - The source file will always be deleted after processing is completed.
  * *Delete After Automatic Processing* - Automatically processed source files will be deleted, but manually processed source files will *NOT* be deleted.
