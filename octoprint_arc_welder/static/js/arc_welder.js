@@ -339,13 +339,13 @@ $(function () {
         });
         // Auto Print
         self.print_auto_processed_file = ko.pureComputed(function(){
-            var auto_select_type = self.plugin_settings.feature_settings.select_after_processing();
+            var auto_select_type = self.plugin_settings.feature_settings.print_after_processing();
             return auto_select_type === ArcWelder.PRINT_AFTER_PROCESSING_AUTO ||
                 auto_select_type === ArcWelder.PRINT_AFTER_PROCESSING_BOTH;
         });
 
         self.print_manual_processed_file = ko.pureComputed(function(){
-            var auto_select_type = self.plugin_settings.feature_settings.select_after_processing();
+            var auto_select_type = self.plugin_settings.feature_settings.print_after_processing();
             return auto_select_type === ArcWelder.PRINT_AFTER_PROCESSING_MANUAL ||
                 auto_select_type === ArcWelder.PRINT_AFTER_PROCESSING_BOTH;
         });
