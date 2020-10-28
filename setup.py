@@ -49,7 +49,7 @@ plugin_package = "octoprint_arc_welder"
 plugin_name = "Arc Welder"
 # The plugin's fallback version, in case versioneer can't extract the version from _version.py.
 # This can happen if the user installs from one of the .zip links in github, not generated with git archive
-fallback_version = "1.0.1.dev1"
+fallback_version = "1.0.1.rc1.dev1"
 plugin_version = versioneer.get_version()
 if plugin_version == "0+unknown" or NumberedVersion(plugin_version) < NumberedVersion(
     fallback_version
