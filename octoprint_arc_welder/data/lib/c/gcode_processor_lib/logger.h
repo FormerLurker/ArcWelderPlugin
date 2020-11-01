@@ -55,15 +55,18 @@ public:
 	static int get_log_level_value(const int log_level);
 	static int get_log_level_for_value(int log_level_value);
 	virtual bool is_log_level_enabled(const int logger_type, const int log_level);
+
+	void set_streams(std::ostream* stdout, std::ostream* stderr);
 protected:
 	virtual void create_log_message(const int logger_type, const int log_level, const std::string& message, std::string& output);
 	
 	bool loggers_created_;
+	std::ostream* stdout;
+	std::ostream* stderr;
 private:
 	std::string* logger_names_;
 	int * logger_levels_;
 	int num_loggers_;
 	static void get_timestamp(std::string &timestamp);
-	
 };
 

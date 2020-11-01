@@ -23,6 +23,7 @@
 #define _CRT_SECURE_NO_DEPRECATE
 #endif
 #include "logger.h"
+
 logger::logger(std::vector<std::string> names, std::vector<int> levels) {
 	// set to true by default, but can be changed by inheritance to support mandatory innitialization (for python or other integrations)
 	loggers_created_ = true;
@@ -36,12 +37,19 @@ logger::logger(std::vector<std::string> names, std::vector<int> levels) {
 		logger_levels_[index] = levels[index];
 	}
 	
-	set_log_level_by_value(NOSET);
+	set_log_level(NOSET);
+	this->stdout = &std::cout;
+	this->stderr = &std::cerr;
 }
 
 logger::~logger() {
 	delete[] logger_names_;
 	delete[] logger_levels_;
+}
+
+void logger::set_streams(std::ostream* stdout, std::ostream* stderr) {
+	this->stdout = stdout;
+	this->stderr = stderr;
 }
 
 void logger::set_log_level_by_value(const int logger_type, const int level_value)
@@ -131,12 +139,12 @@ void logger::log(const int logger_type, const int log_level, const std::string& 
 	create_log_message(logger_type, log_level, message, output);
 
 	// write the log
-	if (is_exception)
-		std::cerr << output << std::endl;
-	else
-		std::cout << output << std::endl;
-	std::cout.flush();
-	
+	if (is_exception) {
+		*this->stderr << output << std::endl;
+	} else {
+		*this->stdout << output << std::endl;
+		this->stdout->flush();
+	}
 }
 
 void logger::get_timestamp(std::string &timestamp)

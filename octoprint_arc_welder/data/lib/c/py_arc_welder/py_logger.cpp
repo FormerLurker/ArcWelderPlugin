@@ -63,18 +63,18 @@ void py_logger::initialize_loggers()
 	PyObject* funcArgs = Py_BuildValue("(s,s,s)", "arc_welder", "arc_welder.", "octoprint_arc_welder.");
 	if (funcArgs == NULL)
 	{
-		std::cout << "Unable to create LoggingConfigurator arguments, exiting.\r\n";
+		*this->stdout << "Unable to create LoggingConfigurator arguments, exiting.\r\n";
 		PyErr_SetString(PyExc_ImportError, "Could not create LoggingConfigurator arguments.");
 		return;
 	}
 	
 	py_logging_configurator = PyObject_CallObject(py_logging_configurator_name, funcArgs);
-	std::cout << "Complete.\r\n";
+	*this->stdout << "Complete.\r\n";
 	Py_DECREF(funcArgs);
 	PyGILState_Release(gstate);
 	if (py_logging_configurator == NULL)
 	{
-		std::cout << "The LoggingConfigurator is null, exiting.\r\n";
+		*this->stdout << "The LoggingConfigurator is null, exiting.\r\n";
 		PyErr_SetString(PyExc_ImportError, "Could not create a new instance of LoggingConfigurator.");
 		return;
 	}
@@ -83,7 +83,7 @@ void py_logger::initialize_loggers()
 	py_arc_welder_gcode_conversion_logger = PyObject_CallMethod(py_logging_configurator, (char*)"get_logger", (char*)"s", "octoprint_arc_welder.gcode_conversion");
 	if (py_arc_welder_gcode_conversion_logger == NULL)
 	{
-		std::cout << "No child logger was created, exiting.\r\n";
+		*this->stdout << "No child logger was created, exiting.\r\n";
 		PyErr_SetString(PyExc_ImportError, "Could not create the arc_welder.gcode_parser child logger.");
 		return;
 	}
@@ -142,14 +142,14 @@ void py_logger::log(const int logger_type, const int log_level, const std::strin
 		current_log_level = gcode_conversion_log_level;
 		break;
 	default:
-		std::cout << "Logging.arc_welder_log - unknown logger_type.\r\n";
+		*this->stdout << "Logging.arc_welder_log - unknown logger_type.\r\n";
 		PyErr_SetString(PyExc_ValueError, "Logging.arc_welder_log - unknown logger_type.");
 		return;
 	}
 
 	if (!check_log_levels_real_time)
 	{
-		//std::cout << "Current Log Level: " << current_log_level << " requested:" << log_level;
+		//*this->stdout << "Current Log Level: " << current_log_level << " requested:" << log_level;
 		// For speed we are going to check the log levels here before attempting to send any logging info to Python.
 		if (current_log_level > log_level)
 		{
@@ -197,7 +197,7 @@ void py_logger::log(const int logger_type, const int log_level, const std::strin
 			pyFunctionName = py_critical_function_name;
 			break;
 		default:
-			std::cout << "An unknown log level of '" << log_level << " 'was supplied for the message: " << message.c_str() << "\r\n";
+			*this->stdout << "An unknown log level of '" << log_level << " 'was supplied for the message: " << message.c_str() << "\r\n";
 			PyErr_Format(PyExc_ValueError,
 				"An unknown log level was supplied for the message %s.", message.c_str());
 			return;
@@ -206,7 +206,7 @@ void py_logger::log(const int logger_type, const int log_level, const std::strin
 	PyObject* pyMessage = gcode_arc_converter::PyUnicode_SafeFromString(message);
 	if (pyMessage == NULL)
 	{
-		std::cout << "Unable to convert the log message '" << message.c_str() << "' to a PyString/Unicode message.\r\n";
+		*this->stdout << "Unable to convert the log message '" << message.c_str() << "' to a PyString/Unicode message.\r\n";
 		PyErr_Format(PyExc_ValueError,
 			"Unable to convert the log message '%s' to a PyString/Unicode message.", message.c_str());
 		return;
@@ -220,14 +220,14 @@ void py_logger::log(const int logger_type, const int log_level, const std::strin
 	{
 		if (!PyErr_Occurred())
 		{
-			std::cout << "Logging.arc_welder_log - null was returned from the specified logger.\r\n";
+			*this->stdout << "Logging.arc_welder_log - null was returned from the specified logger.\r\n";
 			PyErr_SetString(PyExc_ValueError, "Logging.arc_welder_log - null was returned from the specified logger.");
 			return;
 		}
 		else
 		{
-			std::cout << "Logging.arc_welder_log - null was returned from the specified logger and an error was detected.\r\n";
-			std::cout << "\tLog Level: " << log_level <<", Logger Type: " << logger_type << ", Message: " << message.c_str() << "\r\n";
+			*this->stdout << "Logging.arc_welder_log - null was returned from the specified logger and an error was detected.\r\n";
+			*this->stdout << "\tLog Level: " << log_level <<", Logger Type: " << logger_type << ", Message: " << message.c_str() << "\r\n";
 			
 			// I'm not sure what else to do here since I can't log the error.  I will print it 
 			// so that it shows up in the console, but I can't log it, and there is no way to 

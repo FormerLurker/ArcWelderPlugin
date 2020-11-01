@@ -153,7 +153,7 @@ extern "C" void initPyArcWelder(void)
 	p_py_logger->initialize_loggers();
 	std::string message = "PyArcWelder V0.1.0rc1.dev2 imported - Copyright (C) 2019  Brad Hochgesang...";
 	p_py_logger->log(GCODE_CONVERSION, INFO, message);
-	p_py_logger->set_log_level_by_value(DEBUG);
+	p_py_logger->set_log_level(DEBUG);
 	std::cout << " Initialization Complete\r\n";
 
 #if PY_MAJOR_VERSION >= 3
