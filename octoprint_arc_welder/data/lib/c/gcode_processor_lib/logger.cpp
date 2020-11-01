@@ -141,6 +141,7 @@ void logger::log(const int logger_type, const int log_level, const std::string& 
 	// write the log
 	if (is_exception) {
 		*this->stderr << output << std::endl;
+		this->stderr->flush();
 	} else {
 		*this->stdout << output << std::endl;
 		this->stdout->flush();
