@@ -49,6 +49,7 @@ from octoprint.plugins.softwareupdate.version_checks import github_release
 import octoprint_arc_welder.log as log
 import octoprint_arc_welder.preprocessor as preprocessor
 import octoprint_arc_welder.utilities as utilities
+import octoprint_arc_welder.firmware_checker as firmware_checker
 import  octoprint_arc_welder_setuptools as arc_welder_setuptools
 # stupid python 2/python 3 compatibility imports
 try:
@@ -109,6 +110,10 @@ class ArcWelderPlugin(
     SELECT_FILE_AFTER_PROCESSING_AUTO = "auto-only"
     SELECT_FILE_AFTER_PROCESSING_DISABLED = "disabled"
 
+    CHECK_FIRMWARE_ON_CONECT = "connection"
+    CHECK_FIRMWARE_MANUAL_ONLY = "manual-only"
+    CHECK_FIRMWARE_DISABLED = "disabled"
+
     def __init__(self):
         super(ArcWelderPlugin, self).__init__()
         self.preprocessing_job_guid = None
@@ -123,6 +128,7 @@ class ArcWelderPlugin(
             use_octoprint_settings=True,
             g90_g91_influences_extruder=False,
             resolution_mm=0.05,
+            path_tolerance_percent=1.0,
             max_radius_mm=1000*1000,  # 1KM, pretty big :)
             overwrite_source_file=False,
             target_prefix="",
@@ -136,7 +142,9 @@ class ArcWelderPlugin(
                 file_processing=ArcWelderPlugin.FILE_PROCESSING_BOTH,
                 delete_source=ArcWelderPlugin.SOURCE_FILE_DELETE_DISABLED,
                 select_after_processing=ArcWelderPlugin.SELECT_FILE_AFTER_PROCESSING_BOTH,
-                print_after_processing=ArcWelderPlugin.PRINT_AFTER_PROCESSING_DISABLED
+                print_after_processing=ArcWelderPlugin.PRINT_AFTER_PROCESSING_DISABLED,
+                check_firmware=ArcWelderPlugin.CHECK_FIRMWARE_ON_CONECT,
+                current_run_configuration_visible=True
             ),
             enabled=True,
             logging_configuration=dict(
@@ -153,6 +161,9 @@ class ArcWelderPlugin(
         self._recently_moved_files = []
         # a wait period for clearing recently moved files
         self._recently_moved_file_wait_ms = 1000
+
+        # firmware checker
+        self._firmware_checker = None
 
     def on_after_startup(self):
         logging_configurator.configure_loggers(
@@ -171,6 +182,12 @@ class ArcWelderPlugin(
         )
         self._preprocessor_worker.daemon = True
         self._preprocessor_worker.start()
+        logger.info("Preprocessor worker started.")
+
+        # start the firmware checker
+        self._firmware_checker = firmware_checker.FirmwareChecker(self._printer, self._basefolder, self.get_plugin_data_folder(), self.check_firmware_response_received)
+        logger.info("Firmware checker created.")
+        self.check_firmware()
         logger.info("Startup Complete.")
 
     # Events
@@ -264,6 +281,20 @@ class ArcWelderPlugin(
             self._settings.save(trigger_event=True)
             return jsonify({"success": True})
 
+    @octoprint.plugin.BlueprintPlugin.route("/checkFirmware", methods=["POST"])
+    @restricted_access
+    def check_firmware_request(self):
+        with ArcWelderPlugin.admin_permission.require(http_exception=403):
+            self.check_firmware()
+            return jsonify({"success": True})
+
+    @octoprint.plugin.BlueprintPlugin.route("/getFirmwareVersion", methods=["POST"])
+    @restricted_access
+    def get_firmware_version_request(self):
+        with ArcWelderPlugin.admin_permission.require(http_exception=403):
+            current_firmware = self._firmware_checker.get_current_firmware()
+            return jsonify({"success": True, "firmware_info": current_firmware})
+
     # Callback Handler for /downloadFile
     # uses the ArcWelderLargeResponseHandler
     def download_file_request(self, request_handler):
@@ -289,6 +320,34 @@ class ArcWelderPlugin(
             "close_keys": close_keys,
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
+
+    def check_firmware_response_received(self, result):
+        if not result["success"]:
+            self.send_notification_toast(
+                "error",
+                "Unable To Check Firmware",
+                result["error"],
+                False,
+                "check-firmware",
+                "check-firmware"
+            )
+        else:
+            self.send_firmware_info_updated_message(result["firmware_version"])
+
+    def send_firmware_info_updated_message(self, firmware_info):
+        data = {
+            "message_type": "firmware-info-update",
+            "firmware_info": firmware_info,
+        }
+        self._plugin_manager.send_plugin_message(self._identifier, data)
+
+
+    def check_firmware(self):
+        if self._firmware_checker is None or not self._enabled:
+            return
+        logger.info("Checking Firmware Capabilities")
+        self._firmware_checker.check_firmware_async()
+
 
     # ~~ AssetPlugin mixin
     def get_assets(self):
@@ -411,6 +470,17 @@ class ArcWelderPlugin(
         return resolution_mm
 
     @property
+    def _path_tolerance_percent(self):
+        path_tolerance_percent = self._settings.get_float(["path_tolerance_percent"])
+        if path_tolerance_percent is None:
+            path_tolerance_percent = self.settings_default["path_tolerance_percent"]
+        return path_tolerance_percent
+
+    @property
+    def _path_tolerance_percent_decimal(self):
+        return self._path_tolerance_percent / 100.0
+
+    @property
     def _max_radius_mm(self):
         max_radius_mm = self._settings.get_float(["max_radius_mm"])
         if max_radius_mm is None:
@@ -458,6 +528,10 @@ class ArcWelderPlugin(
         ) in [
            ArcWelderPlugin.SELECT_FILE_AFTER_PROCESSING_BOTH, ArcWelderPlugin.SELECT_FILE_AFTER_PROCESSING_MANUAL
         ]
+
+    @property
+    def _check_firmware_on_connect(self):
+        return self._settings.get(["feature_settings", "check_firmware"]) == ArcWelderPlugin.CHECK_FIRMWARE_ON_CONECT
 
     @property
     def _print_after_manual_processing(self):
@@ -518,6 +592,7 @@ class ArcWelderPlugin(
         return {
             "path": source_path_on_disk,
             "resolution_mm": self._resolution_mm,
+            "path_tolerance_percent": self._path_tolerance_percent_decimal,
             "max_radius_mm": self._max_radius_mm,
             "g90_g91_influences_extruder": self._g90_g91_influences_extruder,
             "log_level": self._gcode_conversion_log_level
@@ -683,10 +758,12 @@ class ArcWelderPlugin(
             "Starting pre-processing with the following arguments:"
             "\n\tsource_file_path: %s"
             "\n\tresolution_mm: %.3f"
+            "\n\tpath_tolerance_percent: %.3f"
             "\n\tg90_g91_influences_extruder: %r"
             "\n\tlog_level: %d",
             preprocessor_args["path"],
             preprocessor_args["resolution_mm"],
+            preprocessor_args["path_tolerance_percent"],
             preprocessor_args["g90_g91_influences_extruder"],
             preprocessor_args["log_level"]
         )
@@ -932,6 +1009,9 @@ class ArcWelderPlugin(
         elif event == Events.FILE_REMOVED:
             # add the file to the removed list
             self._add_removed_file(payload["name"])
+        elif event == Events.CONNECTED:
+            if self._check_firmware_on_connect:
+                self.check_firmware()
 
     def get_additional_metadata(self, metadata):
         # list of supported metadata
@@ -1074,6 +1154,22 @@ class ArcWelderPlugin(
         # AND I want to use the most recent software update release channel settings.
         return self.get_release_info()
 
+    # noinspection PyUnusedLocal
+    def on_gcode_sent(self, comm_instance, phase, cmd, cmd_type, gcode, *args, **kwargs):
+        if self._enabled and self._firmware_checker is not None:
+            try:
+                self._firmware_checker.on_gcode_sending(comm_instance, phase, cmd, cmd_type, gcode, args, kwargs)
+            except Exception as e:
+                logger.exception("on_gcode_sent failed.")
+        return None
+    # noinspection PyUnusedLocal
+    def on_gcode_received(self, comm, line, *args, **kwargs):
+        if self._enabled and self._firmware_checker is not None:
+            try:
+                return self._firmware_checker.on_gcode_received(comm, line, args, kwargs)
+            except Exception as e:
+                logger.exception("on_gcode_received failed.")
+        return line
 
 __plugin_pythoncompat__ = ">=2.7,<4"
 __plugin_implementation__ = ArcWelderPlugin()
@@ -1085,7 +1181,9 @@ def __plugin_load__():
     global __plugin_hooks__
     __plugin_hooks__ = {
         "octoprint.plugin.softwareupdate.check_config": __plugin_implementation__.get_update_information,
-        "octoprint.server.http.routes": __plugin_implementation__.register_custom_routes
+        "octoprint.server.http.routes": __plugin_implementation__.register_custom_routes,
+        "octoprint.comm.protocol.gcode.received": (__plugin_implementation__.on_gcode_received, -1),
+        "octoprint.comm.protocol.gcode.sent": (__plugin_implementation__.on_gcode_sent, -1),
     }
 
 

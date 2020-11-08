@@ -47,7 +47,9 @@ div.ui-pnotify.arc-welder {
 .arc-welder .control-label{
     padding-right: 10px;
 }
-
+.arc-welder button.full-width {
+    width: 100%;
+}
 #tab_plugin_arc_welder .border
 {
     border: 1px solid transparent;
@@ -59,6 +61,77 @@ div.ui-pnotify.arc-welder {
     overflow: hidden;
 }
 
-#tab_plugin_arc_welder_controls .no_underline:link {
+#tab_plugin_arc_welder_controls .no-underline:link {
  text-decoration:none;
 }
+
+#tab_plugin_arc_welder_controls .no-click:link {
+  cursor: not-allowed;
+}
+
+.arc-welder .fade-out {
+    display: none;
+    -webkit-animation: arc_welder_fade_out 1s;
+    animation: arc_welder_fade_out 1s;
+}
+
+.arc-welder .fade-in {
+    display: block;
+    -webkit-animation: arc_welder_fade_in 0.5s;
+    animation: arc_welder_fade_in 0.5s;
+}
+
+@keyframes arc_welder_fade_in_visibility {
+    99% {
+        visibility: hidden;
+    }
+
+    100% {
+        visibility: visible;
+    }
+}
+
+@keyframes arc_welder_fade_out {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@-webkit-keyframes arc_welder_fade_in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.arc-welder .short-rows .row-fluid,
+.arc-welder .short-rows .span1,
+.arc-welder .short-rows .span2,
+.arc-welder .short-rows .span3,
+.arc-welder .short-rows .span4,
+.arc-welder .short-rows .span5,
+.arc-welder .short-rows .span6,
+.arc-welder .short-rows .span7,
+.arc-welder .short-rows .span8,
+.arc-welder .short-rows .span9,
+.arc-welder .short-rows .span10,
+.arc-welder .short-rows .span11,
+.arc-welder .short-rows .span12{
+    min-height:20px;
+}
+
+.arc-welder .short-rows .control-group,
+.arc-welder .short-rows fieldset legend {
+    padding-bottom: 0px;
+    margin-bottom: 5px;
+    margin-top: 5px;
+    padding-top: 0px;
+}
+

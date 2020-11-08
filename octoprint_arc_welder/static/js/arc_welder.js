@@ -149,6 +149,36 @@ $(function () {
         result.raw = target;
         return result;
     };
+
+    ArcWelder.boolToPureComputedProperty = function(target, options){
+        var true_value = options.true_value ?? "true";
+        var false_value = options.false_value ?? "false";
+        var null_value = options.null_value ?? "null";
+        var property_name = options.property_name ?? "boolToText"
+        target[property_name] = ko.pureComputed( function(){
+            var val = target();
+            if (val === null)
+                return null_value;
+            return val ? true_value : false_value;
+        });
+        return target;
+    }
+
+    ko.extenders.arc_welder_bool_formatted = function (target, options) {
+        options.property_name = "formatted";
+        return ArcWelder.boolToPureComputedProperty(target, options)
+    };
+    // I hate writing basically the same extender twice, but I can
+    // an extender only once to an observable, so it can't be super generic
+    ko.extenders.arc_welder_bool_class = function (target, options) {
+        options.property_name = "class";
+        return ArcWelder.boolToPureComputedProperty(target, options)
+    };
+
+    ArcWelder.GetVisibilityStyle = function(visible)
+    {
+        return visible ? "show" : "hidden";
+    }
     //ArcWelder.pnotify = PNotifyExtensions({});
     ArcWelder.APIURL = function(fn){
         return "./plugin/" + ArcWelder.PLUGIN_ID + "/" + fn;
@@ -256,8 +286,232 @@ $(function () {
         {name:"Disabled", value: ArcWelder.SELECT_FILE_AFTER_PROCESSING_DISABLED}
     ];
 
+    ArcWelder.CHECK_FIRMWARE_ON_CONECT = "connection"
+    ArcWelder.CHECK_FIRMWARE_MANUAL_ONLY = "manual-only"
+    ArcWelder.CHECK_FIRMWARE_DISABLED = "disabled"
+    ArcWelder.CHECK_FIRMWARE_OPTIONS = [
+        {name:"Automatically When Printer Connects", value: ArcWelder.CHECK_FIRMWARE_ON_CONECT},
+        {name:"Only Check Manually", value: ArcWelder.CHECK_FIRMWARE_MANUAL_ONLY},
+        {name:"Disabled", value: ArcWelder.CHECK_FIRMWARE_DISABLED},
+    ]
+
+    ArcWelder.FirmwareViewModel = function (firmware){
+        var self = this;
+        self.bool_display_options = {
+            true_value: "Yes",
+            false_value: "No",
+            null_value: "Unknown"
+        }
+        self.bool_class_options = {
+            true_value: "text-success",
+            false_value: "text-error",
+            null_value: "text-warning"
+        }
+        self.bool_class_recommended_options = {
+            true_value: "text-success",
+            false_value: "text-warning",
+            null_value: "text-warning"
+        }
+        self.loaded = ko.observable(false);
+        self.success = ko.observable();
+        self.type = ko.observable();
+        self.version = ko.observable();
+        self.build_date = ko.observable();
+        self.version_range = ko.observable();
+        self.version_guid = ko.observable();
+        self.printer = ko.observable();
+        self.supported = ko.observable().extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
+        });
+        self.recommended = ko.observable().extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_recommended_options
+        });
+        self.notes = ko.observable();
+        self.previous_notes = ko.observable();
+        self.error = ko.observable();
+        self.m115_response = ko.observable();
+        self.g2_g3_supported = ko.observable().extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
+        });
+        self.arcs_enabled = ko.observable().extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
+        });
+        self.g90_g91_influences_extruder = ko.observable().extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
+        });
+        self.arc_settings = ko.observable();
+        self.errors = ko.observableArray([]);
+        self.warnings = ko.observableArray([]);
+        self.has_warnings = ko.observable(null).extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
+        });
+        self.has_errors = ko.observable(null).extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
+        });
+
+        self.checking_firmware = ko.observable(false);
+
+        self.update = function(data){
+            self.loaded(true)
+            self.success(data.success);
+            self.type(data.type);
+            self.version(data.version);
+            self.build_date(data.build_date);
+            self.version_range(data.version_range);
+            self.version_guid(data.version_guid);
+            self.printer(data.printer);
+            self.supported(data.supported);
+            self.recommended(data.recommended);
+            self.notes(data.notes);
+            self.previous_notes(data.previous_notes);
+            self.error(data.error);
+            self.m115_response(data.m115_response);
+            self.g2_g3_supported(data.g2_g3_supported);
+            self.arcs_enabled(data.arcs_enabled);
+            self.g90_g91_influences_extruder(data.g90_g91_influences_extruder);
+            self.arc_settings(data.arc_settings);
+            self.fill_warnings();
+            self.fill_errors();
+            self.has_errors(self.errors().length > 0);
+            self.has_warnings(self.warnings().length > 0);
+        };
+
+        self.fill_warnings = function(){
+            var warnings = [];
+            if (self.success()) {
+                if (self.type() === null){
+                    warnings.push("Arc welder was unable to identity this firmware.  It might not support arc commands, or it may have bugs, but it may work fine.  Use with caution");
+                }
+                else if (self.version() === null)
+                {
+                    warnings.push("Arc welder was unable to identity firmware version.  It might not support arc commands, or it may have bugs, but it may work fine.  Use with caution");
+                }
+                else
+                {
+                    if (self.supported()===false && self.arcs_enabled())
+                    {
+                        warnings.push("Your firmware version indicates that it is not supported, but arcs appear to be supported and enabled.  Use with caution.");
+                    }
+
+                    if ((self.supported()===true || self.arcs_enabled()===true) && self.recommended()===false)
+                    {
+                        // Not Recommended (only if supported)
+                        warnings.push("Your printer's firmware is not recommended for use with Arc Welder.  Quality and speed may be reduced.");
+                    }
+                    if (self.g2_g3_supported()===null)
+                    {
+                        // G2/G3 support unknown
+                        warnings.push("Cannot determine if arc commands (G2/G3) are supported by your firmware.");
+                    }
+                    if (self.arcs_enabled() ===null)
+                    {
+                        // Arcs enabled unknown
+                        warnings.push("Cannot determine if arc commands are enabled in your firmware.");
+                    }
+                }
+
+            }
+            self.warnings(warnings);
+        }
+        self.fill_errors = function(){
+            var errors = [];
+            if (!self.success())
+            {
+                errors.push("The last firmware check failed.  Please try again.  Click the help link for troubleshooting tips.");
+            }
+            else
+            {
+                if (self.supported()===false && !self.arcs_enabled())
+                {
+                    // Not Supported
+                    errors.push("Your printer's firmware is not supported.");
+                }
+                else if (self.g2_g3_supported()===false)
+                {
+                    // G2/G3 not supported
+                    errors.push("Your printer's firmware does not support G2/G3 (arc) commands.");
+                }
+                else if (self.arcs_enabled()===false)
+                {
+                    // Arcs not Enabled
+                    errors.push("Arcs are not enabled in your printer's firmware.");
+                }
+            }
+            self.errors(errors);
+
+        }
+
+        self.checkFirmware = function(){
+            if (self.checking_firmware())
+                return;
+            self.checking_firmware(true);
+            $.ajax({
+                url: ArcWelder.APIURL("checkFirmware"),
+                type: "POST",
+                contentType: "application/json",
+                success: function() {
+                    setTimeout(function() {
+                        self.checking_firmware(false);
+                    }, 500);
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    self.checking_firmware(false);
+                    var message = "Unable to check the firmware.  Status: " + textStatus + ".  Error: " + errorThrown;
+                    var options = {
+                        title: 'Check Firmware Error',
+                        text: message,
+                        type: 'error',
+                        hide: false,
+                        addclass: "arc_welder",
+                        desktop: {
+                            desktop: true
+                        }
+                    };
+                    PNotifyExtensions.displayPopupForKey(
+                        options,
+                        ArcWelder.PopupKey("check_firmware_error"),
+                        ArcWelder.PopupKey("check_firmware_error")
+                    );
+                }
+            });
+        }
+
+        self.getFirmwareVersion = function() {
+            $.ajax({
+                url: ArcWelder.APIURL("getFirmwareVersion"),
+                type: "POST",
+                tryCount: 0,
+                retryLimit: 3,
+                contentType: "application/json",
+                success: function(data) {
+                    self.update(data.firmware_info);
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    var message = "Could not retrieve firmware data.  Status: " + textStatus + ".  Error: " + errorThrown;
+                    var options = {
+                        title: 'Arc Welder: Error Loading Firmware Data',
+                        text: message,
+                        type: 'error',
+                        hide: false,
+                        addclass: "arc-welder",
+                        desktop: {
+                            desktop: true
+                        }
+                    };
+                    PNotifyExtensions.displayPopupForKey(
+                        options,
+                        ArcWelder.PopupKey("cancel-popup-error"),
+                        ArcWelder.PopupKey(["cancel-popup-error"])
+                    );
+                    return false;
+                }
+            });
+        }
+    }
+
     ArcWelder.ArcWelderViewModel = function (parameters) {
         var self = this;
+        ArcWelder.Tab = self;
         // variable to hold the settings view model.
         self.settings = parameters[0];
         // variables to hold info from external viewmodels
@@ -272,7 +526,8 @@ $(function () {
         self.git_version = ko.observable();
         self.selected_filename = ko.observable();
         self.selected_file_is_new = ko.observable(false);
-        self.statistics_shown = ko.observable(null);
+        self.is_selected_file_welded = ko.observable(null)
+        self.statistics_available = ko.observable(null);
         self.current_statistics_file = ko.observable();
         self.statistics = {};
         self.statistics.gcodes_processed = ko.observable();
@@ -283,6 +538,7 @@ $(function () {
         self.statistics.target_file_size = ko.observable();
         self.statistics.compression_ratio = ko.observable().extend({arc_welder_numeric: 1});
         self.statistics.compression_percent = ko.observable().extend({arc_welder_numeric: 1});
+        self.firmware_info = new ArcWelder.FirmwareViewModel()
         self.statistics.source_filename = ko.observable();
         self.statistics.target_filename = ko.observable();
         var initial_run_configuration_visible = ArcWelder.getLocalStorage("run_configuration_visible") !== "false";
@@ -290,15 +546,25 @@ $(function () {
         self.run_configuration_visible.subscribe(function(newValue){
             var storage_value = newValue ? 'true' : 'false';
             ArcWelder.setLocalStorage("run_configuration_visible", storage_value);
-        })
+        });
+
+        var initial_firmware_compatibility_visible = ArcWelder.getLocalStorage("firmware_compatibility_visible") !== "false";
+        self.firmware_compatibility_visible = ko.observable(initial_firmware_compatibility_visible);
+        self.firmware_compatibility_visible.subscribe(function(newValue){
+            var storage_value = newValue ? 'true' : 'false';
+            ArcWelder.setLocalStorage("firmware_compatibility_visible", storage_value);
+        });
+
+        var initial_file_statistics_visible = ArcWelder.getLocalStorage("file_statistics_visible") !== "false";
+        self.file_statistics_visible = ko.observable(initial_file_statistics_visible);
+        self.file_statistics_visible.subscribe(function(newValue){
+            var storage_value = newValue ? 'true' : 'false';
+            ArcWelder.setLocalStorage("file_statistics_visible", storage_value);
+        });
+
         self.statistics.segment_statistics_text = ko.observable();
         self.current_files = null;
 
-        self.statistics_shown.subscribe(
-        function(newValue)
-        {
-            self.toggleStatistics(newValue);
-        });
         self.current_statistics_file.subscribe(
         function(newValue) {
             self.loadStats(newValue);
@@ -396,6 +662,7 @@ $(function () {
 
         self.onAfterBinding = function() {
             ArcWelder.Help.bindHelpLinks("#tab_plugin_arc_welder_controls");
+            self.plugin_settings.path_tolerance_percent.extend({arc_welder_numeric: 1});
         };
 
         self.onStartupComplete = function() {
@@ -423,8 +690,7 @@ $(function () {
                     }
                 }
             }, this);
-            var show_stats = ArcWelder.getLocalStorage("show_stats") == "true";
-            self.statistics_shown(show_stats);
+            self.firmware_info.getFirmwareVersion();
         };
 
         self.closePreprocessingPopup = function(){
@@ -433,12 +699,6 @@ $(function () {
             }
             self.preprocessing_job_guid = null;
             self.pre_processing_progress = null;
-        };
-
-        self.showHideStatsBtnClicked = function(){
-            var shown = !self.statistics_shown(); // what????
-            self.statistics_shown(shown);
-            ArcWelder.setLocalStorage("show_stats", shown);
         };
 
         self.toggleStatistics = function(show) {
@@ -461,20 +721,10 @@ $(function () {
         };
 
         self.loadStats = function(file_data) {
-            // Hide everything to start.
-            var $statsButton = $("#arc-welder-show-statistics-btn");
-            var $statsDiv = $("#arc-welder-stats");
-            var $statsNoStatsDiv = $statsDiv.find("#arc-welder-no-stats-div");
-            var $statsTextDiv = $statsDiv.find("#arc-welder-stats-text-div");
-
-            // Hide all the divs and clear text
-            $statsTextDiv.hide();
-            $statsDiv.hide();
-            $statsNoStatsDiv.hide();
-            $statsButton.hide();
 
             var filename, is_welded, statistics, is_new;
-
+            self.statistics_available(false);
+            self.selected_file_is_new(false);
             if (file_data.arc_welder_statistics) {
                 var filename = file_data.name;
                 var is_welded = true;
@@ -486,19 +736,16 @@ $(function () {
                 var file = self.getFile(file_data);
                 if (!file)
                 {
-                    self.toggleStatistics(false);
-                    ArcWelder.setLocalStorage("show_stats", false);
                     return;
                 }
                 filename = file.name;
-                is_welded = file.arc_welder;
+                is_welded = file.arc_welder ?? false;
                 statistics = file.arc_welder_statistics;
             }
-
-
             // Update the UI
             self.selected_filename(filename);
             self.selected_file_is_new(is_new);
+            self.is_selected_file_welded(is_welded);
             if (statistics)
             {
                 self.statistics.gcodes_processed(statistics.gcodes_processed);
@@ -515,15 +762,13 @@ $(function () {
             }
             if (is_welded)
             {
-                $statsDiv.show();
-                $statsButton.show();
                 if (statistics)
                 {
-                    $statsTextDiv.show();
+                    self.statistics_available(true);
                 }
                 else
                 {
-                    $statsNoStatsDiv.show();
+                    self.statistics_available(false);
                 }
             }
 
@@ -663,7 +908,7 @@ $(function () {
                     var compression_ratio = progress.compression_ratio;
                     var compression_percent = progress.compression_percent;
                     var source_file_position = progress.source_file_position;
-                    var space_saved_string = ArcWelder.toFileSizeString(source_file_size - target_file_size, 1);
+                    var space_saved_string = ArcWelder.toFileSizeString(source_file_position - target_file_size, 1);
                     var source_position_string = ArcWelder.toFileSizeString(source_file_position, 1);
                     var target_size_string = ArcWelder.toFileSizeString(target_file_size, 1);
 
@@ -686,6 +931,9 @@ $(function () {
                     self.pre_processing_progress = self.pre_processing_progress.update(
                         percent_complete, progress_text
                     );
+                    break;
+                case "firmware-info-update":
+                    self.firmware_info.update(data.firmware_info)
                     break;
                 default:
                     var options = {
@@ -988,8 +1236,8 @@ $(function () {
             $(query).click();
         }
     };
-    ArcWelder.openTab = function()
-    {
+
+    ArcWelder.openTab = function() {
         $('#tab_plugin_arc_welder_link a').click();
     }
 

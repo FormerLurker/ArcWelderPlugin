@@ -24,30 +24,26 @@
 #include <string>
 #include <vector>
 #include <set>
+#define REVERSED_INT_BUFFER 20
+// Had to increase the zero tolerance because prusa slicer doesn't always 
+// retract enough while wiping.
+#define ZERO_TOLERANCE 0.000005
+
 class utilities{
 public:
-	static bool is_zero(double x);
-	static int round_up_to_int(double x);
-	static bool is_equal(double x, double y);
-	static bool greater_than(double x, double y);
-	static bool greater_than_or_equal(double x, double y);
-	static bool less_than(double x, double y);
-	static bool less_than_or_equal(double x, double y);
+	static bool is_zero(double x, double tolerance = ZERO_TOLERANCE);
+	static int round_up_to_int(double x, double tolerance = ZERO_TOLERANCE);
+	static bool is_equal(double x, double y, double tolerance = ZERO_TOLERANCE);
+	static bool greater_than(double x, double y, double tolerance = ZERO_TOLERANCE);
+	static bool greater_than_or_equal(double x, double y, double tolerance = ZERO_TOLERANCE);
+	static bool less_than(double x, double y, double tolerance = ZERO_TOLERANCE);
+	static bool less_than_or_equal(double x, double y, double tolerance = ZERO_TOLERANCE);
 	
-	// custom tolerance functions
-	static bool is_zero(double x, double tolerance);
-	static bool is_equal(double x, double y, double tolerance);
-	static int round_up_to_int(double x, double tolerance);
-	static bool greater_than(double x, double y, double tolerance);
-	static bool greater_than_or_equal(double x, double y, double tolerance);
-	static bool less_than(double x, double y, double tolerance);
-	static bool less_than_or_equal(double x, double y, double tolerance);
-
 	static double get_cartesian_distance(double x1, double y1, double x2, double y2);
 	static double get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2);
 	static std::string to_string(double value);
 	static std::string to_string(int value);
-	static char* to_string(double value, unsigned short precision, char* str);
+	static char* to_string(double value, unsigned short precision, char* str, bool exact_precision);
 	static std::string ltrim(const std::string& s);
 	static std::string rtrim(const std::string& s);
 	static std::string trim(const std::string& s);

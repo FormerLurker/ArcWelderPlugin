@@ -25,52 +25,18 @@
 #include <iostream>
 #include <iomanip>
 
-// Had to increase the zero tolerance because prusa slicer doesn't always retract enough while wiping.
-const double ZERO_TOLERANCE = 0.000005;
 const std::string utilities::WHITESPACE_ = " \n\r\t\f\v";
 const char utilities::GUID_RANGE[] = "0123456789abcdef";
 const bool utilities::GUID_DASHES[] = { 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0 };
 
-bool utilities::is_zero(double x)
-{
-	return std::abs(x) < ZERO_TOLERANCE;
-}
-
-int utilities::round_up_to_int(double x)
-{
-	return int(x + ZERO_TOLERANCE);
-}
-
-bool utilities::is_equal(double x, double y)
-{
-	double abs_difference = std::abs(x - y);
-	return abs_difference < ZERO_TOLERANCE;
-}
-
-bool utilities::greater_than(double x, double y)
-{
-	return x > y && !is_equal(x, y);
-}
-
-bool utilities::greater_than_or_equal(double x, double y)
-{
-	return x > y || is_equal(x, y);
-}
-
-bool utilities::less_than(double x, double y)
-{
-	return x < y && !is_equal(x, y);
-}
-
-bool utilities::less_than_or_equal(double x, double y)
-{
-	return x < y || is_equal(x, y);
-}
-
-// custom tolerance functions
 bool utilities::is_zero(double x, double tolerance)
 {
 	return std::abs(x) < tolerance;
+}
+
+int utilities::round_up_to_int(double x, double tolerance)
+{
+	return int(x + tolerance);
 }
 
 bool utilities::is_equal(double x, double y, double tolerance)
@@ -79,26 +45,26 @@ bool utilities::is_equal(double x, double y, double tolerance)
 	return abs_difference < tolerance;
 }
 
-int utilities::round_up_to_int(double x, double tolerance)
-{
-	return int(x + tolerance);
-}
 bool utilities::greater_than(double x, double y, double tolerance)
 {
-	return x > y && !utilities::is_equal(x, y, tolerance);
+	return x > y && !is_equal(x, y, tolerance);
 }
+
 bool utilities::greater_than_or_equal(double x, double y, double tolerance)
 {
-	return x > y || utilities::is_equal(x, y, tolerance);
+	return x > y || is_equal(x, y, tolerance);
 }
+
 bool utilities::less_than(double x, double y, double tolerance)
 {
-	return x < y && !utilities::is_equal(x, y, tolerance);
+	return x < y && !is_equal(x, y, tolerance);
 }
+
 bool utilities::less_than_or_equal(double x, double y, double tolerance)
 {
-	return x < y || utilities::is_equal(x, y, tolerance);
+	return x < y || is_equal(x, y, tolerance);
 }
+
 
 double utilities::get_cartesian_distance(double x1, double y1, double x2, double y2)
 {
@@ -133,9 +99,13 @@ std::string utilities::to_string(int value)
 	return os.str();
 }
 
-char * utilities::to_string(double value, unsigned short precision, char * str)
+char * utilities::to_string(double value, unsigned short precision, char * str, bool exact_precision)
 {
-	char reversed_int[20];
+	if (utilities::is_zero(value))
+	{
+		value = 0;
+	}
+	char reversed_int[REVERSED_INT_BUFFER];
 	
 	int char_count = 0, int_count = 0;
 	bool is_negative = false;
@@ -162,20 +132,36 @@ char * utilities::to_string(double value, unsigned short precision, char * str)
 	}
 	int start = is_negative ? 1 : 0;
 	int end = char_count - start;
-	for (int i = 0; i < int_count; i++)
+	for (int i = 0; i < int_count && i < REVERSED_INT_BUFFER; i++)
 	{
-		str[char_count++] = reversed_int[int_count - i - 1];
+		int reversed_int_index = int_count - i - 1;
+		if (reversed_int_index < 0 || reversed_int_index >= REVERSED_INT_BUFFER)
+		{
+			std::cerr << "Buffer overflow turning " << value << " into a string!";
+			break;
+		}
+		str[char_count++] = reversed_int[reversed_int_index];
 	}
-	if (precision > 0)
+	if ( precision > 0)
 	{
 		str[char_count++] = '.'; //Decimal point
 
+		// We will look 1 past the precision to see if it is a 9.  if it is, we will round up.
+		//if (precision > 0) precision++;
 		while (fractional_part > 0 && precision-- > 0) //Convert fractional part, if any
 		{
 			fractional_part *= 10;
 			fractional_part = std::modf(fractional_part, &integer_part);
 			str[char_count++] = '0' + (int)integer_part;
 		}
+		// remove any unnecessary zeros
+		if (!exact_precision)
+		{
+			while (str[char_count-1] == '0') { char_count--; }
+			// Remove the period
+			if (str[char_count-1] == '.') char_count--;
+		}
+		
 	}
 	str[char_count] = 0; //String terminator
 	return str;

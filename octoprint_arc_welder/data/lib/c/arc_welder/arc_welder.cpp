@@ -35,8 +35,27 @@
 #include <iomanip>
 #include <sstream>
 
-
-arc_welder::arc_welder(std::string source_path, std::string target_path, logger * log, double resolution_mm, double max_radius, bool g90_g91_influences_extruder, int buffer_size, progress_callback callback) : current_arc_(DEFAULT_MIN_SEGMENTS, buffer_size - 5, resolution_mm, max_radius), segment_statistics_(segment_statistic_lengths, segment_statistic_lengths_count, log)
+arc_welder::arc_welder(
+	std::string source_path, 
+	std::string target_path, 
+	logger * log, 
+	double resolution_mm, 
+	double path_tolerance_percent,
+	double max_radius,
+	bool g90_g91_influences_extruder, 
+	int buffer_size, 
+	progress_callback callback) : current_arc_(
+			DEFAULT_MIN_SEGMENTS, 
+			buffer_size - 5, 
+			resolution_mm, 
+			path_tolerance_percent, 
+			max_radius
+		), 
+		segment_statistics_(
+			segment_statistic_lengths, 
+			segment_statistic_lengths_count, 
+			log
+		)
 {
 	p_logger_ = log;
 	debug_logging_enabled_ = false;
@@ -45,11 +64,11 @@ arc_welder::arc_welder(std::string source_path, std::string target_path, logger 
 	verbose_logging_enabled_ = false;
 
 	logger_type_ = 0;
+	resolution_mm_ = resolution_mm;
 	progress_callback_ = callback;
 	verbose_output_ = false;
 	source_path_ = source_path;
 	target_path_ = target_path;
-	resolution_mm_ = resolution_mm;
 	gcode_position_args_ = get_args_(g90_g91_influences_extruder, buffer_size);
 	notification_period_seconds = 1;
 	lines_processed_ = 0;
@@ -164,8 +183,9 @@ arc_welder_results results;
 	stream << std::fixed << std::setprecision(5);
 	stream << "arc_welder::process - Parameters received: source_file_path: '" <<
 		source_path_ << "', target_file_path:'" << target_path_ << "', resolution_mm:" <<
-		resolution_mm_ << "mm (+-" << current_arc_.get_resolution_mm() << "mm), max_radius_mm:" << current_arc_.get_max_radius()
-		 << "mm, g90_91_influences_extruder: " << (p_source_position_->get_g90_91_influences_extruder() ? "True" : "False");
+		resolution_mm_ << "mm (+-" << current_arc_.get_resolution_mm() << "mm), path_tolerance_percent: " << current_arc_.get_path_tolerance_percent()  
+		<< ", max_radius_mm:" << current_arc_.get_max_radius() 
+		<< ", g90_91_influences_extruder: " << (p_source_position_->get_g90_91_influences_extruder() ? "True" : "False");
 	p_logger_->log(logger_type_, INFO, stream.str());
 
 
@@ -333,6 +353,12 @@ arc_welder_progress arc_welder::get_progress_(long source_file_position, double 
 
 int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess)
 {
+	/* use to catch gcode for debugging since I can't set conditions equal to strings
+	if (cmd.gcode == "G1 X118.762 Y104.054 E0.0163")
+	{
+		std::cout << "Found it!";
+	}
+	*/
 	// Update the position for the source gcode file
 	p_source_position_->update(cmd, lines_processed_, gcodes_processed_, -1);
 	position* p_cur_pos = p_source_position_->get_current_position_ptr();
@@ -360,9 +386,28 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 
 	// We need to make sure the printer is using absolute xyz, is extruding, and the extruder axis mode is the same as that of the previous position
 	// TODO: Handle relative XYZ axis.  This is possible, but maybe not so important.
+	bool is_g1_g2 = cmd.command == "G0" || cmd.command == "G1";
+	if (is_g1_g2)
+	{
+		for (std::vector<parsed_command_parameter>::iterator it = cmd.parameters.begin(); it != cmd.parameters.end(); ++it)
+		{
+			switch ((*it).name[0])
+			{
+				case 'X':
+				case 'Y':
+				case 'Z':
+					current_arc_.update_xyz_precision((*it).double_precision);
+					break;
+				case 'E':
+					current_arc_.update_e_precision((*it).double_precision);
+					break;
+			}
+		}
+	}
+	
 	if (
 		!is_end && cmd.is_known_command && !cmd.is_empty && (
-			(cmd.command == "G0" || cmd.command == "G1") &&
+			is_g1_g2 &&
 			utilities::is_equal(p_cur_pos->z, p_pre_pos->z) &&
 			utilities::is_equal(p_cur_pos->x_offset, p_pre_pos->x_offset) &&
 			utilities::is_equal(p_cur_pos->y_offset, p_pre_pos->y_offset) &&
@@ -377,7 +422,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 				(previous_extruder.is_retracting && extruder_current.is_retracting)
 			) &&
 			p_cur_pos->is_extruder_relative == p_pre_pos->is_extruder_relative &&
-			(!waiting_for_arc_ || p_pre_pos->f == p_cur_pos->f) &&
+			(!waiting_for_arc_ || p_pre_pos->f == p_cur_pos->f) && // might need to skip the waiting for arc check...
 			(!waiting_for_arc_ || p_pre_pos->feature_type_tag == p_cur_pos->feature_type_tag)
 			)
 	) {
@@ -682,8 +727,7 @@ int arc_welder::write_gcode_to_file(std::string gcode)
 int arc_welder::write_unwritten_gcodes_to_file()
 {
 	int size = unwritten_commands_.count();
-	std::string gcode_to_write;
-	
+	std::string lines_to_write;
 	
 	for (int index = 0; index < size; index++)
 	{
@@ -693,9 +737,10 @@ int arc_welder::write_unwritten_gcodes_to_file()
 		{
 			segment_statistics_.update(p.extrusion_length, false);
 		}
-		write_gcode_to_file(p.command.to_string());
+		lines_to_write.append(p.command.to_string()).append("\n");
 	}
 	
+	output_file_ << lines_to_write;
 	return size;
 }
 

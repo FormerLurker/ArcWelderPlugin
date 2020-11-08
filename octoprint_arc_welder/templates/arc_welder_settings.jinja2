@@ -42,7 +42,7 @@
                     <a href="#arc_welder_about_tab" data-toggle="tab" data-settings-tab="about">About</a>
                 </li>
             </ul>
-            <div class="tab-content">
+            <div class="tab-content short-rows">
                 <div id="arc_welder_settings_tab" class="tab-pane active">
                     <form class="form-horizontal" onsubmit="return false;">
                         <fieldset>
@@ -60,13 +60,31 @@
                             <div class="control-group">
                                 <label class="control-label" for="arc_welder_resolution_mm"><strong>Resolution</strong></label>
                                 <div class="controls">
-                                    <div class="input-append">
-                                        <input class="input-text" required="true" type="number" min="0.001" max="0.1"
-                                               step="0.001" id="arc_welder_resolution_mm"
-                                               data-bind="value: plugin_settings().resolution_mm">
-                                        <span class="add-on">mm</span>
+                                    <div>
+                                        <div class="input-append">
+                                            <input class="input-small" required="true" type="number" min="0.001" max="0.1"
+                                                   step="0.001" id="arc_welder_resolution_mm"
+                                                   data-bind="value: plugin_settings().resolution_mm">
+                                            <span class="add-on">mm</span>
+                                        </div>
+                                        (max deviation&nbsp;<strong>&#177;<span data-bind="text:  plugin_settings().resolution_mm()/2.0"></span>mm</strong>)
+                                        <a class="arc_welder_help" data-help-url="settings.resolution_mm.md"
+                                           data-help-title="Arc Resolution in MM"></a>
+
                                     </div>
-                                    <a class="arc_welder_help" data-help-url="settings.resolution_mm.md"
+                                </div>
+
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_resolution_mm"><strong>Path Tolerance</strong></label>
+                                <div class="controls">
+                                    <div class="input-append">
+                                        <input class="input-small" required="true" type="number" min="0.1" max="5"
+                                               step="0.1" id="arc_welder_path_percent_tolerance"
+                                               data-bind="value: plugin_settings().path_tolerance_percent">
+                                        <span class="add-on">%</span>
+                                    </div>
+                                    <a class="arc_welder_help" data-help-url="settings.path_percent_tolerance.md"
                                        data-help-title="Arc Resolution in MM"></a>
                                 </div>
                             </div>
@@ -75,7 +93,7 @@
                                     Radius</strong></label>
                                 <div class="controls">
                                     <div class="input-append">
-                                        <input class="input-text" required="true" type="number" min="1" max="1000000"
+                                        <input class="input-small" required="true" type="number" min="1" max="1000000"
                                                step="1" id="arc_welder_max_radius_mm"
                                                data-bind="value: plugin_settings().max_radius_mm">
                                         <span class="add-on">mm</span>
@@ -89,7 +107,7 @@
                                     <strong>File Processing Type</strong>
                                 </label>
                                 <div class="controls">
-                                    <select id="arc_welder_file_processing" data-bind="options: ArcWelder.FILE_PROCESSING_OPTIONS,
+                                    <select class="input-xlarge" id="arc_welder_file_processing" data-bind="options: ArcWelder.FILE_PROCESSING_OPTIONS,
                                         optionsText: 'name',
                                         optionsValue: 'value',
                                         value: plugin_settings().feature_settings.file_processing"></select>
@@ -114,7 +132,7 @@
                                 <label class="control-label" for="arc_welder_target_prefix"><strong>Target File
                                     Prefix</strong></label>
                                 <div class="controls">
-                                    <input required="true" class="input-text" type="text"
+                                    <input required="true" class="input-small" type="text"
                                            id="arc_welder_target_prefix"
                                            data-bind="value: plugin_settings().target_prefix">
                                     <a class="arc_welder_help" data-help-url="settings.target_prefix.md"
@@ -125,7 +143,7 @@
                                 <label class="control-label" for="arc_welder_target_postfix"><strong>Target File
                                     Postfix</strong></label>
                                 <div class="controls">
-                                    <input required="true" class="input-text" type="text"
+                                    <input required="true" class="input-small" type="text"
                                            id="arc_welder_target_postfix"
                                            data-bind="value: plugin_settings().target_postfix">
                                     <a class="arc_welder_help" data-help-url="settings.target_postfix.md"
@@ -137,7 +155,7 @@
                                     <strong>Print After Processing</strong>
                                 </label>
                                 <div class="controls">
-                                    <select id="arc_welder_print_after_processing" data-bind="options: ArcWelder.PRINT_AFTER_PROCESSING_OPTIONS,
+                                    <select class="input-xlarge" id="arc_welder_print_after_processing" data-bind="options: ArcWelder.PRINT_AFTER_PROCESSING_OPTIONS,
                                         optionsText: 'name',
                                         optionsValue: 'value',
                                         value: plugin_settings().feature_settings.print_after_processing"></select>
@@ -150,7 +168,7 @@
                                     <strong>Select After Processing</strong>
                                 </label>
                                 <div class="controls">
-                                    <select id="arc_welder_select_after_processing" data-bind="options: ArcWelder.SELECT_FILE_AFTER_PROCESSING_OPTIONS,
+                                    <select class="input-xlarge" id="arc_welder_select_after_processing" data-bind="options: ArcWelder.SELECT_FILE_AFTER_PROCESSING_OPTIONS,
                                         optionsText: 'name',
                                         optionsValue: 'value',
                                         value: plugin_settings().feature_settings.select_after_processing"></select>
@@ -164,7 +182,7 @@
                             <div class="control-group">
                                 <label class="control-label" for="arc_welder_source_file_delete"><strong>Source File Deletion</strong></label>
                                 <div class="controls">
-                                    <select id="arc_welder_source_file_delete" data-bind="options: ArcWelder.SOURCE_FILE_DELETE_OPTIONS,
+                                    <select class="input-xlarge" id="arc_welder_source_file_delete" data-bind="options: ArcWelder.SOURCE_FILE_DELETE_OPTIONS,
                                         optionsText: 'name',
                                         optionsValue: 'value',
                                         value: plugin_settings().feature_settings.delete_source"></select>
@@ -195,6 +213,30 @@
                                            data-bind="checked: plugin_settings().g90_g91_influences_extruder">
                                     <a class="arc_welder_help" data-help-url="settings.g90_g91_influences_extruder.md"
                                        data-help-title="G90/G91 Influences Extruder"></a>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_check_firmware"><strong>Check Firmware</strong></label>
+                                <div class="controls">
+                                    <select class="input-xlarge" id="arc_welder_check_firmware" data-bind="options: ArcWelder.CHECK_FIRMWARE_OPTIONS,
+                                        optionsText: 'name',
+                                        optionsValue: 'value',
+                                        value: plugin_settings().feature_settings.check_firmware"></select>
+                                    <a class="arc_welder_help" data-help-url="settings.check_firmware.md"
+                                       data-help-title="Check Firmware Options"></a>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset>
+                            <legend>Tab Options</legend>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_current_run_configuration_visible"><strong>Show
+                                    Show Current Run Configuration</strong></label>
+                                <div class="controls">
+                                    <input class="input-text" type="checkbox" id="arc_welder_current_run_configuration_visible"
+                                           data-bind="checked: plugin_settings().feature_settings.current_run_configuration_visible">
+                                    <a class="arc_welder_help" data-help-url="settings.current_run_configuration_visible.md"
+                                       data-help-title="Show Current Run Configuration"></a>
                                 </div>
                             </div>
                         </fieldset>

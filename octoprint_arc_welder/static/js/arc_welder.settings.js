@@ -39,7 +39,7 @@ $(function() {
         ];
         self.logger_name_add = ko.observable();
         self.logger_level_add = ko.observable();
-        self.data.all_logger_names = ["arc_welder.__init__", "arc_welder.gcode_conversion"];
+        self.data.all_logger_names = ["arc_welder.__init__", "arc_welder.gcode_conversion", "arc_welder.firmware_checker"];
         self.data.default_log_level = 20;
 
         self.onBeforeBinding = function() {
@@ -60,11 +60,12 @@ $(function() {
             self.available_loggers_sorted = ko.computed(function () {
                 return self.loggerNameSort(self.available_loggers)
             }, self);
-
+            self.firmware_info = ArcWelder.Tab.firmware_info;
         };
 
         self.onAfterBinding = function() {
             ArcWelder.Help.bindHelpLinks("div#arc_welder_settings");
+            //self.firmware_info = ArcWelder.Tab.firmware_info;
         };
 
         self.get_enabled_logger_index_by_name = function (name) {

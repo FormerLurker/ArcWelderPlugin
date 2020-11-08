@@ -44,7 +44,7 @@ private:
 	std::set<std::string> text_only_functions_;
 	std::set<std::string> parsable_commands_;
 	// Functions
-	bool try_extract_double(char ** p_p_gcode, double * p_double) const;
+	bool try_extract_double(char ** p_p_gcode, double * p_double, unsigned char * p_precision) const;
 	static bool try_extract_gcode_command(char ** p_p_gcode, std::string * p_command);
 	static bool try_extract_text_parameter(char ** p_p_gcode, std::string * p_parameter);
 	bool try_extract_parameter(char ** p_p_gcode, parsed_command_parameter * parameter) const;

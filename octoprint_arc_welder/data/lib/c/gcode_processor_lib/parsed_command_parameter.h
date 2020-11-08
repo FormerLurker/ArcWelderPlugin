@@ -28,12 +28,13 @@ struct parsed_command_parameter
 public:
 	parsed_command_parameter();
 	~parsed_command_parameter();
-	parsed_command_parameter(std::string name, double value);
+	parsed_command_parameter(std::string name, double value, unsigned char precision);
 	parsed_command_parameter(std::string name, std::string value);
 	parsed_command_parameter(std::string name, unsigned long value);
 	std::string name;
-	char value_type;
+	unsigned char value_type;
 	double double_value;
+	unsigned char double_precision;
 	unsigned long unsigned_long_value;
 	std::string string_value;
 };

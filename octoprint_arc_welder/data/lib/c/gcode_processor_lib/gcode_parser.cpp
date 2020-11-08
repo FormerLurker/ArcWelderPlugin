@@ -433,7 +433,7 @@ double gcode_parser::ten_pow(unsigned short n) {
 	return r;
 }
 
-bool gcode_parser::try_extract_double(char ** p_p_gcode, double * p_double) const
+bool gcode_parser::try_extract_double(char ** p_p_gcode, double * p_double, unsigned char *p_precision) const
 {
 	char * p = *p_p_gcode;
 	bool neg = false;
@@ -481,6 +481,7 @@ bool gcode_parser::try_extract_double(char ** p_p_gcode, double * p_double) cons
 		}
 		//r += f / pow(10.0, n);
 		r += f / ten_pow(n);
+		*p_precision = n;
 	}
 	if (neg) {
 		r = -r;
@@ -594,7 +595,7 @@ bool gcode_parser::try_extract_parameter(char ** p_p_gcode, parsed_command_param
 	// TODO:  See if unsigned long works....
 
 	// Add all values, stop at end of string or when we hit a ';'
-	if (try_extract_double(&p,&(parameter->double_value)))
+	if (try_extract_double(&p,&(parameter->double_value), &(parameter->double_precision)))
 	{
 		parameter->value_type = 'F';
 	}

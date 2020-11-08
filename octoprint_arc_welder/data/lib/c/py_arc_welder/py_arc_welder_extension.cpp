@@ -190,7 +190,7 @@ extern "C"
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 
-		py_arc_welder arc_welder_obj(args.source_file_path, args.target_file_path, p_py_logger, args.resolution_mm, args.max_radius_mm, args.g90_g91_influences_extruder, 50, py_progress_callback);
+		py_arc_welder arc_welder_obj(args.source_file_path, args.target_file_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.g90_g91_influences_extruder, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
 		arc_welder_results results = arc_welder_obj.process();
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
@@ -254,6 +254,20 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 	if (args.resolution_mm <= 0)
 	{
 		args.resolution_mm = 0.05; // Set to the default if no resolution is provided, or if it is less than 0.
+	}
+
+	// Extract the path tolerance_percent
+	PyObject* py_path_tolerance_percent = PyDict_GetItemString(py_args, "path_tolerance_percent");
+	if (py_path_tolerance_percent == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve the py_path_tolerance_percent parameter from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.path_tolerance_percent = gcode_arc_converter::PyFloatOrInt_AsDouble(py_path_tolerance_percent);
+	if (args.path_tolerance_percent < 0)
+	{
+		args.path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT; // Set to the default if no resolution is provided, or if it is less than 0.
 	}
 
 	// Extract the max_radius in mm
