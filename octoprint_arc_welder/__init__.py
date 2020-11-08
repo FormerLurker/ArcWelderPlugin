@@ -189,6 +189,13 @@ class ArcWelderPlugin(
         logger.info("Creating the firmware checker.")
         self._firmware_checker = firmware_checker.FirmwareChecker(self._printer, self._basefolder, self.get_plugin_data_folder(), self.check_firmware_response_received)
 
+        if self._check_firmware_on_connect:
+            if self._printer.is_operational():
+                # The printer is connected, and we need to check the firmware
+                logger.info("Checking Firmware Asynchronously.")
+                self.check_firmware()
+            else:
+                logger.warning("The printer is not connected, cannot check firmware yet.")
         logger.info("Startup Complete.")
 
     # Events
@@ -293,7 +300,11 @@ class ArcWelderPlugin(
     @restricted_access
     def get_firmware_version_request(self):
         with ArcWelderPlugin.admin_permission.require(http_exception=403):
-            current_firmware = self._firmware_checker.get_current_firmware()
+            current_firmware = {
+                "firmware_info": None
+            }
+            if self._firmware_checker:
+                current_firmware = self._firmware_checker.get_current_firmware()
             return jsonify({"success": True, "firmware_info": current_firmware})
 
     # Callback Handler for /downloadFile
@@ -1012,7 +1023,11 @@ class ArcWelderPlugin(
             self._add_removed_file(payload["name"])
         elif event == Events.CONNECTED:
             if self._check_firmware_on_connect:
+                logger.info("Printer is connected and check firmware on connect is enabled.  Checking Firmware.")
                 self.check_firmware()
+            else:
+                logger.verbose("Printer is connected, but check firmware on connect is disabled.  Skipping.")
+
 
     def get_additional_metadata(self, metadata):
         # list of supported metadata

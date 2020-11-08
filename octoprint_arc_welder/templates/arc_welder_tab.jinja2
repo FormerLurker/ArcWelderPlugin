@@ -178,11 +178,11 @@
                         <p class="text-error"><strong>Firmware Info Loading</strong></p>
                         <p>Please wait while firmware info loads.</p>
                     </div>
-                    <div data-bind="visible: firmware_info.loaded() && firmware_info.success()===false">
+                    <div data-bind="visible: firmware_info.loaded() && firmware_info.success()===null">
                         <p class="text-error"><strong>No Firmware Info Available</strong></p>
                         <p>Please check your firmware by clicking the <strong>Check Firmware</strong> button.</p>
                     </div>
-                    <div id="arc_welder_firmware_info" data-bind="visible: firmware_info.success">
+                    <div id="arc_welder_firmware_info" data-bind="visible: (firmware_info.success() || firmware_info.success() === null)">
                         <button type="button" class="btn full-width"
                             data-bind="click: function(){firmware_info.checkFirmware();}"
                             title="Check your firmware for compatibility with Arc Welder.">

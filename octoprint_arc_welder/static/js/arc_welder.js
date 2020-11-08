@@ -352,24 +352,25 @@ $(function () {
         self.checking_firmware = ko.observable(false);
 
         self.update = function(data){
+            data = data??{};
             self.loaded(true)
-            self.success(data.success);
-            self.type(data.type);
-            self.version(data.version);
-            self.build_date(data.build_date);
-            self.version_range(data.version_range);
-            self.version_guid(data.version_guid);
-            self.printer(data.printer);
-            self.supported(data.supported);
-            self.recommended(data.recommended);
-            self.notes(data.notes);
-            self.previous_notes(data.previous_notes);
-            self.error(data.error);
-            self.m115_response(data.m115_response);
-            self.g2_g3_supported(data.g2_g3_supported);
-            self.arcs_enabled(data.arcs_enabled);
-            self.g90_g91_influences_extruder(data.g90_g91_influences_extruder);
-            self.arc_settings(data.arc_settings);
+            self.success(data.success ?? null);
+            self.type(data.type ?? null);
+            self.version(data.version ?? null);
+            self.build_date(data.build_date ?? null);
+            self.version_range(data.version_range ?? null);
+            self.version_guid(data.version_guid ?? null);
+            self.printer(data.printer ?? null);
+            self.supported(data.supported ?? null);
+            self.recommended(data.recommended ?? null);
+            self.notes(data.notes ?? null);
+            self.previous_notes(data.previous_notes ?? null);
+            self.error(data.error ?? null);
+            self.m115_response(data.m115_response ?? null);
+            self.g2_g3_supported(data.g2_g3_supported ?? null);
+            self.arcs_enabled(data.arcs_enabled ?? null);
+            self.g90_g91_influences_extruder(data.g90_g91_influences_extruder ?? null);
+            self.arc_settings(data.arc_settings ?? null);
             self.fill_warnings();
             self.fill_errors();
             self.has_errors(self.errors().length > 0);
@@ -378,7 +379,11 @@ $(function () {
 
         self.fill_warnings = function(){
             var warnings = [];
-            if (self.success()) {
+            if (self.success() === null)
+            {
+                warnings.push("No firmware check has been completed.  Please make sure your printer is connected, then click 'Check Firmware'.");
+            }
+            else if (self.success()) {
                 if (self.type() === null){
                     warnings.push("Arc welder was unable to identity this firmware.  It might not support arc commands, or it may have bugs, but it may work fine.  Use with caution");
                 }
@@ -417,7 +422,10 @@ $(function () {
             var errors = [];
             if (!self.success())
             {
-                errors.push("The last firmware check failed.  Please try again.  Click the help link for troubleshooting tips.");
+                if (self.success() !== null)
+                {
+                    errors.push("The last firmware check failed.  Please try again.  Click the help link for troubleshooting tips.");
+                }
             }
             else
             {

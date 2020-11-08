@@ -97,7 +97,7 @@ class FirmwareChecker:
         # The firmware types file either does not exist, or it is corrupt.  Recreate from the defaults
         if not os.path.exists(os.path.dirname(self._firmware_types_path)):
             firmware_types_directory = os.path.dirname(self._firmware_types_path)
-            logger.error("Creating firmware types folder at: %s", firmware_types_directory)
+            logger.info("Creating firmware types folder at: %s", firmware_types_directory)
             os.makedirs(firmware_types_directory)
         shutil.copy(self._firmware_types_default_path, self._firmware_types_path)
         with open(self._firmware_types_path) as f:
@@ -105,7 +105,7 @@ class FirmwareChecker:
 
     def _load_current_firmware_info(self):
         if not os.path.isfile(self._current_firmware_path):
-            logger.info("No current firmware info exists at: ", self._current_firmware_path)
+            logger.info("No current firmware info exists at: %s", self._current_firmware_path)
             # no file exists, return none
             return None
         logger.info("Loading current firmware info from: %s.", self._current_firmware_path)
