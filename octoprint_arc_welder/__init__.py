@@ -293,6 +293,7 @@ class ArcWelderPlugin(
     @restricted_access
     def check_firmware_request(self):
         with ArcWelderPlugin.admin_permission.require(http_exception=403):
+            logger.verbose("Manual firmware request received.")
             self.check_firmware()
             return jsonify({"success": True})
 
@@ -356,6 +357,8 @@ class ArcWelderPlugin(
 
     def check_firmware(self):
         if self._firmware_checker is None or not self._enabled:
+            if self._enabled:
+                logger.error("The firmware checker is None, cannot check firmware!")
             return
         logger.info("Checking Firmware Capabilities")
         self._firmware_checker.check_firmware_async()

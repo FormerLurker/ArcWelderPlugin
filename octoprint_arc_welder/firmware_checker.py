@@ -580,6 +580,7 @@ class FirmwareChecker:
                 "error": "",
                 "firmware_version": None
             }
+            logger.info("Checking firmware version");
             firmware_version = self._get_firmware_version()
 
             if firmware_version["success"]:
@@ -592,11 +593,13 @@ class FirmwareChecker:
 
                 result["firmware_version"] = firmware_version
             else:
+                logger.error(firmware_version["error"])
                 result["error"] = firmware_version["error"]
 
             if result["success"]:
                 self._save_current_firmware_info(firmware_version)
                 self._current_firmware_info = firmware_version
+            logger.info("Firmware check complete.")
             self._request_complete_callback(result)
 
         thread = threading.Thread(
