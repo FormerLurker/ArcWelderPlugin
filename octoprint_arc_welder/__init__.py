@@ -128,7 +128,7 @@ class ArcWelderPlugin(
             use_octoprint_settings=True,
             g90_g91_influences_extruder=False,
             resolution_mm=0.05,
-            path_tolerance_percent=1.0,
+            path_tolerance_percent=5.0,
             max_radius_mm=1000*1000,  # 1KM, pretty big :)
             overwrite_source_file=False,
             target_prefix="",
