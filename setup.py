@@ -101,7 +101,7 @@ if (3, 0) < sys.version_info < (3, 3):
 # files. This is sadly due to how python's setup.py works, see also http://stackoverflow.com/a/14159430/2028598
 plugin_additional_data = [
     "data/*.json",
-    "data/firmware/types_default.json",
+    "data/firmware/*.json",
     "data/lib/c/*.cpp",
     "data/lib/c/*.h"
 ]
