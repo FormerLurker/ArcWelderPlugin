@@ -181,13 +181,14 @@ class ArcWelderPlugin(
             self.preprocessing_completed,
         )
         self._preprocessor_worker.daemon = True
+        logger.info("Starting the Preprocessor worker thread.")
         self._preprocessor_worker.start()
-        logger.info("Preprocessor worker started.")
+
 
         # start the firmware checker
+        logger.info("Creating the firmware checker.")
         self._firmware_checker = firmware_checker.FirmwareChecker(self._printer, self._basefolder, self.get_plugin_data_folder(), self.check_firmware_response_received)
-        logger.info("Firmware checker created.")
-        self.check_firmware()
+
         logger.info("Startup Complete.")
 
     # Events
