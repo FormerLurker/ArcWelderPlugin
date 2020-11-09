@@ -36,7 +36,6 @@ from six import string_types
 from past.builtins import xrange
 from flask import request, jsonify
 import os
-import sys
 import octoprint.plugin
 import tornado
 from shutil import copyfile
@@ -45,13 +44,12 @@ from octoprint.server import util, app
 from octoprint.filemanager import FileDestinations
 from octoprint.server.util.flask import restricted_access
 from octoprint.events import Events
-from octoprint.plugins.softwareupdate.version_checks import github_release
 import octoprint_arc_welder.log as log
 import octoprint_arc_welder.preprocessor as preprocessor
 import octoprint_arc_welder.utilities as utilities
 import octoprint_arc_welder.firmware_checker as firmware_checker
-import  octoprint_arc_welder_setuptools as arc_welder_setuptools
 # stupid python 2/python 3 compatibility imports
+
 try:
     import queue
 except ImportError:
@@ -1026,12 +1024,13 @@ class ArcWelderPlugin(
         elif event == Events.FILE_REMOVED:
             # add the file to the removed list
             self._add_removed_file(payload["name"])
-        elif event == Events.CONNECTED:
-            if self._check_firmware_on_connect:
-                logger.info("Printer is connected and check firmware on connect is enabled.  Checking Firmware.")
-                self.check_firmware()
-            else:
-                logger.verbose("Printer is connected, but check firmware on connect is disabled.  Skipping.")
+        elif event == Events.PRINTER_STATE_CHANGED:
+            if payload["state_id"] == "OPERATIONAL":
+                if self._check_firmware_on_connect:
+                    logger.info("Printer is connected and check firmware on connect is enabled.  Checking Firmware.")
+                    self.check_firmware()
+                else:
+                    logger.verbose("Printer is connected, but check firmware on connect is disabled.  Skipping.")
 
 
     def get_additional_metadata(self, metadata):
