@@ -293,9 +293,8 @@ class ArcWelderPlugin(
     @restricted_access
     def check_firmware_request(self):
         with ArcWelderPlugin.admin_permission.require(http_exception=403):
-            logger.verbose("Manual firmware request received.")
-            self.check_firmware()
-            return jsonify({"success": True})
+            logger.debug("Manual firmware request received.")
+            return jsonify({"success": self.check_firmware()})
 
     @octoprint.plugin.BlueprintPlugin.route("/getFirmwareVersion", methods=["POST"])
     @restricted_access
@@ -359,9 +358,12 @@ class ArcWelderPlugin(
         if self._firmware_checker is None or not self._enabled:
             if self._enabled:
                 logger.error("The firmware checker is None, cannot check firmware!")
-            return
+            return False
+        if not self._printer.is_operational():
+            logger.warning("Cannot check firmware, printer not operational.")
+            return False
         logger.info("Checking Firmware Capabilities")
-        self._firmware_checker.check_firmware_async()
+        return self._firmware_checker.check_firmware_async()
 
 
     # ~~ AssetPlugin mixin

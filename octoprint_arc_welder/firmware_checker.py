@@ -42,7 +42,7 @@ logger = logging_configurator.get_logger(__name__)
 
 class FirmwareChecker:
 
-    DEFAULT_TIMEOUT_MS = 100000
+    DEFAULT_TIMEOUT_MS = 600000  # 1 minute
     ARCWELDER_TAG = 'arc_welder'
     FIRMWARE_TYPES_JSON_PATH = ["firmware", "types.json"]
     FIRMWARE_TYPES_DEFAULT_JSON_PATH = ["data", "firmware", "types_default.json"]
@@ -65,6 +65,11 @@ class FirmwareChecker:
         # load from the /data/firmware/types.json or /data/firmware/types_default.json path
         self._firmware_types = self._load_firmware_types(load_defaults)
 
+        # Create a flag to show that we are checking firmware
+        self._is_checking = False
+        # Create an rlock for any shared variables
+        self._shared_data_rlock = threading.RLock()
+
         # create an event that can be used to query the printer and get a response
         self._request_signal = threading.Event()
         self._request_signal.set()
@@ -76,8 +81,6 @@ class FirmwareChecker:
         self._send_request_lock = threading.Lock()
         # The request itself can only be modified by a single thread
         self._request_lock = threading.Lock()
-        # Make sure only one thread can access with self._current_firmware_info:
-        self._current_firmware_rlock = threading.RLock()
         # The most recent firmware version check
         self._current_firmware_info = None
         # Load the most recent firmware info if it exists.
@@ -111,7 +114,7 @@ class FirmwareChecker:
         logger.info("Loading current firmware info from: %s.", self._current_firmware_path)
         try:
             with open(self._current_firmware_path) as f:
-                with self._current_firmware_rlock:
+                with self._shared_data_rlock:
                     self._current_firmware_info = json.load(f)
         except ValueError as e:
             logger.error("Error loading the current firmware info from '%s'.  Could not parse JSON.", self._current_firmware_path)
@@ -569,11 +572,23 @@ class FirmwareChecker:
             result[FirmwareChecker.MARLIN_EXTENDED_CAPABILITIES_KEY] = capabilities
         return result
 
+    @property
+    def is_checking(self):
+        with self._shared_data_rlock:
+            return self._is_checking
+
     def get_current_firmware(self):
-        with self._current_firmware_rlock:
+        with self._shared_data_rlock:
             return self._current_firmware_info
 
     def check_firmware_async(self):
+        with self._shared_data_rlock:
+            if self._is_checking:
+                return False
+            self._is_checking = True
+
+
+
         def check_firmware():
             result = {
                 "success": False,
@@ -601,12 +616,16 @@ class FirmwareChecker:
                 self._current_firmware_info = firmware_version
             logger.info("Firmware check complete.")
             self._request_complete_callback(result)
+            with self._shared_data_rlock:
+                self._is_checking = False
 
         thread = threading.Thread(
             target=check_firmware
         )
         thread.daemon = True
         thread.start()
+
+        return True
 
     def _get_m115_response(self):
         # this can be tried for all firmware.

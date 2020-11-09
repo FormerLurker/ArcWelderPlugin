@@ -184,7 +184,7 @@
                     </div>
                     <div id="arc_welder_firmware_info" data-bind="visible: (firmware_info.success() || firmware_info.success() === null)">
                         <button type="button" class="btn full-width"
-                            data-bind="click: function(){firmware_info.checkFirmware();}"
+                            data-bind="click: function(){firmware_info.checkFirmware();}, disable: firmware_info.checking_firmware() || !firmware_info.loaded()"
                             title="Check your firmware for compatibility with Arc Welder.">
                             <i class="fa fa-spinner fa-spin" data-bind="visible: firmware_info.checking_firmware"></i><span>Check Firmware</span>
                         </button>

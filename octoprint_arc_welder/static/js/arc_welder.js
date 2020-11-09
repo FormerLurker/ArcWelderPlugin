@@ -457,10 +457,19 @@ $(function () {
                 url: ArcWelder.APIURL("checkFirmware"),
                 type: "POST",
                 contentType: "application/json",
-                success: function() {
-                    setTimeout(function() {
+                success: function(data) {
+                    if (data.success)
+                    {
+                        // The request was successful, but the results are pending
+                        self.checking_firmware(true);
+                    }
+                    else
+                    {
+                        // The request failed, we are parobably already checking.
                         self.checking_firmware(false);
-                    }, 500);
+                        // Show an error since the check failed.
+                        self.update(false);
+                    }
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
                     self.checking_firmware(false);
@@ -492,7 +501,14 @@ $(function () {
                 retryLimit: 3,
                 contentType: "application/json",
                 success: function(data) {
-                    self.update(data.firmware_info);
+                    if (!data.success)
+                    {
+                       self.update(false);
+                    }
+                    else
+                    {
+                        self.update(data.firmware_info);
+                    }
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
                     var message = "Could not retrieve firmware data.  Status: " + textStatus + ".  Error: " + errorThrown;
@@ -941,7 +957,10 @@ $(function () {
                     );
                     break;
                 case "firmware-info-update":
+                    // Update the firmware info
                     self.firmware_info.update(data.firmware_info)
+                    // signal that the check is finished.
+                    self.firmware_info.checking_firmware(false);
                     break;
                 default:
                     var options = {
