@@ -686,23 +686,15 @@ class FirmwareChecker:
 
     @staticmethod
     def _check_for_ok_response(response_text):
-        return (
-            response_text.startswith("ok")
-            or response_text.startswith("OK")
-            or response_text.startswith("Ok")
-        )
+        return response_text.strip().upper().startswith("OK")
 
     @staticmethod
     def _check_for_unknown_command_response(response_text):
-        return (
-            response_text.startswith("Unknown")
-            or response_text.startswith("unknown")
-            or response_text.startswith("UNKNOWN")
-        )
+        return response_text.strip().upper().startswith("UNKNOWN")
 
     @staticmethod
     def _check_for_bad_parameter_response(response_text):
-        return response_text.startswith("G2/G3 bad parameters")
+        return response_text.strip().upper().startswith("G2/G3 BAD PARAMETER")
 
     @staticmethod
     def _check_m115_response(response_text):
@@ -778,7 +770,7 @@ class FirmwareChecker:
             finally:
                 # clear the current request
                 with self._request_lock:
-                    self._printer_request = request
+                    self._printer_request = None
 
     # noinspection PyUnusedLocal
     def on_gcode_sending(self, comm_instance, phase, cmd, cmd_type, gcode, *args, **kwargs):
@@ -810,9 +802,11 @@ class FirmwareChecker:
         with self._request_lock as r:
             # see if there is a pending request.  Do this without a lock for speed. I think this is OK
             if self._get_is_request_open():
+                clean_line = line.strip()
                 logger.verbose(
-                    "on_gcode_received: Response Received: %s", line
+                    "on_gcode_received: Response Received: %s", clean_line
                 )
+
                 # test the printer's response, throw no exceptions
                 try:
                     success = False
@@ -820,9 +814,9 @@ class FirmwareChecker:
                     if self._printer_request is not None:
                         if not self._get_request_waiting_for_send():
                             if self._printer_request.response_started == False:
-                                logger.verbose("on_gcode_received: checking response '%s'.", line)
+                                logger.verbose("on_gcode_received: checking response '%s'.", clean_line)
                                 # ensure atomic writes here
-                                success = self._printer_request.check_response(line)
+                                success = self._printer_request.check_response(clean_line)
                                 self._printer_request.response_started = success
                                 if success:
                                     logger.verbose("on_gcode_received: Response found.")
@@ -833,7 +827,7 @@ class FirmwareChecker:
                                         logger.verbose("on_gcode_received: Waiting for OK.")
                             else:
                                 success = True
-                                if line in ["ok", "OK"]:
+                                if self._check_for_ok_response(clean_line):
                                     logger.verbose("on_gcode_received: OK found, response ended.")
                                     self._printer_request.response_ended = True
                         else:
@@ -856,7 +850,7 @@ class FirmwareChecker:
                                 )
                         ):
                             logger.verbose("on_gcode_received: Appending line to response.")
-                            self._printer_request.response.append(line)
+                            self._printer_request.response.append(clean_line)
                         if self._printer_request.response_ended:
                             logger.verbose("on_gcode_received: Triggering event.")
                             self._request_signal.set()
@@ -864,7 +858,6 @@ class FirmwareChecker:
                     logger.exception("on_gcode_received: An error occurred while checking the printer response.")
         # ALWAYS return the line
         return line
-
 
 class PrinterRequest:
     def __init__(
