@@ -174,6 +174,7 @@
                                         value: plugin_settings().feature_settings.select_after_processing"></select>
                                     <a class="arc_welder_help" data-help-url="settings.select_after_processing.md"
                                        data-help-title="Print After Processing"></a>
+
                                 </div>
                             </div>
                         </fieldset>
@@ -226,6 +227,29 @@
                                        data-help-title="Check Firmware Options"></a>
                                 </div>
                             </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_check_for_updates"><strong>Firmware Library</strong></label>
+                                <div class="controls">
+                                    <button type="button" id="arc_welder_check_for_updates" class="btn"
+                                        data-bind="
+                                        click: function(){firmware_info.checkForFirmwareInfoUpdates();},
+                                        disable: (firmware_info.checking_for_firmware_info_updates() || !firmware_info.loaded())"
+                                        title="Check for new firmware information from the repository.">
+                                        <i class="fa fa-spinner fa-spin" data-bind="visible: firmware_info.checking_for_firmware_info_updates"></i>
+                                        <span>Check for Updates</span>
+                                    </button>
+                                    <a class="arc_welder_help" data-help-url="settings.check_for_updates.md"
+                                       data-help-title="Check For Firmware Library Updates"></a>
+                                    <br/>
+
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_firmware_types_version"><strong>Library Version</strong></label>
+                                <div class="controls">
+                                    <span data-bind="text:firmware_info.firmware_types_version"></span></br>
+                                </div>
+                            </div>
                         </fieldset>
                         <fieldset>
                             <legend>Tab Options</legend>
@@ -243,6 +267,16 @@
                         <fieldset>
                             <legend>Notification Settings</legend>
                             <div class="control-group">
+                                <label class="control-label" for="arc_welder_show_queued_notification"><strong>Show
+                                    Task Queued Notification</strong></label>
+                                <div class="controls">
+                                    <input class="input-text" type="checkbox" id="arc_welder_show_queued_notification"
+                                           data-bind="checked: plugin_settings().notification_settings.show_queued_notification">
+                                    <a class="arc_welder_help" data-help-url="settings.show_queued_notification.md"
+                                       data-help-title="Show Task Queued Notification"></a>
+                                </div>
+                            </div>
+                            <div class="control-group">
                                 <label class="control-label" for="arc_welder_show_started_notification"><strong>Show
                                     Pre-Processing Started Notification</strong></label>
                                 <div class="controls">
@@ -250,16 +284,6 @@
                                            data-bind="checked: plugin_settings().notification_settings.show_started_notification">
                                     <a class="arc_welder_help" data-help-url="settings.show_started_notification.md"
                                        data-help-title="Show Pre-Processing Started Notification"></a>
-                                </div>
-                            </div>
-                            <div class="control-group">
-                                <label class="control-label" for="arc_welder_show_progress_bar"><strong>Show Progress
-                                    Bar</strong></label>
-                                <div class="controls">
-                                    <input class="input-text" type="checkbox" id="arc_welder_show_progress_bar"
-                                           data-bind="checked: plugin_settings().notification_settings.show_progress_bar">
-                                    <a class="arc_welder_help" data-help-url="settings.show_progress_bar.md"
-                                       data-help-title="Show Progress Bar"></a>
                                 </div>
                             </div>
                             <div class="control-group">
@@ -399,7 +423,10 @@
                             </div>
                         </fieldset>
                         <div class="row-fluid">
-                            <div class="span12 text-right">
+                            <div class="span6">
+
+                            </div>
+                            <div class="span6 text-right">
                                 <p>
                                     <button class="btn btn-large" data-bind="click: restoreDefaultSettings">Restore
                                         Default Settings

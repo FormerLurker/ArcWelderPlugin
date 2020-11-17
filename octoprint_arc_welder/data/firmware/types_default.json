@@ -1,221 +1,224 @@
 {
-	"Prusa-Firmware": {
-		"functions": {
-			"is_firmware_type": "check_firmware_prusa",
-			"get_version": "get_version_prusa"
+	"version": "1.0.0",
+	"types": {
+		"Prusa-Firmware": {
+			"functions": {
+				"is_firmware_type": "check_firmware_prusa",
+				"get_version": "get_version_prusa"
+			},
+			"version_compare_type": "semantic",
+			"help_file": "firmware_prusa.md",
+			"versions": [
+				{
+					"guid": "a555c60b-3b6c-4c60-acf6-ed7eb68edc07",
+					"version": "<3.0.0",
+					"supported": false,
+					"recommended": false,
+					"g90_g91_influences_extruder": false
+				},
+				{
+					"guid": "1105400b-1e39-4540-a1bb-64cc2a28bbc7",
+					"version": ">=3.0.0,<=3.9.1",
+					"supported": true,
+					"recommended": false,
+					"g2_g3_supported": true,
+					"arcs_enabled": true,
+					"g90_g91_influences_extruder": false,
+					"notes": "The default arc settings can cause flat edges for curves with a radius around 1-2mm, and some slowdown can be expected if MM_PER_ARC_SEGMENT is reduced below 1.0."
+				},
+				{
+					"guid": "b8cf8ab2-333c-4812-a1af-ca2093ec9f0d",
+					"version": ">3.9.1",
+					"supported": true,
+					"recommended": "None",
+					"g2_g3_supported": true,
+					"arcs_enabled": true,
+					"is_future": true,
+					"g90_g91_influences_extruder": false,
+					"m214_supported": "None"
+				}
+			]
 		},
-		"version_compare_type": "semantic",
-		"help_file_name": "firmware_prusa.md",
-		"versions": [
-			{
-				"guid": "a555c60b-3b6c-4c60-acf6-ed7eb68edc07",
-				"version": "<3.0.0",
-				"supported": false,
-				"recommended": false,
-				"g90_g91_influences_extruder": false
+		"Prusa-Firmware-Buddy": {
+			"functions": {
+				"is_firmware_type": "check_firmware_prusa_buddy",
+				"get_version": "get_version_prusa_buddy"
 			},
-			{
-				"guid": "1105400b-1e39-4540-a1bb-64cc2a28bbc7",
-				"version": ">=3.0.0,<=3.9.1",
-				"supported": true,
-				"recommended": false,
-				"g2_g3_supported": true,
-				"arcs_enabled": true,
-				"g90_g91_influences_extruder": false,
-				"notes": "The default arc settings can cause flat edges for curves with a radius around 1-2mm, and some slowdown can be expected if MM_PER_ARC_SEGMENT is reduced below 1.0."
-			},
-			{
-				"guid": "b8cf8ab2-333c-4812-a1af-ca2093ec9f0d",
-				"version": ">3.9.1",
-				"supported": true,
-				"recommended": "None",
-				"g2_g3_supported": true,
-				"arcs_enabled": true,
-				"is_future": true,
-				"g90_g91_influences_extruder": false,
-				"m214_supported": "None"
-			}
-		]
-	},
-	"Prusa-Firmware-Buddy": {
-		"functions": {
-			"is_firmware_type": "check_firmware_prusa_buddy",
-			"get_version": "get_version_prusa_buddy"
+			"version_compare_type": "semantic",
+			"help_file": "firmware_prusa_buddy.md",
+			"versions": [
+				{
+					"guid": "948344d5-1da6-401b-b28c-201ab9fb27a4",
+					"version": "<4.0.3",
+					"supported": false,
+					"recommended": false,
+					"g90_g91_influences_extruder": true
+				},
+				{
+					"guid": "ac0e782e-2264-4433-a822-87aea93322d8",
+					"version": ">=4.0.3,<=4.2.1",
+					"supported": true,
+					"recommended": false,
+					"g2_g3_supported": true,
+					"g90_g91_influences_extruder": true,
+					"notes": "This firmware has not been updated to include arc planning fixes implemented in Marlin 2.0.6."
+				},
+				{
+					"guid": "be64a03b-8878-47c2-959d-4486c1e222b9",
+					"version": ">4.2.1",
+					"supported": true,
+					"recommended": "None",
+					"g2_g3_supported": true,
+					"g90_g91_influences_extruder": true,
+					"is_future": true
+				}
+			]
 		},
-		"version_compare_type": "semantic",
-		"help_file_name": "firmware_prusa_buddy.md",
-		"versions": [
-			{
-				"guid": "948344d5-1da6-401b-b28c-201ab9fb27a4",
-				"version": "<4.0.3",
-				"supported": false,
-				"recommended": false,
-				"g90_g91_influences_extruder": true
+		"Marlin": {
+			"functions": {
+				"is_firmware_type": "check_firmware_marlin",
+				"get_version": "get_version_marlin",
+				"arcs_enabled": "get_arcs_enabled_marlin"
 			},
-			{
-				"guid": "ac0e782e-2264-4433-a822-87aea93322d8",
-				"version": ">=4.0.3,<=4.2.1",
-				"supported": true,
-				"recommended": false,
-				"g2_g3_supported": true,
-				"g90_g91_influences_extruder": true,
-				"notes": "This firmware has not been updated to include arc planning fixes implemented in Marlin 2.0.6."
-			},
-			{
-				"guid": "be64a03b-8878-47c2-959d-4486c1e222b9",
-				"version": ">4.2.1",
-				"supported": true,
-				"recommended": "None",
-				"g2_g3_supported": true,
-				"g90_g91_influences_extruder": true,
-				"is_future": true
-			}
-		]
-	},
-	"Marlin": {
-		"functions": {
-			"is_firmware_type": "check_firmware_marlin",
-			"get_version": "get_version_marlin",
-			"arcs_enabled": "get_arcs_enabled_marlin"
+			"version_compare_type": "semantic",
+			"help_file": "firmware_marlin.md",
+			"versions": [
+				{
+					"guid": "81848e9e-c41a-44dc-bddc-bf0e4df8f16b",
+					"version": "=bugfix-2.0.x",
+					"supported": false,
+					"recommended": false,
+					"notes": "This is a beta version firmware."
+				},
+				{
+					"guid": "d2688900-92a6-411a-8d39-8374a44a478e",
+					"version": "<1.0.0",
+					"supported": false,
+					"recommended": false
+				},
+				{
+					"guid": "8aa1f350-65f3-4824-8c31-b7feb4abcbec",
+					"version": ">=1.0.0,<2.0.0",
+					"supported": true,
+					"recommended": false
+				},
+				{
+					"guid": "9ddfb585-4429-4c3e-96eb-cb3ecf9f1fec",
+					"version": ">=2.0.0,<2.0.6",
+					"supported": true,
+					"recommended": false,
+					"g2_g3_supported": true,
+					"g90_g91_influences_extruder": true
+				},
+				{
+					"guid": "9fa65fea-2adc-4e35-94af-36dc555985f2",
+					"version": ">=2.0.6,<=2.0.7.2",
+					"supported": true,
+					"recommended": true,
+					"g2_g3_supported": true,
+					"g90_g91_influences_extruder": true
+				},
+				{
+					"guid": "aa065880-71b5-4ebe-a90f-665433807758",
+					"version": ">2.0.7.2",
+					"supported": true,
+					"recommended": true,
+					"is_future": true,
+					"g2_g3_supported": true,
+					"g90_g91_influences_extruder": true
+				}
+			]
 		},
-		"version_compare_type": "semantic",
-		"help_file_name": "firmware_marlin.md",
-		"versions": [
-			{
-				"guid": "81848e9e-c41a-44dc-bddc-bf0e4df8f16b",
-				"version": "=bugfix-2.0.x",
-				"supported": false,
-				"recommended": false,
-				"notes": "This is a beta version firmware."
+		"Virtual Marlin": {
+			"functions": {
+				"is_firmware_type": "check_firmware_virtual_marlin",
+				"get_version": "get_version_virtual_marlin",
+				"arcs_enabled": "get_arcs_enabled_virtual_marlin"
 			},
-			{
-				"guid": "d2688900-92a6-411a-8d39-8374a44a478e",
-				"version": "<1.0.0",
-				"supported": false,
-				"recommended": false
-			},
-			{
-				"guid": "8aa1f350-65f3-4824-8c31-b7feb4abcbec",
-				"version": ">=1.0.0,<2.0.0",
-				"supported": true,
-				"recommended": false
-			},
-			{
-				"guid": "9ddfb585-4429-4c3e-96eb-cb3ecf9f1fec",
-				"version": ">=2.0.0,<2.0.6",
-				"supported": true,
-				"recommended": false,
-				"g2_g3_supported": true,
-				"g90_g91_influences_extruder": true
-			},
-			{
-				"guid": "9fa65fea-2adc-4e35-94af-36dc555985f2",
-				"version": ">=2.0.6,<=2.0.7.2",
-				"supported": true,
-				"recommended": true,
-				"g2_g3_supported": true,
-				"g90_g91_influences_extruder": true
-			},
-			{
-				"guid": "aa065880-71b5-4ebe-a90f-665433807758",
-				"version": ">2.0.7.2",
-				"supported": true,
-				"recommended": true,
-				"is_future": true,
-				"g2_g3_supported": true,
-				"g90_g91_influences_extruder": true
-			}
-		]
-	},
-	"Virtual Marlin": {
-		"functions": {
-			"is_firmware_type": "check_firmware_virtual_marlin",
-			"get_version": "get_version_virtual_marlin",
-			"arcs_enabled": "get_arcs_enabled_virtual_marlin"
+			"version_compare_type": "semantic",
+			"help_file": "firmware_virtual_marlin.md",
+			"versions": [
+				{
+					"guid": "81848e9e-c41a-44dc-bddc-bf0e4df8f16b",
+					"version": "<=1.0.0",
+					"supported": true,
+					"recommended": true,
+					"g2_g3_supported": true,
+					"notes": "This is a virtual printer."
+				},
+				{
+					"guid": "d2688900-92a6-411a-8d39-8374a44a478e",
+					"version": ">1.0.0",
+					"supported": true,
+					"recommended": true,
+					"g2_g3_supported": true,
+					"is_future": true
+				}
+			]
 		},
-		"version_compare_type": "semantic",
-		"help_file_name": "firmware_virtual_marlin.md",
-		"versions": [
-			{
-				"guid": "81848e9e-c41a-44dc-bddc-bf0e4df8f16b",
-				"version": "<=1.0.0",
-				"supported": true,
-				"recommended": true,
-				"g2_g3_supported": true,
-				"notes": "This is a virtual printer."
+		"Klipper": {
+			"functions": {
+				"is_firmware_type": "check_firmware_klipper",
+				"get_version": "get_version_klipper",
+				"clean_version": "clean_version_klipper"
 			},
-			{
-				"guid": "d2688900-92a6-411a-8d39-8374a44a478e",
-				"version": ">1.0.0",
-				"supported": true,
-				"recommended": true,
-				"g2_g3_supported": true,
-				"is_future": true
-			}
-		]
-	},
-	"Klipper": {
-		"functions": {
-			"is_firmware_type": "check_firmware_klipper",
-			"get_version": "get_version_klipper",
-			"clean_version": "clean_version_klipper"
+			"version_compare_type": "semantic",
+			"help_file": "firmware_klipper.md",
+			"versions": [
+				{
+					"guid": "bae47fdc-d91a-465b-8f7b-c99a468e8153",
+					"version": "<0.8.0",
+					"supported": false,
+					"recommended": false
+				},
+				{
+					"guid": "f691ee9a-fa2a-48ce-a11d-b97ebed177f7",
+					"version": ">=0.8.0,<0.9.0",
+					"supported": true,
+					"recommended": false,
+					"notes": "Arc support is there, but there are bugs in absolute extrusion mode that could result in very little extrusion.  If you experience problems, upgrade to at least v{recommended_version}."
+				},
+				{
+					"guid": "7da24715-4f3a-4dbf-8ab5-912221f3f26d",
+					"version": "=0.9.0",
+					"supported": true,
+					"recommended": true,
+					"g2_g3_supported": true
+				},
+				{
+					"guid": "aa065880-71b5-4ebe-a90f-665433807758",
+					"version": ">0.9.0",
+					"supported": true,
+					"recommended": true,
+					"g2_g3_supported": true,
+					"is_future": true
+				}
+			]
 		},
-		"version_compare_type": "semantic",
-		"help_file_name": "firmware_klipper.md",
-		"versions": [
-			{
-				"guid": "bae47fdc-d91a-465b-8f7b-c99a468e8153",
-				"version": "<0.8.0",
-				"supported": false,
-				"recommended": false
+		"Smoothieware": {
+			"functions": {
+				"is_firmware_type": "check_firmware_smoothieware",
+				"get_version": "get_version_smoothieware",
+				"get_date": "get_date_smoothieware"
 			},
-			{
-				"guid": "f691ee9a-fa2a-48ce-a11d-b97ebed177f7",
-				"version": ">=0.8.0,<0.9.0",
-				"supported": true,
-				"recommended": false,
-				"notes": "Arc support is there, but there are bugs in absolute extrusion mode that could result in very little extrusion.  If you experience problems, upgrade to at least v{recommended_version}."
-			},
-			{
-				"guid": "7da24715-4f3a-4dbf-8ab5-912221f3f26d",
-				"version": "=0.9.0",
-				"supported": true,
-				"recommended": true,
-				"g2_g3_supported": true
-			},
-			{
-				"guid": "aa065880-71b5-4ebe-a90f-665433807758",
-				"version": ">0.9.0",
-				"supported": true,
-				"recommended": true,
-				"g2_g3_supported": true,
-				"is_future": true
-			}
-		]
-	},
-	"Smoothieware": {
-		"functions": {
-			"is_firmware_type": "check_firmware_smoothieware",
-			"get_version": "get_version_smoothieware",
-			"get_date": "get_date_smoothieware"
-		},
-		"version_compare_type": "date",
-		"help_file_name": "firmware_smoothieware.md",
-		"versions": [
-			{
-				"guid": "2d468d37-e8dc-467e-9505-0ea00640772e",
-				"version": "<Nov 04 2020 00:00:00",
-				"supported": false,
-				"recommended": false
-			},
-			{
-				"guid": "3a166cc2-ff62-4011-aa70-ffa96950a105",
-				"version": ">=Nov 04 2020 00:00:00",
-				"supported": true,
-				"recommended": true,
-				"is_future": true,
-				"g2_g3_supported": true
-			}
-		]
+			"version_compare_type": "date",
+			"help_file": "firmware_smoothieware.md",
+			"versions": [
+				{
+					"guid": "2d468d37-e8dc-467e-9505-0ea00640772e",
+					"version": "<Nov 04 2020 00:00:00",
+					"supported": false,
+					"recommended": false
+				},
+				{
+					"guid": "3a166cc2-ff62-4011-aa70-ffa96950a105",
+					"version": ">=Nov 04 2020 00:00:00",
+					"supported": true,
+					"recommended": true,
+					"is_future": true,
+					"g2_g3_supported": true
+				}
+			]
+		}
 	}
 }

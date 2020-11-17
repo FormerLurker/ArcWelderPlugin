@@ -29,7 +29,8 @@ $(function() {
         var self = this;
 
         self.settings = parameters[0];
-        self.plugin_settings = ko.observable(null);
+        self.plugin_settings = ko.observable({feature_settings:null});
+        self.firmware_info = {};
         self.data = ko.observable();
         self.data.logging_levels = [
             {name:"Verbose", value: 5},
@@ -42,9 +43,34 @@ $(function() {
         self.data.all_logger_names = ["arc_welder.__init__", "arc_welder.gcode_conversion", "arc_welder.firmware_checker"];
         self.data.default_log_level = 20;
 
+        self.auto_pre_processing_enabled = ko.pureComputed(function(){
+            var file_processing_type = self.plugin_settings().feature_settings.file_processing();
+            return (
+                file_processing_type == ArcWelder.FILE_PROCESSING_AUTO ||
+                file_processing_type == ArcWelder.FILE_PROCESSING_BOTH
+            )
+        });
+
+        self.print_after_automatic_processing_enabled = ko.pureComputed(function(){
+            var file_processing_type = self.plugin_settings().feature_settings.print_after_processing();
+            return (
+                file_processing_type == ArcWelder.PRINT_AFTER_PROCESSING_AUTO ||
+                file_processing_type == ArcWelder.PRINT_AFTER_PROCESSING_BOTH
+            )
+        });
+
+        self.select_after_auto_processing_enabled = ko.pureComputed(function(){
+            var file_processing_type = self.plugin_settings().feature_settings.select_after_processing();
+            return (
+                file_processing_type == ArcWelder.SELECT_FILE_AFTER_PROCESSING_AUTO ||
+                file_processing_type == ArcWelder.SELECT_FILE_AFTER_PROCESSING_BOTH
+            )
+        });
+
         self.onBeforeBinding = function() {
             // Make plugin setting access a little more terse
             self.plugin_settings(self.settings.settings.plugins.arc_welder);
+            self.firmware_info = ArcWelder.Tab.firmware_info;
             self.available_loggers = ko.computed(function () {
                 var available_loggers = [];
                 for (var logger_index = 0; logger_index < self.data.all_logger_names.length; logger_index++) {
@@ -60,12 +86,11 @@ $(function() {
             self.available_loggers_sorted = ko.computed(function () {
                 return self.loggerNameSort(self.available_loggers)
             }, self);
-            self.firmware_info = ArcWelder.Tab.firmware_info;
         };
 
         self.onAfterBinding = function() {
             ArcWelder.Help.bindHelpLinks("div#arc_welder_settings");
-            //self.firmware_info = ArcWelder.Tab.firmware_info;
+
         };
 
         self.get_enabled_logger_index_by_name = function (name) {

@@ -1,1 +1,0 @@
-When enabled **Arc Welder** will create a progress bar showing statistics about the file being currently processed.  There is also a *Cancel* and *Cancel All* button on the progress display.  Default: Enabled

@@ -32,6 +32,7 @@ $(function () {
             self.notice = null;
             self.$progress = null;
             self.$progressText = null;
+            self.$progressBarText = null;
             self.$subTitle = null;
             self.initial_text = initial_text;
             self.popup_margin = 15;
@@ -60,6 +61,7 @@ $(function () {
                 }
                 var percent_complete_text = percent_complete.toFixed(1);
                 self.$progress.width(percent_complete_text + "%").attr("aria-valuenow", percent_complete_text).find("span").html(percent_complete_text + "%");
+                self.$progressBarText.text (percent_complete_text + "%");
                 self.$progressText.html(progress_text);
                 return self;
             };
@@ -83,7 +85,8 @@ $(function () {
             // create the pnotify loader
             self.loader = new PNotify({
                 title: title,
-                text: '<div class="progress-sub-title"></div><div class="progress progress-striped active" style="margin:0"><div class="arc-welder progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',
+                /*text: '<div class="progress-sub-title"></div><div class="progress progress-striped active" style="margin:0"><div class="arc-welder progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',*/
+                text: '<div class="progress-bar-container" style="margin:0"><div class="progress-bar-info text-center"><span class="progress-bar-text"></span></div><div class="progress-bar" style="margin:0" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',
                 addclass: "arc-welder",
                 icon: 'fa fa-cog fa-spin',
                 width: self.popup_width.toString() + "px",
@@ -103,6 +106,7 @@ $(function () {
                     self.notice = notice.get();
                     self.$progress = self.notice.find("div.progress-bar");
                     self.$progressText = self.notice.find("div.progress-text");
+                    self.$progressBarText = self.notice.find("span.progress-bar-text")
                     self.notice.find(".remove_button").remove();
                     self.$subTitle = self.notice.find("div.progress-sub-title");
                     self.$subTitle.html(self.subtitle);

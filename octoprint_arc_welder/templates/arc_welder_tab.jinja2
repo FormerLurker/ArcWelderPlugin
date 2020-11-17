@@ -24,9 +24,104 @@
 # following email address: FormerLurker@pm.me
 ##################################################################################-->
 <div id="tab_plugin_arc_welder_controls" class="form-horizontal arc-welder">
+    <div>
+        <H4>
+            <a href="#" class="no-underline"
+               data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_current_preprocessor_tasks', toggle_observable: current_tasks_visible }">
+                Processor Tasks
+                <i class="fa fa-spinner fa-spin" data-bind="visible: is_processing"></i>
+                <i class="fa fa-exclamation text-warning" data-bind="visible: queued_not_processing"></i>
+                <i class="fa fa-no-shadow fa-caret-down"></i>
+            </a>
+        </H4>
+        <div id="arc_welder_current_preprocessor_tasks">
+            <div data-bind="visible: preprocessing_tasks().length == 0">
+                <p>There are no gcode files in the queue.</p>
+            </div>
+            <div data-bind="visible: processing_task">
+                <div class="row-fluid">
+                    <div class="span12">
+                        <Strong>Active Task:</Strong>&nbsp;
+                        <a data-bind="click: function(){cancelPreprocessing(processing_task());}" href="#"> <i class="fa fa-times text-error fa-lg" ></i></a>
+                        <span data-bind="visible: processing_task() && processing_task().task.octoprint_args.print_after_processing" title="Will print after processing is completed.">&nbsp;<i class="fa fa-print fa-lg"></i>&nbsp;</span>
+                        <span data-bind="text: processing_task_file_name"></span>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span12"> <!--Progress Bar-->
+                        <div class="progress">
+                            <div class="bar"
+                                 data-bind="style: {width: progress_percent_complete().toString()+'%'}"
+                                 style="margin:0; width: 100%"></div>
+                            <span data-bind="text: progress_percent_complete().toString()+'%'"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="short-rows" data-bind="visible: progress_percent_complete()>0">
+                    <div class="row-fluid">
+                        <div class="span4 text-right"><strong>Time Remaining:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: progress_seconds_remaining.formatted"></span>
+                        </div>
+                    </div>
+                    <div class="row-fluid">
+                        <div class="span4 text-right"><strong>Time Elapsed:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: progress_seconds_elapsed.formatted"></span>
+                        </div>
+                    </div>
+                    <div class="row-fluid">
+                        <div class="span4 text-right"><strong>Arcs:</strong></div>
+                        <div class="span8">
+                            Created <span data-bind="text: progress_arcs_created.formatted"></span> from <span data-bind="text: progress_points_compressed.formatted"></span> extrusions
+                        </div>
+                    </div>
+                    <div class="row-fluid">
+                        <div class="span4 text-right"><strong>Target/Source Extrusions:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: progress_target_file_total_count.formatted"></span>
+                            &#8260;
+                            <span data-bind="text: progress_source_file_total_count.formatted"></span>
+                            =&nbsp;<span data-bind="text: Math.abs(progress_total_count_reduction_percent())"></span>%
+                            <span data-bind="text: progress_total_count_reduction_percent() < 0 ? 'reduction' : 'increase'"></span>
+                        </div>
+                    </div>
+                    <div class="row-fluid">
+                        <div class="span4 text-right"><strong>Compression:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: progress_compression_ratio"></span>&#8758;1 (<span data-bind="text: progress_compression_percent"></span>%)
+                        </div>
+                    </div>
+                    <div class="row-fluid">
+                        <div class="span4 text-right"><strong>File Size:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: progress_source_position.formatted"></span> - <span data-bind="text: progress_space_saved.formatted"></span> = <span data-bind="text: progress_target_file_size.formatted"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="short-rows" data-bind="visible: progress_percent_complete()==0">
+                    <p>Loading Statistics <i class="fa fa-spinner fa-spin"></i></p>
+                </div>
+            </div>
+            <div data-bind="visible: queued_tasks().length > 0">
+                <h5>Queued for Processing</h5>
+                <ol data-bind="foreach: queued_tasks">
+                    <li class="queued-task">
+                        <a data-bind="click: function(){$parent.cancelPreprocessing($data);}" href="#" title="Remove from Queue"><i class="fa fa-times text-error" ></i></a>
+                        <span data-bind="visible: $data.task.octoprint_args.print_after_processing" title="Will print after processing is completed.">&nbsp;<i class="fa fa-print"></i>&nbsp;
+                        </span>
+                        <span data-bind="text: $data.task.octoprint_args.source_name"></span>
+
+                    </li>
+                </ol>
+            </div>
+            <hr/>
+        </div>
+    </div>
     <div data-bind="visible: plugin_settings.feature_settings.current_run_configuration_visible">
         <H4>
-            <a href="#" class="no-underline" data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_current_run_configuration', toggle_observable: run_configuration_visible }">
+            <a href="#" class="no-underline"
+               data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_current_run_configuration', toggle_observable: run_configuration_visible }">
                 Current Run Configuration <i class="fa fa-no-shadow fa-caret-down"></i>
             </a>
         </H4>
@@ -45,9 +140,7 @@
                         <strong>Pre-Processing Types:</strong>
                     </div>
                     <div class="span8">
-                        <span data-bind="visible: auto_pre_processing_enabled() && !manual_pre_processing_enabled()">Automatic Processing Only</span>
-                        <span data-bind="visible: !auto_pre_processing_enabled() && manual_pre_processing_enabled()">Manual Processing Only</span>
-                        <span data-bind="visible: auto_pre_processing_enabled() && manual_pre_processing_enabled()">Automatic and Manual Processing Enabled</span>
+                        <span data-bind="text: file_processing_setting_name"></span>
                     </div>
                 </div>
                 <div class="row-fluid">
@@ -66,7 +159,8 @@
                         <strong>Resolution:</strong>
                     </div>
                     <div class="span8">
-                        <span data-bind="text: plugin_settings.resolution_mm"></span>mm&nbsp;(max deviation <strong>&#177;<span data-bind="text:  plugin_settings.resolution_mm()/2.0"></span>mm</strong>)
+                        <span data-bind="text: plugin_settings.resolution_mm"></span>mm&nbsp;(max deviation <strong>&#177;<span
+                            data-bind="text:  plugin_settings.resolution_mm()/2.0"></span>mm</strong>)
                     </div>
                 </div>
                 <div class="row-fluid">
@@ -90,35 +184,27 @@
                         <strong>Output File Name:</strong>
                     </div>
                     <div class="span8">
-                        <span data-bind="visible: plugin_settings.overwrite_source_file">Gcode files will be overwritten after processing.</span>
-                        <div data-bind="visible: !plugin_settings.overwrite_source_file()">
-                            <span data-bind="visible: plugin_settings.target_postfix() != '' && plugin_settings.target_prefix() != ''">
-                                <strong><span
-                                data-bind="text: plugin_settings.target_prefix"></span></strong>source_file_name<strong><span data-bind="text: plugin_settings.target_postfix"></span></strong>.gcode
-                            </span>
-                            <span data-bind="visible: plugin_settings.target_postfix() == '' && plugin_settings.target_prefix() != ''">
-                                <strong><span data-bind="text: plugin_settings.target_prefix"></span></strong>source_file_name.gcode
-                            </span>
-                            <span data-bind="visible: plugin_settings.target_postfix() != '' && plugin_settings.target_prefix() == ''">
-                                source_file_name<strong><span data-bind="text: plugin_settings.target_postfix"></span></strong>.gcode
-                            </span>
-                            <span data-bind="visible: plugin_settings.target_postfix() == '' && plugin_settings.target_prefix() == ''" class="text-error">
-                                Overwrite source file
-                            </span>
+                        <span data-bind="visible: overwrite_source_file">Gcode files will be overwritten after processing.</span>
+                        <div data-bind="visible: !overwrite_source_file()">
+                            <span data-bind="visible: plugin_settings.target_prefix() != ''">
+                                <strong><span data-bind="text: plugin_settings.target_prefix"></span></strong>
+                            </span>source_file_name<span
+                                data-bind="visible: plugin_settings.target_postfix() != ''"><strong><span
+                                data-bind="text: plugin_settings.target_postfix"></span></strong></span>.gcode
                         </div>
 
                     </div>
                 </div>
                 <div class="row-fluid">
                     <div class="span4 text-right">
-                        <strong>Delete Output File:</strong>
+                        <strong>Delete Source File:</strong>
                     </div>
                     <div class="span8">
-                        <div data-bind="visible: plugin_settings.overwrite_source_file() || (plugin_settings.target_postfix() == '' && plugin_settings.target_prefix() == '')">
+                        <div data-bind="visible: overwrite_source_file">
                             <span>The source file will be overwritten, based on other the other plugin settings.</span>
                         </div>
-                        <div data-bind="visible: !(plugin_settings.overwrite_source_file() || (plugin_settings.target_postfix() == '' && plugin_settings.target_prefix() == ''))">
-                            <span data-bind="text: source_file_delete_description"></span>
+                        <div data-bind="visible: !overwrite_source_file()">
+                            <span data-bind="text: source_file_delete_setting_name"></span>
                         </div>
 
                     </div>
@@ -128,10 +214,7 @@
                         <strong>Print After Processing:</strong>
                     </div>
                     <div class="span8">
-                        <span data-bind="visible: print_auto_processed_file() && !print_manual_processed_file()">After Automatic Processing Only</span>
-                        <span data-bind="visible: !print_auto_processed_file() && print_manual_processed_file()">After Manual Processing Only</span>
-                        <span data-bind="visible: print_auto_processed_file() && print_manual_processed_file()">Always</span>
-                        <span data-bind="visible: !print_auto_processed_file() && !print_manual_processed_file()">Disabled</span>
+                        <span data-bind="text: print_file_setting_name"></span>
                     </div>
                 </div>
                 <div class="row-fluid">
@@ -139,10 +222,7 @@
                         <strong>Select After Processing:</strong>
                     </div>
                     <div class="span8">
-                        <span data-bind="visible: select_auto_processed_file() && !select_manual_processed_file()">After Automatic Processing Only</span>
-                        <span data-bind="visible: !select_auto_processed_file() && select_manual_processed_file()">After Manual Processing Only</span>
-                        <span data-bind="visible: select_auto_processed_file() && select_manual_processed_file()">Always</span>
-                        <span data-bind="visible: !select_auto_processed_file() && !select_manual_processed_file()">Disabled</span>
+                        <span data-bind="text: select_file_setting_name"></span>
                     </div>
                 </div>
             </div>
@@ -150,13 +230,14 @@
                 <dl class="row-fluid">
                     <div class="span4 text-right"><strong>Plugin Status:</strong></div>
                     <div class="span8">
-                        Disabled - Arc Welder is completely disabled
+                        Disabled - All processing is disabled, but statistics will still be visible.
                     </div>
                 </dl>
             </div>
             <div class="row-fluid">
                 <div class="span12 text-right">
-                    <button class="btn btn-primary" data-bind="click: function() {ArcWelder.openArcWelderSettings('settings');}"
+                    <button class="btn btn-primary"
+                            data-bind="click: function() {ArcWelder.openArcWelderSettings('settings');}"
                             title="Open Arc Welder settings">
                         Edit Settings
                     </button>
@@ -167,111 +248,141 @@
     </div>
     <div data-bind="visible: plugin_settings.feature_settings.check_firmware() != ArcWelder.CHECK_FIRMWARE_DISABLED">
         <H4>
-            <a href="#" class="no-underline" data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_firmware_compatibility', toggle_observable: firmware_compatibility_visible }, css: {'text-error':firmware_info.has_errors(), 'text-warning': !firmware_info.has_errors() && firmware_info.has_warnings()}">
-                Firmware Compatibility&nbsp;<i data-bind="visible: firmware_info.has_errors() || firmware_info.has_warnings()" class="fa fa-exclamation">&nbsp;</i><i class="fa fa-no-shadow fa-caret-down"></i>
+            <a href="#" class="no-underline"
+               data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_firmware_compatibility', toggle_observable: firmware_compatibility_visible }, css: {'text-error':firmware_info.has_errors(), 'text-warning': !firmware_info.has_errors() && firmware_info.has_warnings()}">
+                Firmware Compatibility&nbsp;<i
+                    data-bind="visible: firmware_info.has_errors() || firmware_info.has_warnings()"
+                    class="fa fa-exclamation">&nbsp;</i><i class="fa fa-no-shadow fa-caret-down"></i>
             </a>
         </H4>
         <div id="arc_welder_firmware_compatibility">
-            <div class="row-fluid">
-                <div class="span5">
-                    <div data-bind="visible: !firmware_info.loaded()">
+            <div data-bind="visible: !firmware_info.loaded()">
                         <p class="text-error"><strong>Firmware Info Loading</strong></p>
                         <p>Please wait while firmware info loads.</p>
                     </div>
-                    <div data-bind="visible: firmware_info.loaded() && firmware_info.success()===null">
+            <div data-bind="visible: firmware_info.loaded() && firmware_info.success()===null">
                         <p class="text-error"><strong>No Firmware Info Available</strong></p>
                         <p>Please check your firmware by clicking the <strong>Check Firmware</strong> button.</p>
                     </div>
-                    <div id="arc_welder_firmware_info" data-bind="visible: (firmware_info.success() || firmware_info.success() === null)">
-                        <button type="button" class="btn full-width"
-                            data-bind="click: function(){firmware_info.checkFirmware();}, disable: firmware_info.checking_firmware() || !firmware_info.loaded()"
-                            title="Check your firmware for compatibility with Arc Welder.">
-                            <i class="fa fa-spinner fa-spin" data-bind="visible: firmware_info.checking_firmware"></i><span>Check Firmware</span>
+            <div id="arc_welder_firmware_info"
+                         data-bind="visible: (firmware_info.success() || firmware_info.success() === null)">
+                <div class="short-rows row-fluid">
+                    <div class="span4">
+                        <button type="button" class="btn btn-small full-width"
+                                data-bind="click: function(){firmware_info.checkFirmware();}, disable: firmware_info.checking_firmware() || !firmware_info.loaded()"
+                                title="Check your firmware for compatibility with Arc Welder.">
+                            <i class="fa fa-spinner fa-spin"
+                               data-bind="visible: firmware_info.checking_firmware"></i><span>Check Firmware</span>
                         </button>
-                        <div class="short-rows">
-                            <div class="row-fluid">
-                                <div class="span6 text-right">Name:</div>
-                                <div class="span6"><span data-bind="text: firmware_info.type() ?? 'unknown'"></span></div>
-                            </div>
-                            <div class="row-fluid">
-                                <div class="span6 text-right">Version:</div>
-                                <div class="span6"><span data-bind="text: firmware_info.version() ?? 'unknown'"></span></div>
-                            </div>
-                            <div class="row-fluid" data-bind="visible: firmware_info.build_date() !== null">
-                                <div class="span6 text-right">Build Date:</div>
-                                <div class="span6"><span data-bind="text: firmware_info.build_date()"></span></div>
-                            </div>
-                            <div data-bind="attr: {class: firmware_info.supported.class}">
-                                <div class="row-fluid">
-                                    <div class="span6 text-right">Supported:</div>
-                                    <div class="span6">
-                                        <span data-bind="text: firmware_info.supported.formatted"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div data-bind="visible: firmware_info.supported() !== false || firmware_info.arcs_enabled() === true, attr: {class: firmware_info.recommended.class}">
-                                <div class="row-fluid">
-                                    <div class="span6 text-right">Recommended:</div>
-                                    <div class="span6">
-                                        <span data-bind="text: firmware_info.recommended.formatted"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div data-bind="attr: {class: firmware_info.g2_g3_supported.class}">
-                                <div class="row-fluid">
-                                    <div class="span6 text-right">Arcs Supported:</div>
-                                    <div class="span6">
-                                        <span data-bind="text: firmware_info.g2_g3_supported.formatted"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div data-bind="attr: {class: firmware_info.arcs_enabled.class}">
-                                <div class="row-fluid">
-                                    <div class="span6 text-right">Arcs Enabled:</div>
-                                    <div class="span6">
-                                        <span data-bind="text: firmware_info.arcs_enabled.formatted"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div data-bind="visible: !!firmware_info.notes()">
-                                <div class="row-fluid">
-                                    <div class="span6 text-right">Notes:</div>
-                                    <div class="span6">
-                                        <span data-bind="text: firmware_info.arcs_enabled.notes"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div data-bind="visible: !!firmware_info.previous_notes()">
-                                <div class="row-fluid">
-                                    <div class="span6 text-right">Notes:</div>
-                                    <div class="span6">
-                                        <span data-bind="text: firmware_info.previous_notes.notes"></span>
-                                    </div>
-                                </div>
-                            </div>
+                    </div>
+                    <div class="span8">
+                        <div class="text-success"
+                            data-bind="visible: !(firmware_info.has_errors() || firmware_info.has_warnings())">
+                            Your firmware is good to go!
                         </div>
+                        <div data-bind="visible: firmware_info.has_errors() || firmware_info.has_warnings()">
+                            <p data-bind="visible: firmware_info.has_errors()"
+                               class="text-error">
+                                Your firmware may have issues running gcode produced by Arc Welder.  You may need to alter firmware settings or upgrade to a newer version.
+                            </p>
+                            <p data-bind="visible: !firmware_info.has_errors()"
+                                class="text-warning">
+                                Your firmware may have issues running gcode produced by Arc Welder.
+                            </p>
+                        </div>
+
                     </div>
                 </div>
-                <div class="span7">
-                    <div class="row-fluid text-error" data-bind="visible: firmware_info.has_errors">
-                        <div class="span12">
-                            <h5>Errors</h5>
-                            <ul data-bind="foreach: firmware_info.errors">
-                                <li data-bind="text: $data"></li>
-                            </ul>
+
+                <div class="short-rows">
+                    <div class="row-fluid">
+                        <div class="span4 text-right"><strong>Name:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: firmware_info.type() ?? 'unknown'"></span>
+                            <a class="arc_welder_help"
+                               data-bind="visible: firmware_info.type_help_file, attr: {'data-help-url': firmware_info.type_help_file, 'data-help-title': (firmware_info.type() + ' Firmware Help')}"></a>
                         </div>
                     </div>
-                    <div class="row-fluid text-warning" data-bind="visible: firmware_info.has_warnings() && ! firmware_info.has_errors()">
-                        <div class="span12">
-                            <h5>Warnings</h5>
-                            <ul data-bind="foreach: firmware_info.warnings">
-                                <li data-bind="text: $data"></li>
-                            </ul>
+                    <div class="row-fluid">
+                        <div class="span4 text-right"><strong>Version:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: firmware_info.version() ?? 'unknown'"></span>
+                            <a class="arc_welder_help"
+                               data-bind="visible: firmware_info.version_help_file, attr: {'data-help-url': firmware_info.version_help_file, 'data-help-title': (firmware_info.type() + ' ' + firmware_info.version() + ' Help')}"></a>
+                            <a class="arc_welder_help"
+                               data-bind="visible: firmware_info.previous_version_help_file, attr: {'data-help-url': firmware_info.previous_version_help_file, 'data-help-title': (firmware_info.type() + ' Previous Version Help')}"></a>
                         </div>
                     </div>
-                    <div class="row-fluid text-success" data-bind="visible: (firmware_info.has_warnings()===false && firmware_info.has_warnings()===false)">
-                        <div class="span12">
-                            Your firmware is good to go!
+                    <div class="row-fluid" data-bind="visible: firmware_info.build_date() !== null">
+                        <div class="span4 text-right"><strong>Build Date:</strong></div>
+                        <div class="span8"><span data-bind="text: firmware_info.build_date()"></span></div>
+                    </div>
+                    <div>
+                        <div class="row-fluid">
+                            <div class="span4 text-right"><strong>Supported:</strong></div>
+                            <div class="span8">
+                                <span data-bind="text: firmware_info.supported.formatted, attr: {class: firmware_info.supported.class}"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="visible: firmware_info.supported() !== false || firmware_info.arcs_enabled() === true">
+                        <div class="row-fluid">
+                            <div class="span4 text-right"><strong>Recommended:</strong></div>
+                            <div class="span8" >
+                                <span data-bind="text: firmware_info.recommended.formatted, attr: {class: firmware_info.recommended.class}"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="row-fluid">
+                            <div class="span4 text-right"><strong>Arcs Supported:</strong></div>
+                            <div class="span8">
+                                <span data-bind="text: firmware_info.g2_g3_supported.formatted, attr: {class: firmware_info.g2_g3_supported.class}"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="row-fluid">
+                            <div class="span4 text-right"><strong>Arcs Enabled:</strong></div>
+                            <div class="span8" >
+                                <span data-bind="text: firmware_info.arcs_enabled.formatted, attr: {class: firmware_info.arcs_enabled.class}"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="visible: firmware_info.notes">
+                        <div class="row-fluid">
+                            <div class="span4 text-right"><strong>Notes:</strong></div>
+                            <div class="span8">
+                                <span data-bind="text: firmware_info.arcs_enabled.notes"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="visible: firmware_info.previous_notes">
+                        <div class="row-fluid">
+                            <div class="span4 text-right"><strong>Notes:</strong></div>
+                            <div class="span8">
+                                <span data-bind="text: firmware_info.previous_notes.notes"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="visible: firmware_info.has_errors">
+                        <div class="row-fluid">
+                            <div class="span4 text-right"><strong>Errors:</strong></div>
+                            <div class="span8">
+                                <ul class="text-error" data-bind="foreach: firmware_info.errors">
+                                <li data-bind="text: $data"></li>
+                            </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="visible: firmware_info.has_warnings">
+                        <div class="row-fluid">
+                            <div class="span4 text-right"><strong>Warnings:</strong></div>
+                            <div class="span8">
+                                <ul data-bind="foreach: firmware_info.warnings">
+                                <li class="text-warning" data-bind="text: $data"></li>
+                            </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -279,134 +390,90 @@
             <hr/>
         </div>
     </div>
-    <div id="arc-welder-no-stats-div" data-bind="visible: !statistics_available()">
-        <h4><a href="javaScript:void(0)" class="no-click no-underline">File Statistics Unavailable</a></h4>
-    </div>
-    <div data-bind="visible: statistics_available">
-        <H4>
-            <a href="#" class="no-underline" data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc-welder-stats-container', toggle_observable: file_statistics_visible }">
-                Processed File Statistics <i class="fa fa-no-shadow fa-caret-down"></i>
-            </a>
-        </H4>
-        <div id="arc-welder-stats-container">
-            <div id="arc-welder-stats">
-                <div class="row-fluid">
-                    <div class="span12">
-                        <h4>Arc-Welder Statistics for <span data-bind="text:selected_filename_title"></span> File</h4>
-                    </div>
+    <H4>
+        <a id="arc_welder_show_statistics" href="#" class="no-underline"
+           data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc-welder-stats-container', toggle_observable: file_statistics_visible }">
+                Processed File Statistics
+            <i class="fa fa-no-shadow fa-caret-down"></i>
+        </a>
+    </H4>
+    <div id="arc-welder-stats-container">
+        <div id="arc-welder-no-stats-div" data-bind="visible: !statistics_available()">
+            <div data-bind="visible: is_selected_file_welded">
+                <h5>Statistics Unavailable for <span data-bind="text:selected_filename"></span></h5>
+                <p>The selected file was welded, but contains no statistics. It may have been welded before being
+                    uploaded into OctoPrint, or the metadata was lost somehow.</p>
+            </div>
+            <div data-bind="visible: !is_selected_file_welded() && selected_filename()">
+                <h5><a href="javaScript:void(0)" class="no-click no-underline">No Arc Welding Detected.</a></h5>
+                <p>Either '<span data-bind="text:selected_filename"></span>' has not been processed by Arc Welder,
+                    or the comments added by Arc Welder have been stripped from the gcode.</p>
+            </div>
+            <div data-bind="visible: !is_selected_file_welded() && !selected_filename()">
+                <h5>No File Selected</h5>
+            </div>
+
+        </div>
+        <div id="arc-welder-stats" data-bind="visible: statistics_available" class="short-rows">
+            <div class="row-fluid">
+                <div class="span12">
+                    <h5>Arc-Welder Statistics for <span data-bind="text:selected_filename_title"></span> File</h5>
                 </div>
-                <div id="arc-welder-stats-text-div">
-                    <div class="row-fluid">
-                        <div class="span6">
-                            <div class="row-fluid">
-                                <div class="span3 text-right">
-                                    <strong>Source:</strong>
-                                </div>
-                                <div class="span9 overflow-ellipsis">
-                                    <sapn data-bind="text:statistics.source_filename, attr:{title:statistics.source_filename}"></sapn>
-                                </div>
-                            </div>
-                            <div class="row-fluid">
-                                <div class="span3 text-right">
-                                    <strong>Lines:</strong>
-                                </div>
-                                <div class="span9">
-                                    <span data-bind="text: statistics.lines_processed"></span>
-                                </div>
-                            </div>
-                            <div class="row-fluid">
-                                <div class="span3 text-right">
-                                    <strong>Size:</strong>
-                                </div>
-                                <div class="span9">
-                                    <span data-bind="text: statistics.source_file_size"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="span6">
-                            <div class="row-fluid">
-                                <div class="span3 text-right">
-                                    <strong>Target:</strong>
-                                </div>
-                                <div class="span9 overflow-ellipsis">
-                                    <span data-bind="text:selected_filename, attr:{title:selected_filename}"></span>
-                                </div>
-                            </div>
-
-                            <div class="row-fluid">
-                                <div class="span3 text-right">
-                                    <strong>Lines:</strong>
-                                </div>
-                                <div class="span9">
-                                    <span data-bind="text: statistics.lines_processed() - statistics.points_compressed()"></span>
-                                </div>
-                            </div>
-                            <div class="row-fluid">
-                                <div class="span3 text-right">
-                                    <strong>Size:</strong>
-                                </div>
-                                <div class="span9">
-                                    <span data-bind="text: statistics.target_file_size"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span12">
-                            <h5>Compression</h5>
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span6">
-                            <div class="row-fluid">
-                                <div class="span6 text-right">
-                                    <strong>Points Compressed:</strong>
-                                </div>
-                                <div class="span6">
-                                    <span data-bind="text: statistics.points_compressed"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="span6">
-                            <div class="row-fluid">
-                                <div class="span6 text-right">
-                                    <strong>Arcs Created:</strong>
-                                </div>
-                                <div class="span6">
-                                    <span data-bind="text: statistics.arcs_created"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span6">
-                            <div class="row-fluid">
-                                <div class="span6 text-right">
-                                    <strong>Ratio:</strong>
-                                </div>
-                                <div class="span6">
-                                    <span data-bind="text: statistics.compression_ratio"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="span6">
-                            <div class="row-fluid">
-                                <div class="span6 text-right">
-                                    <strong>Compression:</strong>
-                                </div>
-                                <div class="span6">
-                                    <span data-bind="text: statistics.compression_percent"></span>%
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span12">
-                            <h5>Segment Length Statistics</h5>
-                            <pre class="text-center" data-bind="text: statistics.segment_statistics_text"></pre>
-                        </div>
-                    </div>
-
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Source File:</strong></div>
+                <div class="span8"><sapn data-bind="text:statistics_source_name, attr:{title:statistics_source_name}"></sapn></div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Target File:</strong></div>
+                <div class="span8"><sapn data-bind="text:statistics_target_name, attr:{title:statistics_target_name}"></sapn></div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Arcs:</strong></div>
+                <div class="span8">
+                    Created <span data-bind="text: statistics_arcs_created.formatted"></span> from <span data-bind="text: statistics_points_compressed.formatted"></span> extrusions
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Target/Source Extrusions:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_target_file_total_count.formatted"></span>
+                    &#8260;
+                    <span data-bind="text: statistics_source_file_total_count.formatted"></span>
+                    =&nbsp;<span data-bind="text: Math.abs(statistics_total_count_reduction_percent())"></span>%
+                    <span data-bind="text: statistics_total_count_reduction_percent() < 0 ? 'reduction' : 'increase'"></span>
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Compression:</strong></div>
+                <div class="span8">
+                     <span data-bind="text: statistics_compression_ratio"></span>&#8758;1 (<span data-bind="text: statistics_compression_percent"></span>%)
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>File Size:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_source_file_size.formatted"></span> - <span data-bind="text: statistics_space_saved_string"></span> = <span data-bind="text: statistics_target_file_size.formatted"></span>
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Line Count:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_lines_processed.formatted"></span> - <span data-bind="text: statistics_points_compressed.formatted"></span> = <span data-bind="text: statistics_target_file_lines"></span>
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Processing Time:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_seconds_elapsed.formatted"></span>
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right">
+                    <strong>Segment Length Statistics:</strong>
+                </div>
+                <div class="span8 text-center">
+                    <pre class="text-center statistics-text" data-bind="text: statistics_segment_statistics_text"></pre>
                 </div>
             </div>
         </div>

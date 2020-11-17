@@ -23,21 +23,32 @@
 # You can contact the author either through the git-hub repository, or at the
 # following email address: FormerLurker@pm.me
 ###################################################################################*/
-.arc-welder.progress-bar-container{
-    width:100%;
-    display: inline-flex;
-    flex-grow: 1;
+
+
+.arc-welder .progress {
+    position: relative;
 }
 
-.arc-welder.progress-bar {
-    height: 100%;
-    background: green;
-    color: white;
+.arc-welder .progress .bar {
+    z-index: 1;
+    position: absolute;
+}
+
+.arc-welder .progress span {
+    position: absolute;
+    top: 0;
+    z-index: 2;
+    color: black; /* Change according to needs */
     text-align: center;
+    width: 100%;
 }
 
-.arc-welder.progress-bar.failed {
-    background: red;
+.arc-welder .progress {
+    margin-bottom:5px;
+}
+
+.arc-welder .statistics-text{
+    margin-top: 5px;
 }
 
 div.ui-pnotify.arc-welder {
@@ -110,7 +121,7 @@ div.ui-pnotify.arc-welder {
         opacity: 1;
     }
 }
-
+.arc-welder .short-rows.row-fluid,
 .arc-welder .short-rows .row-fluid,
 .arc-welder .short-rows .span1,
 .arc-welder .short-rows .span2,
@@ -128,10 +139,15 @@ div.ui-pnotify.arc-welder {
 }
 
 .arc-welder .short-rows .control-group,
+.arc-welder .short-rows .progress ,
 .arc-welder .short-rows fieldset legend {
     padding-bottom: 0px;
     margin-bottom: 5px;
     margin-top: 5px;
     padding-top: 0px;
+}
+
+.arc-welder .short-rows ul {
+    margin: 0 0 0 13px;
 }
 

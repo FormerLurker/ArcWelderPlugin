@@ -94,6 +94,10 @@ struct source_target_segment_statistics {
 	int total_count_source;
 	int total_count_target;
 	int num_segment_tracking_lengths;
+  
+	double get_total_count_reduction_percent() const {
+		return utilities::get_percent_change(total_count_source, total_count_target);
+	}
 
 	void update(double length, bool is_source)
 	{
@@ -353,7 +357,6 @@ struct arc_welder_progress {
 		target_file_size = 0;
 		compression_ratio = 0;
 		compression_percent = 0;
-
 	}
 	double percent_complete;
 	double seconds_elapsed;

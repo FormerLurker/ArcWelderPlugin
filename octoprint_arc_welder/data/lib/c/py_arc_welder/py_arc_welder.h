@@ -35,6 +35,7 @@ class py_arc_welder : public arc_welder
 {
 public:
 	py_arc_welder(
+		std::string guid,
 		std::string source_path, 
 		std::string target_path, 
 		py_logger* logger, 
@@ -54,13 +55,15 @@ public:
 			g90_g91_influences_extruder, 
 			buffer_size
   ){
+		guid_ = guid;
 		py_progress_callback_ = py_progress_callback;
 	}
 	virtual ~py_arc_welder() {
 		
 	}
-	static PyObject* build_py_progress(const arc_welder_progress& progress);
+	static PyObject* build_py_progress(const arc_welder_progress& progress, std::string guid);
 protected:
+	std::string guid_;
 	virtual bool on_progress_(const arc_welder_progress& progress);
 private:
 	PyObject* py_progress_callback_;

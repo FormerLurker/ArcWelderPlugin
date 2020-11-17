@@ -223,7 +223,6 @@ class build_ext_subclass(build_ext):
 
 ## Build our c++ parser extension
 plugin_ext_sources = [
-
     "octoprint_arc_welder/data/lib/c/gcode_processor_lib/array_list.cpp",
     "octoprint_arc_welder/data/lib/c/gcode_processor_lib/circular_buffer.cpp",
     "octoprint_arc_welder/data/lib/c/gcode_processor_lib/extruder.cpp",

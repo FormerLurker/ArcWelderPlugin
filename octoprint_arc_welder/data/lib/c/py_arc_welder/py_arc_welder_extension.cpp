@@ -190,22 +190,22 @@ extern "C"
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 
-		py_arc_welder arc_welder_obj(args.source_file_path, args.target_file_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.g90_g91_influences_extruder, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
+		py_arc_welder arc_welder_obj(args.guid, args.source_path, args.target_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.g90_g91_influences_extruder, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
 		arc_welder_results results = arc_welder_obj.process();
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 		Py_XDECREF(py_progress_callback);
 		// return the arguments
-		PyObject* p_progress = py_arc_welder::build_py_progress(results.progress);
+		PyObject* p_progress = py_arc_welder::build_py_progress(results.progress, args.guid);
 		if (p_progress == NULL)
 			p_progress = Py_None;
 
 		PyObject* p_results = Py_BuildValue(
 			"{s:i,s:i,s:s,s:O}",
 			"success",
-			results.success,
-			"cancelled",
-			results.cancelled,
+			(long int)(results.success ? 1 : 0),
+			"is_cancelled",
+			(long int)(results.cancelled ? 1 : 0),
 			"message",
 			results.message.c_str(),
 			"progress",
@@ -222,25 +222,35 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 		"Parsing GCode Conversion Args."
 		);
 
-	// Extract the source file path
-	PyObject* py_source_file_path =  PyDict_GetItemString(py_args, "source_file_path");
-	if (py_source_file_path == NULL)
+	// Extract the job guid
+	PyObject* py_guid = PyDict_GetItemString(py_args, "guid");
+	if (py_guid == NULL)
 	{
-		std::string message = "ParseArgs - Unable to retrieve the source_file_path parameter from the args.";
+		std::string message = "ParseArgs - Unable to retrieve the guid parameter from the args.";
 		p_py_logger->log_exception(GCODE_CONVERSION, message);
 		return false;
 	}
-	args.source_file_path = gcode_arc_converter::PyUnicode_SafeAsString(py_source_file_path);
+	args.guid = gcode_arc_converter::PyUnicode_SafeAsString(py_guid);
+
+	// Extract the source file path
+	PyObject* py_source_path =  PyDict_GetItemString(py_args, "source_path");
+	if (py_source_path == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve the source_path parameter from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.source_path = gcode_arc_converter::PyUnicode_SafeAsString(py_source_path);
 
 	// Extract the target file path
-	PyObject* py_target_file_path = PyDict_GetItemString(py_args, "target_file_path");
-	if (py_target_file_path == NULL)
+	PyObject* py_target_path = PyDict_GetItemString(py_args, "target_path");
+	if (py_target_path == NULL)
 	{
-		std::string message = "ParseArgs - Unable to retrieve the target_file_path parameter from the args.";
+		std::string message = "ParseArgs - Unable to retrieve the target_path parameter from the args.";
 		p_py_logger->log_exception(GCODE_CONVERSION, message);
 		return false;
 	}
-	args.target_file_path = gcode_arc_converter::PyUnicode_SafeAsString(py_target_file_path);
+	args.target_path = gcode_arc_converter::PyUnicode_SafeAsString(py_target_path);
 
 	// Extract the resolution in millimeters
 	PyObject* py_resolution_mm = PyDict_GetItemString(py_args, "resolution_mm");

@@ -43,8 +43,9 @@ extern "C"
 
 struct py_gcode_arc_args {
 	py_gcode_arc_args() {
-		source_file_path = "";
-		target_file_path = "";
+		guid = "";
+		source_path = "";
+		target_path = "";
 		resolution_mm = DEFAULT_RESOLUTION_MM;
 		path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT;
 		max_radius_mm = DEFAULT_MAX_RADIUS_MM;
@@ -52,24 +53,27 @@ struct py_gcode_arc_args {
 		log_level = 0;
 	}
 	py_gcode_arc_args(
-		std::string source_file_path_, 
-		std::string target_file_path_, 
+		std::string guid_,
+		std::string source_path_, 
+		std::string target_path_, 
 		double resolution_mm_, 
 		double path_tolerance_percent_,
 		double max_radius_mm_,
 		bool g90_g91_influences_extruder_, 
 		int log_level_
 	) {
-		source_file_path = source_file_path_;
-		target_file_path = target_file_path_;
+		guid = guid_;
+		source_path = source_path_;
+		target_path = target_path_;
 		resolution_mm = resolution_mm_;
 		path_tolerance_percent = path_tolerance_percent_;
 		max_radius_mm = max_radius_mm_;
 		g90_g91_influences_extruder = g90_g91_influences_extruder_;
 		log_level = log_level_;
 	}
-	std::string source_file_path;
-	std::string target_file_path;
+	std::string guid;
+	std::string source_path;
+	std::string target_path;
 	double resolution_mm;
 	double path_tolerance_percent;
 	bool g90_g91_influences_extruder;

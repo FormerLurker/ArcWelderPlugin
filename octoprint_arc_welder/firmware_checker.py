@@ -25,6 +25,8 @@
 # following email address: FormerLurker@pm.me
 ##################################################################################
 from __future__ import unicode_literals
+import requests
+import uuid
 import threading
 import re
 import json
@@ -32,6 +34,7 @@ import os
 import shutil
 from datetime import datetime
 from pkg_resources import parse_version
+import octoprint_arc_welder.utilities as utilities
 import octoprint_arc_welder.log as log
 
 logging_configurator = log.LoggingConfigurator("arc_welder", "arc_welder.", "octoprint_arc_welder.")
@@ -45,12 +48,17 @@ class FirmwareChecker:
     DEFAULT_TIMEOUT_MS = 600000  # 1 minute
     ARCWELDER_TAG = 'arc_welder'
     FIRMWARE_TYPES_JSON_PATH = ["firmware", "types.json"]
+    FIRMWARE_DOCS_PAATH = ["static", "docs", "help"]
     FIRMWARE_TYPES_DEFAULT_JSON_PATH = ["data", "firmware", "types_default.json"]
     CURRENT_FIRMWARE_JSON_PATH = ["firmware", "current.json"]
 
-    def __init__(self, printer, base_folder, data_directory, request_complete_callback, load_defaults=False):
+    def __init__(self, plugin_version, printer, base_folder, data_directory, request_complete_callback, load_defaults=False):
+        self._plugin_version = plugin_version
         self._firmware_types_default_path = os.path.join(
             base_folder, *self.FIRMWARE_TYPES_DEFAULT_JSON_PATH
+        )
+        self._firmware_docs_path = os.path.join(
+            base_folder, *self.FIRMWARE_DOCS_PAATH
         )
         self._firmware_types_path = os.path.join(
             data_directory, *self.FIRMWARE_TYPES_JSON_PATH
@@ -63,10 +71,9 @@ class FirmwareChecker:
         self._request_complete_callback = request_complete_callback
         # the types of firmware we will be looking for
         # load from the /data/firmware/types.json or /data/firmware/types_default.json path
-        self._firmware_types = self._load_firmware_types(load_defaults)
+        self._firmware_types_version = None
+        self._firmware_types = {"version": None, "types": {}}
 
-        # Create a flag to show that we are checking firmware
-        self._is_checking = False
         # Create an rlock for any shared variables
         self._shared_data_rlock = threading.RLock()
 
@@ -83,28 +90,51 @@ class FirmwareChecker:
         self._request_lock = threading.Lock()
         # The most recent firmware version check
         self._current_firmware_info = None
+        # Create a flag to show that we are checking firmware
+        self._is_checking = False
+
+        # load the current firmware types file
+        self._load_firmware_types(False)
+
+        # check for updates
+        # this will also load default firmware types if the update fails
+        self.check_for_updates()
+
         # Load the most recent firmware info if it exists.
         self._load_current_firmware_info()
 
     def _load_firmware_types(self, load_defaults):
         logger.info("Loading firmware types from: %s", self._firmware_types_path)
+        types = None
         if not load_defaults:
             try:
                 with open(self._firmware_types_path) as f:
-                    return json.load(f)
+                    types = json.load(f)
             except (IOError, OSError) as e:
-                logger.info("The firmwware types file does not exist.  Creating from defaults.")
+                logger.info("The firmware types file does not exist.  Creating from defaults.")
             except ValueError as e:
                 logger.error("Could not parse the firmware types file.  Recreating from the defaults.")
-
-        # The firmware types file either does not exist, or it is corrupt.  Recreate from the defaults
-        if not os.path.exists(os.path.dirname(self._firmware_types_path)):
-            firmware_types_directory = os.path.dirname(self._firmware_types_path)
-            logger.info("Creating firmware types folder at: %s", firmware_types_directory)
-            os.makedirs(firmware_types_directory)
-        shutil.copy(self._firmware_types_default_path, self._firmware_types_path)
-        with open(self._firmware_types_path) as f:
-            return json.load(f)
+        if not types:
+            # The firmware types file either does not exist, or it is corrupt.  Recreate from the defaults
+            if not os.path.exists(os.path.dirname(self._firmware_types_path)):
+                firmware_types_directory = os.path.dirname(self._firmware_types_path)
+                logger.info("Creating firmware types folder at: %s", firmware_types_directory)
+                os.makedirs(firmware_types_directory)
+            shutil.copy(self._firmware_types_default_path, self._firmware_types_path)
+            with open(self._firmware_types_path) as f:
+                types = json.load(f)
+        if types:
+            self._firmware_types_version = types["version"]
+            self._firmware_types = types["types"]
+            # compile all regex functions
+            for firmware_key in self._firmware_types:
+                firmware_type = self._firmware_types[firmware_key]
+                functions = firmware_type.get("functions", {})
+                for function_key in functions:
+                    function = functions[function_key]
+                    if isinstance(function, dict):
+                        function["regex"] = re.compile(function.get("regex", ""))
+        return types
 
     def _load_current_firmware_info(self):
         if not os.path.isfile(self._current_firmware_path):
@@ -133,6 +163,45 @@ class FirmwareChecker:
         except ValueError as e:
             logger.exception("Error saving current firmware to '%s': Could not convert to JSON.", self._current_firmware_path)
 
+    def check_for_updates(self):
+        result = {
+            "success": False,
+            "error": None,
+            "new_version": None
+        }
+        with self._shared_data_rlock:
+            if self._is_checking:
+                result["error"] = "A firmware check is underway, cannot check for updates"
+                return result
+            # set flag that we are checking for updates
+            self._is_checking = True
+            logger.info("Checking for firmware info updates.  Current version: %s", self._firmware_types_version)
+            try:
+                update_result = FirmwareFileUpdater.update_firmware_info(
+                    self._plugin_version,
+                    self._firmware_types_version,
+                    self._firmware_types_path,
+                    self._firmware_docs_path
+                )
+            except FirmwareFileUpdaterError as e:
+                result["error"] = e.message
+            except Exception as E:
+                logger.exception("an unknown exception occurred while checking for firmware info updates.")
+                result["error"] = "An unexpected exception occurred while checking for firmware updates.  See plugin.arcwelder.log for details."
+            if update_result["success"]:
+                result["new_version"] = update_result["new_version"]
+                result["success"] = True
+            else:
+                result["error"] = update_result["error"]
+            # load the retrieved firmware info, or load defaults if none exist.
+            self._load_firmware_types(False)
+
+            # set flag that we are no longer checking for updates
+            self._is_checking = False
+        if result["success"]:
+            logger.info("Firmware completed successfully. Updated to version: %s", self._firmware_types_version)
+        return result
+
     # properties
     @property
     def _is_printing(self):
@@ -155,6 +224,9 @@ class FirmwareChecker:
             "recommended": None,
             "notes": None,
             "previous_notes": None,
+            "type_help_file": None,
+            "version_help_file": None,
+            "previous_version_help_file": None,
             "error": None,
             "m115_response": response_lines,
             "m115_parsed_response": None,
@@ -205,32 +277,57 @@ class FirmwareChecker:
             # get the firmware type
             firmware = self._firmware_types[firmware_key]
             # get the check function name
-            is_firmware_type_name = firmware["functions"]["is_firmware_type"]
-            # get the check firmware function
-            is_firmware_type = getattr(self, is_firmware_type_name, None)
-            if not is_firmware_type:
-                # the check firmware function does not exist!
-                logger.error(
-                    "Could not find the check firmware function '%s'.  You may be running an old version.",
-                     is_firmware_type_name
-                )
-                continue
-            if is_firmware_type(parsed_response):
+            if self._is_firmware_type(result, firmware):
                 result["type"] = firmware_key
                 firmware_type = firmware
                 break
+            # is_firmware_type_info = firmware["functions"]["is_firmware_type"]
+            # is_regex = False
+            # if isinstance(is_firmware_type_info, dict):
+            #     is_regex = True
+            #     regex = is_firmware_type_info["regex"]
+            #     regex_key = is_firmware_type_info.get("key", None)
+            #     # this is a regex function
+            # else:
+            #     # get the check firmware function
+            #     is_firmware_type = getattr(self, is_firmware_type_info, None)
+            #
+            # if not is_firmware_type:
+            #     # the check firmware function does not exist!
+            #     logger.error(
+            #         "Could not find the check firmware function '%s'.  You may be running an old version.",
+            #          is_firmware_type_info
+            #     )
+            #     continue
+            #
+            # if not is_regex and is_firmware_type(parsed_response):
+            #     result["type"] = firmware_key
+            #     firmware_type = firmware
+            #     break
+            #
+            # elif is_regex and FirmwareChecker.get_regex_check(result, regex, regex_key):
+            #
+            #     break
 
         if not firmware_type:
             error = "Arc Welder does not recognize this firmware."
             return result
+        # Get the help file for this firmware type
+        result["type_help_file"] = firmware["help_file"]
 
         get_version_function_name = firmware["functions"]["get_version"]
 
         # get the check firmware function if we've not already found one
         if not firmware_version:
-            get_version = getattr(self, get_version_function_name, None)
-            firmware_version = get_version(parsed_response)
+            firmware_version = self._get_firmware_version_match(result, firmware)
             result["version"] = firmware_version
+            # get_version = getattr(self, get_version_function_name, None)
+            # firmware_version = get_version(parsed_response)
+            # result["version"] = firmware_version
+
+        # call any custom arcs_enabled function
+        if result.get("arcs_enabled", None) is None:
+            result["arcs_enabled"] = self._get_arcs_enabled_match(result, firmware)
 
         version_compare_type = firmware_type.get("version_compare_type", "semantic")
 
@@ -265,11 +362,114 @@ class FirmwareChecker:
                 if result["g2_g3_supported"] is None:
                     result["g2_g3_supported"] = version_info.get("g2_g3_supported", None)
                 result["notes"] = version_info.get("notes", None)
+                result["version_help_file"] = version_info.get("help_file", None)
                 if result["is_future"] and index > 0:
                     result["previous_notes"] = firmware_type["versions"][index-1].get("notes", None)
+                    result["previous_version_help_file"] = version_info.get("help_file", None)
                 break
 
         return result
+
+    def _is_firmware_type(self, firmware_check_result, firmware_type):
+        is_firmware_type_info = firmware_type.get("functions", {}).get("is_firmware_type", None)
+        if not is_firmware_type_info:
+            logger.error(
+                "Could not find is_firmware_type in firmware/types.json for %s",
+                firmware_type.get("name", "unknown firmware")
+            )
+            return False
+        parsed_response = firmware_check_result.get("m115_parsed_response", None)
+        is_regex = False
+        if isinstance(is_firmware_type_info, dict):
+            is_regex = True
+            regex = is_firmware_type_info.get("regex", None)
+            regex_key = is_firmware_type_info.get("key", None)
+        else:
+            # get the check firmware function
+            is_firmware_type = getattr(self, is_firmware_type_info, None)
+            if not is_firmware_type:
+                # the check firmware function does not exist!
+                logger.error(
+                    "Could not find the check firmware function '%s'.  You may be running an old version.",
+                    is_firmware_type_info
+                )
+                return False
+        if not is_regex and parsed_response and is_firmware_type(parsed_response):
+            return True
+        elif is_regex and regex and FirmwareChecker.get_regex_check(
+                firmware_check_result, regex, regex_key
+        ):
+            return True
+        return False
+
+    def _get_firmware_version_match(self, firmware_check_result, firmware_type):
+        get_version_info = firmware_type.get("functions", {}).get("get_version", None)
+        parsed_response = firmware_check_result.get("m115_parsed_response", None)
+        is_regex = False
+        if isinstance(get_version_info, dict):
+            is_regex = True
+            regex = get_version_info.get("regex", None)
+            regex_key = get_version_info.get("key", None)
+        else:
+            # get the check firmware function
+            get_version_info = getattr(self, get_version_info, None)
+            if not get_version_info:
+                # the check firmware function does not exist!
+                logger.error(
+                    "Could not find the get_version firmware function '%s'.  You may be running an old version.",
+                    get_version_info
+                )
+                return False
+        if not is_regex and parsed_response:
+            return get_version_info(parsed_response)
+        elif is_regex and regex:
+            return FirmwareChecker.get_regex_match(firmware_check_result, regex, regex_key)
+        return False
+
+    def _get_arcs_enabled_match(self, firmware_check_result, firmware_type):
+        get_arcs_enabled_info = firmware_type.get("functions", {}).get("arcs_enabled", None)
+        get_arcs_not_enabled_info = firmware_type.get("functions", {}).get("arcs_not_enabled", None)
+        parsed_response = firmware_check_result.get("m115_parsed_response", None)
+        is_regex = False
+        arcs_enabled = None
+        arcs_not_enabled = None
+        # Check Arcs Enabled
+        if get_arcs_not_enabled_info:
+            if isinstance(get_arcs_enabled_info, dict):
+                is_regex = True
+                regex = get_arcs_enabled_info.get("regex", None)
+                regex_key = get_arcs_enabled_info.get("key", None)
+            else:
+                # check the arcs_enabled function
+                get_arcs_enabled = getattr(self, get_arcs_enabled_info, None)
+
+            if not is_regex and parsed_response and get_arcs_enabled:
+                arcs_enabled = get_arcs_enabled(parsed_response)
+            elif is_regex and regex:
+                arcs_enabled = FirmwareChecker.get_regex_check(firmware_check_result, regex, regex_key)
+
+            if arcs_enabled:
+                return True
+
+        # check arcs not enabled
+        if get_arcs_not_enabled_info:
+            if isinstance(get_arcs_not_enabled_info, dict):
+                is_regex = True
+                regex = get_arcs_not_enabled_info.get("regex", None)
+                regex_key = get_arcs_not_enabled_info.get("key", None)
+            else:
+                # check the arcs_enabled function
+                get_arcs_not_enabled = getattr(self, get_arcs_not_enabled_info, None)
+
+            if not is_regex and parsed_response and get_arcs_not_enabled:
+                arcs_not_enabled = get_arcs_not_enabled(parsed_response)
+            elif is_regex and regex:
+                arcs_not_enabled = FirmwareChecker.get_regex_check(firmware_check_result, regex, regex_key)
+
+            if arcs_not_enabled:
+                return False
+
+        return None
 
     @staticmethod
     def _try_extract_arcs_enabled(parsed_m115_response):
@@ -290,77 +490,7 @@ class FirmwareChecker:
                 current_version_string = clean_version(current_version_string)
             current_value = parse_version(current_version_string)
 
-        if current_value is None:
-            # either we have no version info, or parsing failed
-            return False
-
-        for version_check in [x.strip() for x in version_checks.split(",")]:
-            # see if this is a single or two character compare (they all end with =)
-            # then get the logical operator and the value to compare
-            if len(version_check) > 1 and version_check[1] == "=":
-                logical_operator = version_check[0:2]
-                compare_string = version_check[2:]
-            else:
-                logical_operator = version_check[0:1]
-                compare_string = version_check[1:]
-
-            # make sure we have something to compare and a method of comparison.
-            if not compare_string:
-                logger.error("No value to compare in version check '%s'", version_check)
-                return False
-            if logical_operator not in ["<=", ">=", "!=", ">", "<", "="]:
-                logger.error("Unknown logical operation '%s' in version check '%s'", logical_operator, version_check)
-                return False
-
-            # Convert the compare string to something we can use logical operators on
-            if compare_type == "date":
-                # parse the date into a datetime
-                compare_value = FirmwareChecker.parse_datetime(compare_string)
-            elif compare_type == "semantic":
-                # parse the version number
-                compare_value = parse_version(compare_string)
-            else:
-                # this shouldn't happen, but handle it gracefully in case there are typos
-                logger.error(
-                    "Unknown compare type '%s' for the version check '%s'.",
-                    compare_type,
-                    version_check
-                )
-
-            if compare_value is None:
-                # this shouldn't happen, but typos occur.  Handle them gracefully
-                logger.error(
-                    "Could not parse the compare value '%s' via the %s compare type.",
-                    compare_string,
-                    compare_type
-                )
-                continue
-
-            # see what kind of compare we will do
-            # test the longest ones first
-            # Note that we've already validated the logical operator
-            if logical_operator == "<=":
-                if current_value <= compare_value:
-                    continue
-            elif logical_operator == ">=":
-                if current_value >= compare_value:
-                    continue
-            elif logical_operator == "!=":
-                if current_value != compare_value:
-                    continue
-            elif logical_operator == ">":
-                if current_value > compare_value:
-                    continue
-            elif logical_operator == "<":
-                if current_value < compare_value:
-                    continue
-            elif logical_operator == "=":
-                if current_value == compare_value:
-                    continue
-            # either there is an unknown logical operator, or the compare failed
-            return False
-        # all checks have passed, this is the right version
-        return True
+        return utilities.is_version_in_versions(current_version_string, version_checks, compare_type)
 
     @staticmethod
     def parse_datetime(datetime_string):
@@ -374,6 +504,37 @@ class FirmwareChecker:
             except ValueError:
                 pass
         return None
+
+    ################
+    # Regex dynamic matching functions
+    ################
+    @staticmethod
+    def get_firmware_regex_string(firmware_info, key=None):
+        match_text = None
+        if key is not None:
+            match_text = firmware_info.get("m115_parsed_response", {}).get(key, None)
+        else:
+            match_text = firmware_info.get("m115_response", None)
+            if isinstance(match_text, list):
+                match_text = "\n".join(match_text)
+        return match_text
+
+    @staticmethod
+    def get_regex_match(firmware_info, compiled_regex, key=None):
+        match_text = FirmwareChecker.get_firmware_regex_string(firmware_info, key)
+        if match_text is None:
+            return False
+        result = compiled_regex.match(match_text)
+        if result:
+            return result.group(1)
+        return False
+
+    @staticmethod
+    def get_regex_check(firmware_info, compiled_regex, key=None):
+        match_text = FirmwareChecker.get_firmware_regex_string(firmware_info, key)
+        if match_text is None:
+            return False
+        return compiled_regex.search(match_text)
 
     ################
     # Dynamically called static functions for specific firmware
@@ -577,7 +738,13 @@ class FirmwareChecker:
         with self._shared_data_rlock:
             return self._is_checking
 
-    def get_current_firmware(self):
+    @property
+    def firmware_types_version(self):
+        with self._shared_data_rlock:
+            return self._firmware_types_version
+
+    @property
+    def current_firmware_info(self):
         with self._shared_data_rlock:
             return self._current_firmware_info
 
@@ -859,6 +1026,7 @@ class FirmwareChecker:
         # ALWAYS return the line
         return line
 
+
 class PrinterRequest:
     def __init__(
             self, name, commands, check_response_function, check_sent_function=None, wait_for_ok=False,
@@ -885,6 +1053,204 @@ class PrinterRequest:
 
     def check_response(self, response_string):
         return self.check_response_function(response_string) or False
+
+
+class FirmwareFileUpdater:
+
+    @staticmethod
+    def update_firmware_info(plugin_vesrion, settings_version, firmware_types_path, firmware_docs_path):
+        logger.info("Updating firmware info from server.")
+        results = {
+            "success": False,
+            "warning": None,
+            "error": None,
+            "error_type": None,
+            "cause": None,
+            "new_version": False
+        }
+        # first get the available firmware versions
+        try:
+            version_info = FirmwareFileUpdater._get_best_settings_version(plugin_vesrion, settings_version)
+        except FirmwareFileUpdaterError as e:
+            logger.exception("An error occurred getting the best settings version.")
+            results.error = e.message
+            return results
+        if version_info is None:
+            results["success"] = True
+            return results
+
+        logger.info("A newer version (%s) is available.  Loading version info.", version_info["version"])
+
+        try:
+            firmware_types = FirmwareFileUpdater._get_firmware_types_for_version(version_info)
+        except FirmwareFileUpdaterError as e:
+            results["error"] = "Could not find the firmware type file for version {0}".format(
+                version_info["version"]
+            )
+            logger.exception(results["error"])
+            return results
+
+        logger.info("Retrieved firmware types file version %s.", firmware_types["version"])
+        try:
+            version_docs = FirmwareFileUpdater._get_docs_for_version(version_info, firmware_types)
+        except FirmwareFileUpdaterError as e:
+            results["error"] = "Could not find documents for version {0}".format(
+                version_info["version"])
+            logger.exception(results["error"])
+            return results
+        logger.info("Fetched %d firmware help files.", len(version_docs))
+
+        # make sure the firmware types path exists
+        if not os.path.exists(os.path.dirname(firmware_types_path)):
+            firmware_types_directory = os.path.dirname(firmware_types_path)
+            logger.info("Creating firmware types folder at: %s", firmware_types_directory)
+            os.makedirs(firmware_types_directory)
+
+        # save the firmware types
+        with open(firmware_types_path, 'w') as firmware_type_file:
+            firmware_type_file.write(json.dumps(firmware_types, sort_keys=True, indent=4))
+
+        # save the docs to the static folder, with overwrite
+        for document in version_docs:
+            with open(os.path.join(firmware_docs_path, document["name"]), 'w') as firmware_type_file:
+                firmware_type_file.write(document["data"])
+
+        results["new_version"] = firmware_types["version"]
+        results["success"] = "True"
+        return results
+
+    @staticmethod
+    def _get_best_settings_version(plugin_version, current_version):
+        # load the available versions for the current settings version.  This number will be incremented as the
+        # settings change enough to not be backwards compatible
+        versions = FirmwareFileUpdater._get_versions()["versions"]
+        if not versions:
+            return None
+        versions = sorted(versions, key=lambda k: parse_version(k['version']), reverse=True)
+        settings_version = None
+        for version_info in versions:
+            # make sure the settings plugin version is good.
+            if (
+                    "plugin_compatibility" in version_info and
+                    not utilities.is_version_in_versions(plugin_version, version_info["plugin_compatibility"])
+             ):
+                continue
+            if parse_version(str(version_info["version"])) >= parse_version(str(current_version)):
+                # found a version!  Normally, this will be the first entry that passes the
+                # plugin compatibility test, but there could be some oddballs
+                settings_version = version_info
+                break
+            elif parse_version(str(version_info["version"])) < parse_version(str(current_version)):
+                # this version is OLDER than the current version, exit.
+                break
+
+        if settings_version and parse_version(settings_version["version"]) == parse_version(current_version):
+            return None
+        return settings_version
+
+    @staticmethod
+    def _get_versions():
+        try:
+            # load the available versions
+            r = requests.get(
+                (
+                    "https://raw.githubusercontent.com/FormerLurker/ArcWelderPluginFirmwareInfo/main/versions.json"
+                    "?nonce={0}".format(uuid.uuid4().hex)
+                ),
+                timeout=float(10)
+            )
+            r.raise_for_status()
+        except (
+                requests.exceptions.HTTPError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.ConnectTimeout
+        ) as e:
+            message = "An error occurred while retrieving firmware types versions from the server."
+            raise FirmwareFileUpdaterError('profiles-retrieval-error', message, cause=e)
+        if 'content-length' in r.headers and r.headers["content-length"] == 0:
+            message = "No Octolapse version data was returned while requesting profiles"
+            raise FirmwareFileUpdaterError('no-data', message)
+        # if we're here, we've had great success!
+        return r.json()
+
+    @staticmethod
+    def _get_url_for_version(version_info):
+        # build up keys string
+        return (
+            "https://raw.githubusercontent.com/FormerLurker/ArcWelderPluginFirmwareInfo/main/{0}/types.json?nonce={1}"
+                .format(version_info["version_folder"], uuid.uuid4().hex)
+        )
+
+    @staticmethod
+    def _get_firmware_types_for_version(version_info):
+        url = FirmwareFileUpdater._get_url_for_version(version_info)
+        r = requests.get(url, timeout=float(5))
+        if r.status_code != requests.codes.ok:
+            message = (
+                "An invalid status code or {0} was returned while getting available firmware versions at {1}."
+                    .format(r.status_code, url)
+            )
+            raise FirmwareFileUpdaterError('invalid-status-code', message)
+        if 'content-length' in r.headers and r.headers["content-length"] == 0:
+            message = "No profile data was returned for a request at {0}.".format(url)
+            raise FirmwareFileUpdaterError('no-data', message)
+        # if we're here, we've had great success!
+        return r.json()
+
+    @staticmethod
+    def _get_url_for_document(version_info, doc_name):
+        # build up keys string
+        return (
+            "https://raw.githubusercontent.com/FormerLurker/ArcWelderPluginFirmwareInfo/main/{0}/docs/{1}?nonce={2}"
+                .format(version_info["version_folder"], doc_name, uuid.uuid4().hex)
+        )
+
+    @staticmethod
+    def _get_docs_for_version(version_info, firmware_types):
+        document_names = []
+        # iterate the firmware type and versions and extract all of the help file names
+        for firmware_type_key, firmware_type in firmware_types["types"].items():
+            if "help_file" in firmware_type:
+                document_names.append(firmware_type["help_file"])
+            for version in firmware_type["versions"]:
+                if "help_file" in version:
+                    document_names.append(version["help_file"])
+
+        # now download all the individual files
+        documents = []
+        for document_name in document_names:
+            url = FirmwareFileUpdater._get_url_for_document(version_info, document_name)
+            r = requests.get(url, timeout=float(5))
+            if r.status_code != requests.codes.ok:
+                message = (
+                    "An invalid status code or {0} was returned while getting available firmware document at {1}."
+                    .format(r.status_code, url)
+                )
+                logger.error(message)
+                continue
+            if 'content-length' in r.headers and r.headers["content-length"] == 0:
+                message = "No version document data was returned for a request at {0}.".format(url)
+                logger.error(message)
+                continue
+            # if we're here, we've had great success!
+            documents.append({
+                "name": document_name,
+                "data": r.content
+            })
+        return documents
+
+
+class FirmwareFileUpdaterError(Exception):
+    def __init__(self, error_type, message, cause=None):
+        super(FirmwareFileUpdaterError, self).__init__()
+        self.error_type = error_type
+        self.cause = cause if cause is not None else None
+        self.message = message
+
+    def __str__(self):
+        if self.cause is None:
+            return "{0}: {1}".format(self.error_type, self.message)
+        return "{0}: {1} - Inner Exception: {2}".format(self.error_type, self.message, "{}".format(self.cause))
 
 
 class PrintingException(Exception):

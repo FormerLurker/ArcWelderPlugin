@@ -22,13 +22,17 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "py_arc_welder.h"
 
-PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress)
+PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, std::string guid)
 {
 	std::string segment_statistics = progress.segment_statistics.str();
+	PyObject* pyGuid = gcode_arc_converter::PyUnicode_SafeFromString(guid);
+	if (pyGuid == NULL)
+		return NULL;
 	PyObject* pyMessage = gcode_arc_converter::PyUnicode_SafeFromString(segment_statistics);
 	if (pyMessage == NULL)
 		return NULL;
-	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i}",
+	double total_count_reduction_percent = progress.segment_statistics.get_total_count_reduction_percent();
+	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:f}",
 		"percent_complete",
 		progress.percent_complete,												//1
 		"seconds_elapsed",
@@ -60,7 +64,10 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress)
 		"source_file_total_count",
 		progress.segment_statistics.total_count_source,		//15
 		"target_file_total_count",
-		progress.segment_statistics.total_length_target	//16
+		progress.segment_statistics.total_count_target,   //16
+		"total_count_reduction_percent",
+		total_count_reduction_percent                     //17
+		
 	);
 
 	if (py_progress == NULL)
@@ -71,12 +78,13 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress)
 	// else it crashes in python 2.7.  Looking forward to retiring this backwards 
 	// compatible code...
 	PyDict_SetItemString(py_progress, "segment_statistics_text", pyMessage);
+	PyDict_SetItemString(py_progress, "guid", pyGuid);
 	return py_progress;
 }
 
 bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 {
-	PyObject* py_dict = py_arc_welder::build_py_progress(progress);
+	PyObject* py_dict = py_arc_welder::build_py_progress(progress, guid_);
 	if (py_dict == NULL)
 	{
 		return false;

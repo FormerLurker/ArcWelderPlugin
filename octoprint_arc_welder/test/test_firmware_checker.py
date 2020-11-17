@@ -72,7 +72,7 @@ class TestFirmwareChecker(unittest.TestCase):
 
         # Prusa Firmware >=1.0.0,<=3.9.1
         # try 1.0.0
-        firmware_guid = '1105400b-1e39-4540-a1bb-64cc2a28bbc7'
+        firmware_guid = 'a555c60b-3b6c-4c60-acf6-ed7eb68edc07'
         self.response = [
             "FIRMWARE_NAME:Prusa-Firmware 1.0.0 based on Marlin " \
             "FIRMWARE_URL:https://github.com/prusa3d/Prusa-Firmware PROTOCOL_VERSION:1.0 " \

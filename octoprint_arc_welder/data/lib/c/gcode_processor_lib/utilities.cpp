@@ -229,6 +229,15 @@ std::string utilities::center(std::string input, int width)
 	return std::string(left_padding, ' ') + input + std::string(right_padding, ' ');
 }
 
+double utilities::get_percent_change(int v1, int v2)
+{
+	if (v1 != 0)
+	{
+		return (((double)v2 - (double)v1) / (double)v1) * 100.0;
+	}
+	return 0;
+}
+
 std::string utilities::get_percent_change_string(int v1, int v2, int precision)
 {
 	std::stringstream format_stream;
@@ -247,7 +256,7 @@ std::string utilities::get_percent_change_string(int v1, int v2, int precision)
 	}
 	else
 	{
-		double percent_change = (((double)v2 - (double)v1) / (double)v1) * 100.0;
+		double percent_change = get_percent_change(v1, v2);
 		format_stream << std::fixed << std::setprecision(precision) << percent_change << "%";
 	}
 	return format_stream.str();

@@ -49,6 +49,7 @@ public:
 	static std::string trim(const std::string& s);
 	static std::istream& safe_get_line(std::istream& is, std::string& t);
 	static std::string center(std::string input, int width);
+	static double get_percent_change(int v1, int v2);
 	static std::string get_percent_change_string(int v1, int v2, int precision);
 
 	static int get_num_digits(int x);
