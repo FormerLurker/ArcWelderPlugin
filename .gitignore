@@ -10,3 +10,4 @@ dist
 .vs/
 *.zip
 /octoprint_arc_welder/data/firmware/types.json
+/octoprint_arc_welder/test/firmware/types.json

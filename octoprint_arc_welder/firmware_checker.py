@@ -133,6 +133,8 @@ class FirmwareChecker:
                 # we are using a dev version (1.0<version<1.1) that had an incomplete types file
                 # Reload the defaults
                 self._load_firmware_types(True)
+                return
+
             self._firmware_types_version = types["version"]
             self._firmware_types = types["types"]
             # compile all regex functions
