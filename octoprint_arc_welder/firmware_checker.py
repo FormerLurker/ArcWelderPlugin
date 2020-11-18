@@ -53,55 +53,60 @@ class FirmwareChecker:
     CURRENT_FIRMWARE_JSON_PATH = ["firmware", "current.json"]
 
     def __init__(self, plugin_version, printer, base_folder, data_directory, request_complete_callback, load_defaults=False):
-        self._plugin_version = plugin_version
-        self._firmware_types_default_path = os.path.join(
-            base_folder, *self.FIRMWARE_TYPES_DEFAULT_JSON_PATH
-        )
-        self._firmware_docs_path = os.path.join(
-            base_folder, *self.FIRMWARE_DOCS_PAATH
-        )
-        self._firmware_types_path = os.path.join(
-            data_directory, *self.FIRMWARE_TYPES_JSON_PATH
-        )
-        self._current_firmware_path = os.path.join(
-            data_directory, *self.CURRENT_FIRMWARE_JSON_PATH
-        )
-        self._printer = printer
+        try:
+            self._plugin_version = plugin_version
+            self._firmware_types_default_path = os.path.join(
+                base_folder, *self.FIRMWARE_TYPES_DEFAULT_JSON_PATH
+            )
+            self._firmware_docs_path = os.path.join(
+                base_folder, *self.FIRMWARE_DOCS_PAATH
+            )
+            self._firmware_types_path = os.path.join(
+                data_directory, *self.FIRMWARE_TYPES_JSON_PATH
+            )
+            self._current_firmware_path = os.path.join(
+                data_directory, *self.CURRENT_FIRMWARE_JSON_PATH
+            )
+            self._printer = printer
 
-        self._request_complete_callback = request_complete_callback
-        # the types of firmware we will be looking for
-        # load from the /data/firmware/types.json or /data/firmware/types_default.json path
-        self._firmware_types_version = None
-        self._firmware_types = {"version": None, "types": {}}
+            self._request_complete_callback = request_complete_callback
+            # the types of firmware we will be looking for
+            # load from the /data/firmware/types.json or /data/firmware/types_default.json path
+            self._firmware_types_version = None
+            self._firmware_types = {"version": None, "types": {}}
 
-        # Create an rlock for any shared variables
-        self._shared_data_rlock = threading.RLock()
+            # Create an rlock for any shared variables
+            self._shared_data_rlock = threading.RLock()
 
-        # create an event that can be used to query the printer and get a response
-        self._request_signal = threading.Event()
-        self._request_signal.set()
-        # variable for holding the most recent printer request and response
-        self._printer_request = None
-        self._printer_response = None
+            # create an event that can be used to query the printer and get a response
+            self._request_signal = threading.Event()
+            self._request_signal.set()
+            # variable for holding the most recent printer request and response
+            self._printer_request = None
+            self._printer_response = None
 
-        # We can only send one request at a time, create a lock for this
-        self._send_request_lock = threading.Lock()
-        # The request itself can only be modified by a single thread
-        self._request_lock = threading.Lock()
-        # The most recent firmware version check
-        self._current_firmware_info = None
-        # Create a flag to show that we are checking firmware
-        self._is_checking = False
+            # We can only send one request at a time, create a lock for this
+            self._send_request_lock = threading.Lock()
+            # The request itself can only be modified by a single thread
+            self._request_lock = threading.Lock()
+            # The most recent firmware version check
+            self._current_firmware_info = None
+            # Create a flag to show that we are checking firmware
+            self._is_checking = False
 
-        # load the current firmware types file
-        self._load_firmware_types(False)
+            # load the current firmware types file
+            self._load_firmware_types(False)
 
-        # check for updates
-        # this will also load default firmware types if the update fails
-        self.check_for_updates()
+            # check for updates
+            # this will also load default firmware types if the update fails
+            self.check_for_updates()
 
-        # Load the most recent firmware info if it exists.
-        self._load_current_firmware_info()
+            # Load the most recent firmware info if it exists.
+            self._load_current_firmware_info()
+        except Exception as e:
+            logger.exception("Unable to start the firmware checker.")
+            # throw the exception
+            raise e
 
     def _load_firmware_types(self, load_defaults):
         logger.info("Loading firmware types from: %s", self._firmware_types_path)
