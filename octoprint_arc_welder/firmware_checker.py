@@ -129,6 +129,10 @@ class FirmwareChecker:
             with open(self._firmware_types_path) as f:
                 types = json.load(f)
         if types:
+            if "version" not in types and not load_defaults:
+                # we are using a dev version (1.0<version<1.1) that had an incomplete types file
+                # Reload the defaults
+                self._load_firmware_types(True)
             self._firmware_types_version = types["version"]
             self._firmware_types = types["types"]
             # compile all regex functions

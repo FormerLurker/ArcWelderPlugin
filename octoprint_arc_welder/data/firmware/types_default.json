@@ -77,8 +77,7 @@
 		"Marlin": {
 			"functions": {
 				"is_firmware_type": "check_firmware_marlin",
-				"get_version": "get_version_marlin",
-				"arcs_enabled": "get_arcs_enabled_marlin"
+				"get_version": "get_version_marlin"
 			},
 			"version_compare_type": "semantic",
 			"help_file": "firmware_marlin.md",
@@ -217,6 +216,36 @@
 					"recommended": true,
 					"is_future": true,
 					"g2_g3_supported": true
+				}
+			]
+		},
+		"RegexFirmwareTest": {
+			"name": "Regex Firmware Test",
+			"functions": {
+				"is_firmware_type": {"regex":"^(?:\\s*)RegexFirmware(\\s*)", "key": "FIRMWARE_NAME"},
+				"get_version": {"regex":"^(?:\\s*)RegexFirmware(?:\\s*)([0-9A-Za-z\\.]+)", "key": "FIRMWARE_NAME"},
+				"get_date": {"regex":"^(?:\\s*)RegexFirmware(?:\\s*).*\\((.*)\\)", "key": "FIRMWARE_NAME"},
+				"arcs_enabled": {"regex":"(?i).*(HASARCS:1)"},
+				"arcs_not_enabled": {"regex":"\\s*(0)\\s*", "KEY": "HASARCS"}
+			},
+			"version_compare_type": "semantic",
+			"help_file": "firmware_regex_firmware_test.md",
+			"versions": [
+				{
+					"guid": "2c926d8d-b72c-419b-bf54-5d273b881cb8",
+					"version": "<=1.0.0",
+					"supported": true,
+					"recommended": true,
+					"g2_g3_supported": true,
+					"notes": "This is a test printer."
+				},
+				{
+					"guid": "2f6ebc41-055b-41d3-9f8c-f2e1d67f95d0",
+					"version": ">1.0.0",
+					"supported": true,
+					"recommended": true,
+					"g2_g3_supported": true,
+					"is_future": true
 				}
 			]
 		}
