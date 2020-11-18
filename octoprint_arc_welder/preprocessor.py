@@ -28,7 +28,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 import threading
 import ray
-from asyncio import Event
 import octoprint_arc_welder.utilities as utilities
 import octoprint_arc_welder.log as log
 import octoprint_arc_welder.ray_process as ray_process
