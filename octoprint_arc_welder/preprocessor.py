@@ -27,20 +27,27 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 import threading
-from multiprocessing import Process, Pipe
+import ray
+from asyncio import Event
 import octoprint_arc_welder.utilities as utilities
 import octoprint_arc_welder.log as log
+import octoprint_arc_welder.ray_process as ray_process
 import time
 import shutil
 import copy
 import os
 import uuid
-import PyArcWelder as converter # must import AFTER log, else this will fail to log and may crash
+
+# initialize ray
+if not ray.is_initialized():
+    ray.init(include_dashboard=False)
+
 from collections import deque
 try:
     import queue
 except ImportError:
     import Queue as queue
+
 
 
 logging_configurator = log.LoggingConfigurator("arc_welder", "arc_welder.", "octoprint_arc_welder.")
@@ -68,6 +75,7 @@ class PreProcessorWorker(threading.Thread):
         self._source_path = os.path.join(data_folder, "source.gcode")
         self._target_path = os.path.join(data_folder, "target.gcode")
         self._processing_file_path = None
+        self._progress_wait_time = 1
         self._idle_sleep_seconds = 2.5  # wait at most 2.5 seconds for a rendering job from the queue
         # holds incoming tasks that need to be added to the _task_deque
         self._incoming_task_queue = task_queue
@@ -269,8 +277,36 @@ class PreProcessorWorker(threading.Thread):
             # this is a bit ugly for python2+python3 compatibility
             processor_args = {}
             processor_args.update(task["processor_args"])
-            processor_args.update({"on_progress_received": self._progress_received, "guid": task["guid"]})
-            results = converter.ConvertFile(processor_args)
+            # old single process code
+            #processor_args.update({"on_progress_received": self._progress_received, "guid": task["guid"]})
+            # results = converter.ConvertFile(processor_args)
+
+            # new ray code
+            processor_args.update({"guid": task["guid"]})
+            # create a new ray process
+            process = ray_process.ArcWelderProcess.remote(processor_args)
+
+            # get the futures
+            future_process_file = process.process_file.remote()
+            # start processing
+            ray.get(future_process_file)
+            # busy loop while waiting for results
+            while True:
+                # wait for progress
+                future_progress = process.get_progress.remote()
+                progress = ray.get(future_progress)
+                if progress:
+                    if not self._progress_received(progress):
+                        # call the cancel function
+                        cancel_future = process.cancel.remote()
+                        # wait for a result
+                        ray.get(cancel_future)
+                elif progress is not None and not progress:
+                    # progress is false, but not none.  We are finished!
+                    break
+            # the results should be ready now, get them
+            results = ray.get(process.get_results.remote())
+
         except Exception as e:
             # It would be better to catch only specific errors here, but we will log them.  Any
             # unhandled errors that occur would shut down the worker thread until reboot.
@@ -290,7 +326,8 @@ class PreProcessorWorker(threading.Thread):
         # the progress payload will all be in bytes (str for python 2) format.
         # Make sure everything is in unicode (str for python3) because mixed encoding
         # messes with things.
-
+        if results is None:
+            results = {"success": False, "message": "No results were returned from the welding process."}
         encoded_results = utilities.dict_encode(results)
         encoded_results["source_name"] = source_name
         if encoded_results.get("is_cancelled", False):
@@ -360,6 +397,10 @@ class PreProcessorWorker(threading.Thread):
             return False
 
         return not is_cancelled
+
+
+
+
 
 
 

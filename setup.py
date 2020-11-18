@@ -79,7 +79,7 @@ plugin_url = "https://github.com/FormerLurker/ArcWelderPlugin"
 plugin_license = "AGPLv3"
 
 # Any additional requirements besides OctoPrint should be listed here
-plugin_requires = ["six", "OctoPrint>1.3.8", "setuptools>=6.0"]
+plugin_requires = ["six", "OctoPrint>1.3.8", "setuptools>=6.0", "ray>=1.0.1"]
 
 import octoprint.server
 
