@@ -678,16 +678,20 @@ class ArcWelderPlugin(
         processor_args = task["processor_args"]
         octoprint_args = task["octoprint_args"]
         source_name = octoprint_args["source_name"]
+        source_path = octoprint_args["source_path"]
         target_path = octoprint_args["target_path"]
         target_name = octoprint_args["target_name"]
 
         if self._get_is_printing(target_path):
             raise TargetFileSaveError("The source file will be overwritten, but it is currently printing, cannot overwrite.")
 
-        if self._overwrite_source_file:
+        if source_path == target_path:
             logger.info("Overwriting source file '%s' with the processed file '%s'.", source_name, target_name)
+            # first remove the source file
+            self._file_manager.remove_file(target_path)
         else:
             logger.info("Arc compression complete, creating a new gcode file: %s", target_name)
+
 
         new_file_object = octoprint.filemanager.util.DiskFileWrapper(
             target_name, processor_args["target_path"], move=True
@@ -849,7 +853,6 @@ class ArcWelderPlugin(
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
         self.send_preprocessing_tasks_update()
-
 
     def preprocessing_progress(self, progress, current_task):
         data = {
