@@ -296,7 +296,7 @@ arc_welder_results results;
 	{
 		// Sending final progress update message
 		p_logger_->log(logger_type_, VERBOSE, "Sending final progress update message.");
-		on_progress_(final_progress);
+		on_progress_(arc_welder_progress(final_progress));
 	}
 	p_logger_->log(logger_type_, DEBUG, "Processing complete, closing source and target file.");
 	output_file_.close();
