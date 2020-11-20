@@ -30,13 +30,14 @@ logger::logger(std::vector<std::string> names, std::vector<int> levels) {
 	logger_names_ = new std::string[static_cast<int>(num_loggers_)];
 	logger_levels_ = new int[static_cast<int>(num_loggers_)];
 	// this is slow due to the vectors, but it is trivial.  Could switch to an iterator
+	
 	for (int index = 0; index < num_loggers_; index++)
 	{
 		logger_names_[index] = names[index];
 		logger_levels_[index] = levels[index];
 	}
-	
 	set_log_level_by_value(NOSET);
+	
 }
 
 logger::~logger() {

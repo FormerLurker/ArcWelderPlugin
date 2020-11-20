@@ -25,7 +25,7 @@
 #pragma once
 #include <string>
 #include <limits>
-#define PI_DOUBLE 3.14159265358979323846
+#define PI_DOUBLE 3.14159265358979323846264338327950288
 
 #include <list> 
 #include "utilities.h"
@@ -109,7 +109,7 @@ struct circle {
 
 	static bool try_create_circle(const point &p1, const point &p2, const point &p3, const double max_radius, circle& new_circle);
 	
-	static bool try_create_circle(const array_list<point>& points, const double max_radius, const double resolutino_mm, circle& new_circle, bool check_middle_only=false);
+	static bool try_create_circle(const array_list<point>& points, const double max_radius, const double resolutino_mm, const int xyz_precision, bool allow_z_axis_changes, bool check_middle_only, circle& new_circle);
 
 	double get_radians(const point& p1, const point& p2) const;
 
@@ -117,10 +117,11 @@ struct circle {
 
 	point get_closest_point(const point& p) const;
 
-	bool is_over_deviation(const array_list<point>& points, const double resolution_mm);
+	bool is_over_deviation(const array_list<point>& points, const double resolution_mm, const int xyz_precision, const bool allow_z_axis_changes);
 };
 
 #define DEFAULT_RESOLUTION_MM 0.05
+#define DEFAULT_ALLOW_Z_AXIS_CHANGES false
 struct arc : circle
 {
 	arc() {
@@ -151,9 +152,33 @@ struct arc : circle
 	point start_point;
 	point end_point;
 	// Statis functions
-	static bool try_create_arc(const circle& c, const point& start_point, const point& mid_point, const point& end_point, arc& target_arc, double approximate_length, double resolution = DEFAULT_RESOLUTION_MM, double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT);
-	static bool try_create_arc(const circle& c, const array_list<point>& points, arc& target_arc, double approximate_length, double resolution = DEFAULT_RESOLUTION_MM, double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT);
-	static bool try_create_arc(const array_list<point>& points, arc& target_arc, double approximate_length, double max_radius = DEFAULT_MAX_RADIUS_MM, double resolution = DEFAULT_RESOLUTION_MM, double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT);
+	static bool try_create_arc(
+		const circle& c, 
+		const point& start_point, 
+		const point& mid_point, 
+		const point& end_point, 
+		arc& target_arc, 
+		double approximate_length, 
+		double resolution = DEFAULT_RESOLUTION_MM, 
+		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT, 
+		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES);
+	static bool try_create_arc(
+		const circle& c, 
+		const array_list<point>& points, 
+		arc& target_arc, 
+		double approximate_length, 
+		double resolution = DEFAULT_RESOLUTION_MM, 
+		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
+		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES);
+	static bool try_create_arc(
+		const array_list<point>& points, 
+		arc& target_arc, 
+		double approximate_length, 
+		double max_radius = DEFAULT_MAX_RADIUS_MM, 
+		double resolution = DEFAULT_RESOLUTION_MM, 
+		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
+		int xyz_precision = DEFAULT_XYZ_PRECISION,
+		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES);
 };
 double distance_from_segment(segment s, point p);
 

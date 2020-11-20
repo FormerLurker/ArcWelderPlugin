@@ -103,6 +103,17 @@
                                 </div>
                             </div>
                             <div class="control-group">
+                                <label class="control-label" for="arc_welder_allow_z_axis_changes"><strong>Allow Z-Axis Changes (for vase mode)</strong></label>
+                                <div class="controls">
+                                    <input class="input-text" type="checkbox"
+                                           id="arc_welder_allow_z_axis_changes"
+                                           data-bind="checked: plugin_settings().allow_z_axis_changes">
+                                    <a class="arc_welder_help" data-help-url="settings.allow_z_axis_changes.md"
+                                       data-help-title="Allow Z-Axis Changes (for vase mode)"></a><br/>
+                                    <span class="label label-important">WARNING</span> This setting is experimental, and not all firmware that supports arcs will support z axis changes.
+                                </div>
+                            </div>
+                            <div class="control-group">
                                 <label class="control-label" for="arc_welder_file_processing">
                                     <strong>File Processing Type</strong>
                                 </label>

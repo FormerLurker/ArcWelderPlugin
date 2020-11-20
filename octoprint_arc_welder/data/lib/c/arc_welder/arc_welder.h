@@ -407,7 +407,7 @@ struct arc_welder_results {
 	std::string message;
 	arc_welder_progress progress;
 };
-#define DEFAULT_GCODE_BUFFER_SIZE 100
+#define DEFAULT_GCODE_BUFFER_SIZE 1000
 #define DEFAULT_G90_G91_INFLUENCES_EXTRUDER false
 class arc_welder
 {
@@ -420,6 +420,7 @@ public:
 		double path_tolerance_percent,
 		double max_radius,
 		bool g90_g91_influences_extruder = DEFAULT_G90_G91_INFLUENCES_EXTRUDER,
+		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES,
 		int buffer_size = DEFAULT_GCODE_BUFFER_SIZE,
 		progress_callback callback = NULL);
 	void set_logger_type(int logger_type);
@@ -445,6 +446,7 @@ private:
 	std::string target_path_;
 	double resolution_mm_;
 	gcode_position_args gcode_position_args_;
+	bool allow_z_axis_changes_;
 	long file_size_;
 	int lines_processed_;
 	int gcodes_processed_;

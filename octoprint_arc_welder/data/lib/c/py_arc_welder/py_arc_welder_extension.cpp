@@ -148,7 +148,13 @@ extern "C" void initPyArcWelder(void)
 	std::vector<std::string> logger_names;
 	logger_names.push_back("arc_welder.gcode_conversion");
 	std::vector<int> logger_levels;
+	logger_levels.push_back(log_levels::NOSET);
+	logger_levels.push_back(log_levels::VERBOSE);
 	logger_levels.push_back(log_levels::DEBUG);
+	logger_levels.push_back(log_levels::INFO);
+	logger_levels.push_back(log_levels::WARNING);
+	logger_levels.push_back(log_levels::ERROR);
+	logger_levels.push_back(log_levels::CRITICAL);
 	p_py_logger = new py_logger(logger_names, logger_levels);
 	p_py_logger->initialize_loggers();
 	std::string message = "PyArcWelder V0.1.0rc1.dev2 imported - Copyright (C) 2019  Brad Hochgesang...";
@@ -190,7 +196,7 @@ extern "C"
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 
-		py_arc_welder arc_welder_obj(args.guid, args.source_path, args.target_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.g90_g91_influences_extruder, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
+		py_arc_welder arc_welder_obj(args.guid, args.source_path, args.target_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.g90_g91_influences_extruder, args.allow_z_axis_changes, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
 		arc_welder_results results = arc_welder_obj.process();
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
@@ -293,6 +299,17 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 	{
 		args.max_radius_mm = DEFAULT_MAX_RADIUS_MM; // Set to the default if no resolution is provided, or if it is less than 0.
 	}
+
+	// Extract Allow Z Axis Changes
+	// allow_z_axis_changes
+	PyObject* py_allow_z_axis_changes = PyDict_GetItemString(py_args, "allow_z_axis_changes");
+	if (py_allow_z_axis_changes == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve allow_z_axis_changes from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.allow_z_axis_changes = PyLong_AsLong(py_allow_z_axis_changes) > 0;
 
 	// Extract G90/G91 influences extruder
 	// g90_influences_extruder

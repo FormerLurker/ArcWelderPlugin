@@ -383,7 +383,8 @@ $(function () {
 
     ArcWelder.FILE_PROCESSING_OPTIONS = [
         {name:"All New Files", value: ArcWelder.PROCESS_OPTION_ALWAYS},
-        {name:"Direct Slicer Uploads", value: ArcWelder.PROCESS_OPTION_SLICER_UPLOADS},
+        // This option won't work at the moment.  Maybe in the future
+        // {name:"Direct Slicer Uploads", value: ArcWelder.PROCESS_OPTION_SLICER_UPLOADS},
         {name:"Manual Processing Only", value: ArcWelder.PROCESS_OPTION_MANUAL_ONLY},
     ];
     ArcWelder.SOURCE_FILE_DELETE_OPTIONS = [
@@ -392,7 +393,8 @@ $(function () {
     ];
     ArcWelder.PRINT_AFTER_PROCESSING_OPTIONS = [
         {name:"Always", value: ArcWelder.PROCESS_OPTION_ALWAYS},
-        {name:"After Slicer Upload", value: ArcWelder.PROCESS_OPTION_SLICER_UPLOADS},
+        // This option won't work ATM, maybe in the future.
+        //{name:"After Slicer Upload", value: ArcWelder.PROCESS_OPTION_SLICER_UPLOADS},
         {name:"After Manual Processing", value: ArcWelder.PROCESS_OPTION_MANUAL_ONLY},
         {name:"Disabled", value: ArcWelder.PROCESS_OPTION_DISABLED}
     ];

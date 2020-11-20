@@ -28,7 +28,8 @@
 #include <iomanip>
 #include <sstream>
 
-#define GCODE_CHAR_BUFFER_SIZE 100
+#define GCODE_CHAR_BUFFER_SIZE 1000
+
 class segmented_arc :
 	public segmented_shape
 {
@@ -39,7 +40,8 @@ public:
 		int max_segments = DEFAULT_MAX_SEGMENTS, 
 		double resolution_mm = DEFAULT_RESOLUTION_MM, 
 		double path_tolerance_percnet = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT, 
-		double max_radius_mm = DEFAULT_MAX_RADIUS_MM
+		double max_radius_mm = DEFAULT_MAX_RADIUS_MM ,
+		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES
 	);
 	virtual ~segmented_arc();
 	virtual bool try_add_point(point p, double e_relative);
@@ -57,5 +59,6 @@ private:
 	//circle arc_circle_;
 	arc current_arc_;
 	double max_radius_mm_;
+	bool allow_z_axis_changes_;
 };															
 

@@ -33,7 +33,8 @@
 
 segmented_arc::segmented_arc() : segmented_shape(DEFAULT_MIN_SEGMENTS, DEFAULT_MAX_SEGMENTS, DEFAULT_RESOLUTION_MM, ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT)
 {
-	
+	max_radius_mm_ = DEFAULT_MAX_RADIUS_MM;
+	allow_z_axis_changes_ = DEFAULT_ALLOW_Z_AXIS_CHANGES;
 }
 
 segmented_arc::segmented_arc(
@@ -41,12 +42,13 @@ segmented_arc::segmented_arc(
 	int max_segments, 
 	double resolution_mm, 
 	double path_tolerance_percent, 
-	double max_radius_mm
+	double max_radius_mm,
+	bool allow_z_axis_changes
 	) : segmented_shape(min_segments, max_segments, resolution_mm, path_tolerance_percent)
 {
 	if (max_radius_mm > DEFAULT_MAX_RADIUS_MM) max_radius_mm_ = DEFAULT_MAX_RADIUS_MM;
 	else max_radius_mm_ = max_radius_mm;
-
+	allow_z_axis_changes_ = allow_z_axis_changes;
 }
 
 segmented_arc::~segmented_arc()
@@ -97,20 +99,23 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 	if (points_.count() > 0)
 	{
 		point p1 = points_[points_.count() - 1];
-		distance = utilities::get_cartesian_distance(p1.x, p1.y, p.x, p.y);
-		if (!utilities::is_equal(p1.z, p.z))
-		{
-			// Arcs require that z is equal for all points
-			//std::cout << " failed - z change.\n";
-
-			return false;
+		if (allow_z_axis_changes_){
+			// If we can draw arcs in 3 space, add in the distance of the z axis changes
+			distance = utilities::get_cartesian_distance(p1.x, p1.y, p1.z, p.x, p.y, p.z);
 		}
-
+		else {
+			distance = utilities::get_cartesian_distance(p1.x, p1.y, p.x, p.y);
+			if (!utilities::is_equal(p1.z, p.z))
+			{
+				// Z axis changes aren't allowed
+				return false;
+			}
+		}
+		
 		if (utilities::is_zero(distance))
 		{
 			// there must be some distance between the points
 			// to make an arc.
-			//std::cout << " failed - no distance change.\n";
 			return false;
 		}
 		
@@ -150,11 +155,18 @@ bool segmented_arc::try_add_point(point p, double e_relative)
 	{
 		// If we haven't added a point, and we have exactly min_segments_,
 		// pull off the initial arc point and try again
+
 		point old_initial_point = points_.pop_front();
 		// We have to remove the distance and e relative value
 		// accumulated between the old arc start point and the new
 		point new_initial_point = points_[0];
-		original_shape_length_ -= utilities::get_cartesian_distance(old_initial_point.x, old_initial_point.y, new_initial_point.x, new_initial_point.y);
+		if (allow_z_axis_changes_) {
+			original_shape_length_ -= utilities::get_cartesian_distance(old_initial_point.x, old_initial_point.y, old_initial_point.z, new_initial_point.x, new_initial_point.y, new_initial_point.z);
+		}
+		else {
+			original_shape_length_ -= utilities::get_cartesian_distance(old_initial_point.x, old_initial_point.y, new_initial_point.x, new_initial_point.y);
+		}
+		
 		e_relative_ -= new_initial_point.e_relative;
 		//std::cout << " failed - removing start point and retrying current point.\n";
 		return try_add_point(p, e_relative);
@@ -177,7 +189,7 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
 	double previous_shape_length = original_shape_length_;
 	original_shape_length_ += pd;
 
-	if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_))
+	if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, xyz_precision_, allow_z_axis_changes_))
 	{
 		if (!is_shape())
 		{	
@@ -208,7 +220,7 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
 	
 	char buf[20];
 	std::string gcode;
-	
+
 	double i = current_arc_.center.x - current_arc_.start_point.x;
 	double j = current_arc_.center.y - current_arc_.start_point.y;
 	// Here is where the performance part kicks in (these are expensive calls) that makes things a bit ugly.
@@ -230,6 +242,19 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
 
 	gcode += " Y";
 	gcode += utilities::to_string(current_arc_.end_point.y, xyz_precision_, buf, false);
+
+	if (allow_z_axis_changes_)
+	{
+		// We may need to add a z coordinate
+		double z_initial = current_arc_.start_point.z;
+		double z_final = current_arc_.end_point.z;
+		if (!utilities::is_equal(z_initial, z_final, std::pow(10, -1 * xyz_precision_)))
+		{
+			// The z axis has changed within the precision of the gcode coordinates
+			gcode += " Z";
+			gcode += utilities::to_string(current_arc_.end_point.z, xyz_precision_, buf, false);
+		}
+	}
 
 	gcode += " I";
 	gcode += utilities::to_string(i, xyz_precision_, buf, false);

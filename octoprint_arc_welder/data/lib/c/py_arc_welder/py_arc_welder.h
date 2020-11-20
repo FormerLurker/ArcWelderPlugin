@@ -42,7 +42,8 @@ public:
 		double resolution_mm, 
 		double path_tolerance_percent,
 		double max_radius, 
-		bool g90_g91_influences_extruder, 
+		bool g90_g91_influences_extruder,
+		bool allow_z_axis_changes,
 		int buffer_size, 
 		PyObject* py_progress_callback
 		): arc_welder(
@@ -52,7 +53,8 @@ public:
 			resolution_mm, 
 			path_tolerance_percent,
 			max_radius, 
-			g90_g91_influences_extruder, 
+			g90_g91_influences_extruder,
+			allow_z_axis_changes,
 			buffer_size
   ){
 		guid_ = guid;

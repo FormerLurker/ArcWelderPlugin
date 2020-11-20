@@ -141,6 +141,7 @@ class ArcWelderPlugin(
         self.settings_default = dict(
             use_octoprint_settings=True,
             g90_g91_influences_extruder=False,
+            allow_z_axis_changes=False,
             resolution_mm=0.05,
             path_tolerance_percent=5.0,
             max_radius_mm=1000*1000,  # 1KM, pretty big :)
@@ -534,6 +535,12 @@ class ArcWelderPlugin(
         return g90_g91_influences_extruder
 
     @property
+    def _allow_z_axis_changes(self):
+        return self._settings.get_boolean(
+            ["allow_z_axis_changes"]
+        )
+
+    @property
     def _resolution_mm(self):
         resolution_mm = self._settings.get_float(["resolution_mm"])
         if resolution_mm is None:
@@ -615,7 +622,7 @@ class ArcWelderPlugin(
     def _print_after_processing(self):
         return self._settings.get(["feature_settings", "print_after_processing"])
 
-    def _get_process_file(self, is_slicer_upload, is_manual):
+    def _get_process_file(self, is_manual):
         if is_manual:
             # always process if manually triggered.
             return True
@@ -623,9 +630,10 @@ class ArcWelderPlugin(
         if setting == ArcWelderPlugin.PROCESS_OPTION_ALWAYS:
             # Always process if the 'always' option is selected
             return True
-        if setting == ArcWelderPlugin.PROCESS_OPTION_SLICER_UPLOADS and is_slicer_upload:
-            # process slicer uploads if the slicer option is selected
-            return True
+        # Can't do this yet, maybe later
+        #if setting == ArcWelderPlugin.PROCESS_OPTION_SLICER_UPLOADS and is_slicer_upload:
+        #    # process slicer uploads if the slicer option is selected
+        #    return True
         return False
 
     def _get_delete_source(self):
@@ -640,14 +648,15 @@ class ArcWelderPlugin(
             return True
         return False
 
-    def _get_print_after_processing(self, is_manual, is_slicer_upload):
+    def _get_print_after_processing(self, is_manual):
         setting = self._print_after_processing
         if setting == ArcWelderPlugin.PROCESS_OPTION_ALWAYS:
             return True
         if is_manual and setting == ArcWelderPlugin.PROCESS_OPTION_MANUAL_ONLY:
             return True
-        if is_slicer_upload and setting == ArcWelderPlugin.PROCESS_OPTION_SLICER_UPLOADS:
-            return True
+        # Reserve for a future version
+        #if is_slicer_upload and setting == ArcWelderPlugin.PROCESS_OPTION_SLICER_UPLOADS:
+        #    return True
         return False
 
     def get_output_file_name_and_path(self, storage_path, gcode_comment_settings):
@@ -945,7 +954,6 @@ class ArcWelderPlugin(
             else:
                 logger.exception("Unable to delete the source file at '%s'.  It is currently printing.", processor_args["source_path"])
 
-
         data = {
             "message_type": "preprocessing-success",
             "arc_welder_statistics": metadata,
@@ -1033,7 +1041,9 @@ class ArcWelderPlugin(
 
     def get_preprocessor_task(self, source_name, source_path, gcode_comment_settings, is_manual_request, metadata):
         # Start building up the feature settings, but override with any gcode comment settings
-        uploaded_by_slicer = gcode_comment_settings.get("slicer_upload_type", "") != ""
+
+        # This option doesn't work atm, maybe in the future
+        #uploaded_by_slicer = gcode_comment_settings.get("slicer_upload_type", "") != ""
         select_after_processing = self._get_select_after_processing(not is_manual_request)
         select_after_processing = gcode_comment_settings.get("SELECT", select_after_processing)
         delete_after_processing = self._get_delete_source()
@@ -1052,7 +1062,7 @@ class ArcWelderPlugin(
         print_after_processing = False
         if not self._get_is_printing():
             # first, get this value based on the settings
-            print_after_processing = self._get_print_after_processing(is_manual_request, uploaded_by_slicer)
+            print_after_processing = self._get_print_after_processing(is_manual_request)
             # now override if the WELD paramater is supplied within the gcode
             print_after_processing = gcode_comment_settings.get("WELD", print_after_processing)
         additional_metadata = self.get_additional_metadata(metadata)
@@ -1078,6 +1088,11 @@ class ArcWelderPlugin(
             logger.warning(
                 "The max radius mm of %0.2fmm is greater than the recommended max of 1000000mm (1km).", resolution_mm
             )
+
+        allow_z_axis_changes = gcode_comment_settings.get(
+            "allow_z_axis_changes", self._allow_z_axis_changes
+        )
+
         g90_g91_influences_extruder = gcode_comment_settings.get(
             "g90_g91_influences_extruder", self._g90_g91_influences_extruder
         )
@@ -1101,6 +1116,7 @@ class ArcWelderPlugin(
                 "path_tolerance_percent": path_tolerance_percent,
                 "max_radius_mm": max_radius_mm,
                 "g90_g91_influences_extruder": g90_g91_influences_extruder,
+                "allow_z_axis_changes": allow_z_axis_changes,
                 "log_level": self._gcode_conversion_log_level
             }
         }
@@ -1144,7 +1160,8 @@ class ArcWelderPlugin(
             path_on_disk,
             [
                 ArcWelderPlugin.SEARCH_FUNCTION_IS_WELDED,
-                ArcWelderPlugin.SEARCH_FUNCTION_CURA_UPLOAD,
+                # Can't do this yet.
+                # ArcWelderPlugin.SEARCH_FUNCTION_CURA_UPLOAD,
                 ArcWelderPlugin.SEARCH_FUNCTION_SETTINGS
             ]
         )
@@ -1167,12 +1184,13 @@ class ArcWelderPlugin(
                 return
             if "settings" in gcode_search_results:
                 gcode_comment_settings = gcode_search_results["settings"]
-            if "slicer_upload_type" in gcode_search_results:
-                is_slicer_upload = True
-                logger.info("Detected slicer upload via: %s", gcode_search_results["slicer_upload_type"])
+            # Save for later
+            #if "slicer_upload_type" in gcode_search_results:
+            #    is_slicer_upload = True
+            #    logger.info("Detected slicer upload via: %s", gcode_search_results["slicer_upload_type"])
         if not gcode_comment_settings.get("WELD", False):
             # If the gcode file is set to weld, we don't want to enforce any of this
-            if not self._get_process_file(is_slicer_upload, is_manual_request):
+            if not self._get_process_file(is_manual_request):
                 logger.debug("Cannot weld '%s', Welding is not enabled for uploaded files.", source_name)
                 # not set to auto process regularly uploaded file, exit
                 return
