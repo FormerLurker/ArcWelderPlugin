@@ -97,18 +97,16 @@ Note: You can combine prefixes and postfixes if you like.
   * *Disabled* - The source file will not be deleted.
 
 #### Printer Settings
-*Arc Welder* needs to know one property of your printer's firmware to guarantee accurate results in all slicers and with all start/end GCode: G90/G91 influences extruder.
+*Arc Welder* needs to know a few things about your printer's firmware to work properly.  It can also run some basic firmware tests to see if things are configured correctly.
 
-* **Use OctoPrint Settings** -  Octoprint has a setting for *G90/G91 influences extruder* in the *Features* tab.  Enabling *Use Octoprint Printer Settings* will cause *Arc Welder* to use OctoPrint's setting.  Default: Enabled
-* **G90/G91 Influence Extruder** - If *Use Octoprint Feature Settings* is unchecked, *Arc Welder* will use this setting to determine if the G90/G91 command influences your extruder's axis mode.  In general, Marlin 2.0 and forks should have this box checked.  Many forks of Marlin 1.x should have this unchecked, like the Prusa MK2 and MK3.  I will try to add a list of printers and the proper value for this setting at some point, as well as a GCode test script you can use to determine what setting to use.  Keep in mind that most slicers produce code that will work fine no matter what setting you choose here.  Default: Disabled
-
-*Arc welder* also has a nifty firmware checker (new in version 1.1) that can run some basic tests to see if arcs are supported and/or enabled.  It will display errors (arcs not enabled, firmware not supported) or warnings (arc generation has some issues) along with help files that should assist getting these issues solved.  The firmware library is updated from a separate github repository, so additional firmware info can be added without updating the *Arc Welder* plugin.  The plugin checks for updates each time OctoPrint boots.  Octoprint cannot check your firmware while printing.  The options here are:
-
+* **Use OctoPrint Settings** - Octoprint has a setting for *G90/G91 influences extruder* in the *Features* tab.  Enabling *Use Octoprint Printer Settings* will cause *Arc Welder* to use OctoPrint's setting.  Default: Enabled
+* **G90/G91 Influence Extruder** - If *Use Octoprint Feature Settings* is unchecked, *Arc Welder* will use this setting to determine if the G90/G91 command influences your extruder's axis mode.  This setting can be extremely important depending on your start gcode.  In general, Marlin 2.0 and forks should have this box checked.  Many forks of Marlin 1.x should have this unchecked, like the Prusa MK2 and MK3.  I will try to add a list of printers and the proper value for this setting at some point, as well as a GCode test script you can use to determine what setting to use.  Keep in mind that most slicers produce code that will work fine no matter what setting you choose here.  Default: Disabled
+* **Check Firmware** *Arc welder* also has a nifty firmware checker (new in version 1.1) that can run some basic tests to see if arcs are supported and/or enabled.  It will display errors (arcs not enabled, firmware not supported) or warnings (arc generation has some issues) along with help files that should assist getting these issues solved.  The firmware library is updated from a separate github repository, so additional firmware info can be added without updating the *Arc Welder* plugin.  The plugin checks for updates each time OctoPrint boots.  Octoprint cannot check your firmware while printing.  The options here are:
   * **Automatically When Printer Connects ** - *Arc Welder* will run a firmware check any time a printer connects to OctoPrint.
   * **Manual Only** - *Arc Welder* will only check your firmware when you manually click the *Check Firmware* button on the tab.
   * **Disabled** - No firmware checking will be done and the firmware section will be hidden on the tab.  This is useful if you know your firmware works fine, but *Arc Welder* reports possible problems.
-
-You can also check for updates to the firmware library by clicking on the *Check for Updates* button.  The current library version will display below the button.  Note that you cannot check for updates while offline.
+* **Firmware Library** - *Arc Welder* automatically checks for new firmware information when OctoPrint boots, but you can also check for updates to the firmware library by clicking on the *Check for Updates* button.  You must be online for this to work.
+* **Library Version** - This is just informational, and shows the current firmware library version.
 
 #### Tab Options
 
