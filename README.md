@@ -53,73 +53,74 @@ By default, Arc-Welder will automatically convert any newly added GCode files an
 
 You can also convert existing files from the file manager by clicking a new icon (compress icon - two arrows pointing towards each other) that will now be available within the file manager.  Note: You cannot convert files that have already been converted by *Arc Welder*!
 
-Once a file has been converted, the *Arc Welder* tab will show detailed statistics about the conversion, including before/after file sizes, compression information, before and after segment length statistics, and more.  You can view these statistics at any time by selecting a welded file or by clicking the statistics icon in the file manager.
+When a new file is queued, it will display within the collapsable *Processor Tasks* section within the *Arc Welder* tab.  You can cancel any queued tasks by clicking on the red X icon.  When the file begins processing, a progress bar will display along with a bunch of cool statistics about the conversion process.  If your file is marked for printing (see the *print after processing* setting below), a printer icon will appear next to it.  Don't worry, Arc Welder will not print any queued files if a print starts while it is processing or queued.  In fact, to protect your print, arc welder will automatically cancel and re-queue any files that are currently processing.  You can also cancel a file that is currently processing by clicking on the red X next to its name.
+
+Once a file has been converted, the *Arc Welder* tab will show detailed statistics within the tab about the conversion, including before/after file sizes, compression information, before and after segment length statistics, and more.  You can view these statistics at any time by selecting a welded file or by clicking the statistics icon in the file manager.
 
 ### Settings and Setup
 
-*Arc Welder* is pre-configured and will work with no settings changes for most people.  However, there are a few settings you may want to investigate (see the *Use Octoprint Settings* and *G90/G91 Influence Extruder* extruder settings in particular).  You can navigate to the settings either by navigating to the *Arc Welder* tab and clicking on the *Edit Settings* button or by opening the OctoPrint settings and finding the *Arc Welder* plugin in the left side menu.
+*Arc Welder* is pre-configured and will work with no settings changes for most people.  However, there are a few settings you may want to investigate (see the *Use OctoPrint Settings* and *G90/G91 Influence Extruder* extruder settings in particular).  You can navigate to the settings either by navigating to the *Arc Welder* tab and clicking on the *Edit Settings* button or by opening the OctoPrint settings and finding the *Arc Welder* plugin in the left side menu.
 
-#### Pre-Processor Settings
+#### Preprocessor Settings
 These settings control the main aspects of the plugin and how your GCode file will be compressed.
 
 * **Arc Welder Enabled** - Check or uncheck to enable or disable the plugin.  This prevents *Arc Welder* from converting any files and adding buttons to the file browser.  It will not remove the plugin from the tabs or settings pages.  If you want to truly disable *Arc Welder*, please do so in the plugin manager.
 * **Resolution in MM** - This setting controls how much play *Arc Welder* has in converting GCode points into arcs.  If the arc deviates from the original points by + or - 1/2 of the resolution, the points will **not** be converted.  The default setting is 0.05 which means the arcs may not deviate by more than +- 0.025mm (that's a **really** tiny deviation).  Increasing the resolution will result in more arcs being converted but will make the tool paths less accurate.  Decreasing the resolution will result in fewer arcs but more accurate tool paths.  I don't recommend going above 0.1MM.  Higher values than that may result in print failure.
 * **Path Tolerance %** - This feature controls the maximum allowable deviation in path length compared to the original length.  This setting can be higher than you'd expect (5% by default) especially for larger arcs due to the way the firmware implements arc interpolation.  However, future firmware versions may add corrections to the arc path to correct for a slight reduction in path length caused by inscribing the interpolated segments inside of the arc.  This setting would then be userful, at least until an extrusion correction factor can be added to the algorithm.
 * **Maximum Arc Radius** - This is a safety feature to prevent unusually large arcs from being generated.  Internally, *Arc Welder* uses a constant to prevent an arc with a very large radius from being generated where the path is essentially (but not exactly) a straight line.  If it is not perfectly straight and if my constant isn't conservative enough, an extremely large arc could be created that may have the wrong direction of rotation.  The default value works fine for all of the gCode I've tested (it is about 1/7th of the radius of the worst errant arc I've encountered).  If you discover that you need to adjust this setting because of errant arcs, please [create an issue](https://github.com/FormerLurker/ArcWelderPlugin/issues/new) and let me know!  The default setting is **1000000 mm** or **1KM**.
+* **Allow Z Axis Changes** - This is an experimental setting that allows you to use *Arc Welder* while printing in spiral vase mode.  Note that not all firmware that supports Arc commands (G2/G3) will also support z axis changes while printing arcs.  Use with caution.
 * **File Processing Type** - There are three options here:
-  * *Automatic Processing Only* - Newly uploaded files will be compressed automatically.
+  * *All New Files* - All files added to OctoPrint will be automatically converted.
   * *Manual Processing Only* - Convert files by clicking on the compress button in the file manager.  Files that are already compressed will have the compress button disabled.
-  * *Automatic and Manual Processing* - Newly uploaded files will automatically be converted **and** you will be able to compress files by clicking the compress button in the file manager.
 
 The default setting is *Automatic and Manual Processing*.
   
 #### Output File Settings
 Here you can control how *Arc Welder* will handle the output file.  It can either overwrite the source GCode file completely, or you can create a new file with a different name.
 
-* **Overwrite Source File** - When selected, *Arc Welder* will overwrite the original file with the compressed version.  Default Value: disabled.
+* **Overwrite Source File** - When selected, *Arc Welder* will overwrite the original file with the compressed version.  This will never occur if the source file is overwritten by the target. Default Value: disabled.
 * **Target File Prefix** - When *Overwrite Source File* is disabled, *Arc Welder* will produce a new file with this prefix.  For example, if you use **AW_** as your prefix and your source file is called **print.gcode** the output file would be called **AW_print.gcode**.  Default:  NO PREFIX
 * **Target File Postfix** - When *Overwrite Source File* is disabled, *Arc Welder* will produce a new file with this postfix before the file extension.  For example, if you use **.aw** for your postfix and your source file is called **print.gcode**, the resulting file would be called **print.aw.gcode**.  Default: .aw
 Note: You can combine prefixes and postfixes if you like.
-
 * **Print After Processing** - *Arc Welder* can start printing the processed file after it is finished processing.  Arc welder will not automatically start if your printer is currently printing, or if a previously queued file started printing automatically.  This is to prevent a new print from starting right after one finished.  Options:
-  * **Disabled** - *Arc Welder* will not start a print.  This is the default option.
-  * **Always Print After Processing** - *Arc Welder* will start both manually and automatically processed files if possible.
-  * **Print After Automatic Processing** - *Arc Welder* will start only automatically processed files.
-  * **Print After Manual Processing** - *Arc Welder* will start only manually processed files.
-
+  * *Always* - The target file will always be printed after processing.
+  * *Print After Manual Processing* - The target file will be printed only after manual processing.
+  * *Disabled* - The target file will never be printed.
 * **Select After Processing** - *Arc Welder* can automatically select files after processing is complete.  Arc Welder cannot select files while printing.  Options:
-  * **Disabled** - *Arc Welder* will not select files after they are processed.
-  * **Always Select File After Processing** - *Arc Welder* will select both manually and automatically processed files if possible.
-  * **Select File After Automatic Processing** - *Arc Welder* will select only automatically processed files.
-  * **Select File After Manual Processing** - *Arc Welder* will select only manually processed files.
+  * *Always* - The target file will always be selected after processing.
+  * *Uploaded Files* - Only uploaded files will be selected after processing.
+  * *Disabled* - The target file will never be selected.
 
 #### Source File Options
 * **Source File Deletion** - *Arc Welder* can delete the source file in most situations.  It will never delete the source file if it is currently printing or if the source file is overwritten by the welded GCode.  The options are:
-  * *Disabled* - The source file will never be deleted.
-  * *Always Delete Source File* - The source file will always be deleted if possible.
-  * *Delete After Automatic Processing* - Files that are automatically processed (see the *File Preprocessing Type* setting) will be automatically deleted when possible.
-  * *Delete After Manual Processing* - Files that are manually processed (see the *File Preprocessing Type* setting) will be automatically deleted when possible.
+  * *Always* - The source file will always be deleted after processing is completed if possible.
+  * *Disabled* - The source file will not be deleted.
 
 #### Printer Settings
 *Arc Welder* needs to know one property of your printer's firmware to guarantee accurate results in all slicers and with all start/end GCode: G90/G91 influences extruder.
 
-* **Use Octoprint Settings** -  Octoprint has a setting for *G90/G91 influences extruder* in the *Features* tab.  Enabling *Use Octoprint Printer Settings* will cause *Arc Welder* to use OctoPrint's setting.  Default: Enabled
+* **Use OctoPrint Settings** -  Octoprint has a setting for *G90/G91 influences extruder* in the *Features* tab.  Enabling *Use Octoprint Printer Settings* will cause *Arc Welder* to use OctoPrint's setting.  Default: Enabled
 * **G90/G91 Influence Extruder** - If *Use Octoprint Feature Settings* is unchecked, *Arc Welder* will use this setting to determine if the G90/G91 command influences your extruder's axis mode.  In general, Marlin 2.0 and forks should have this box checked.  Many forks of Marlin 1.x should have this unchecked, like the Prusa MK2 and MK3.  I will try to add a list of printers and the proper value for this setting at some point, as well as a GCode test script you can use to determine what setting to use.  Keep in mind that most slicers produce code that will work fine no matter what setting you choose here.  Default: Disabled
-* **Check Firmware** - *Arc Welder* can attempt to query your firmware to determine if arcs are enabled or supported.  It can also report known issues with several types of firmware.  Arc Welder cannot run a firmware check while printing.  Options:
+
+*Arc welder* also has a nifty firmware checker (new in version 1.1) that can run some basic tests to see if arcs are supported and/or enabled.  It will display errors (arcs not enabled, firmware not supported) or warnings (arc generation has some issues) along with help files that should assist getting these issues solved.  The firmware library is updated from a separate github repository, so additional firmware info can be added without updating the *Arc Welder* plugin.  The plugin checks for updates each time OctoPrint boots.  Octoprint cannot check your firmware while printing.  The options here are:
+
   * **Automatically When Printer Connects ** - *Arc Welder* will run a firmware check any time a printer connects to OctoPrint.
   * **Manual Only** - *Arc Welder* will only check your firmware when you manually click the *Check Firmware* button on the tab.
   * **Disabled** - No firmware checking will be done and the firmware section will be hidden on the tab.  This is useful if you know your firmware works fine, but *Arc Welder* reports possible problems.
+
+You can also check for updates to the firmware library by clicking on the *Check for Updates* button.  The current library version will display below the button.  Note that you cannot check for updates while offline.
 
 #### Tab Options
 
 * **Show Current Run Configuration** - By default, *Arc Welder* will display a summary of your settings on the tab.  Unchecking this option will hide that completely.
 
 #### Notification Settings
+
 These settings allow you to control the notification toasts and progress display.
 
-* **Show Pre-Processing Started Notifications** - When enabled, *Arc Welder* will create a toast showing that pre-processing is initializing.  Default: Enabled
-* **Show Progress Bar** - When enabled, *Arc Welder* will create a progress bar showing statistics about the file being currently processed.  There is also a *Cancel* and *Cancel All* button on the progress display.  Default: Enabled
-* **Show Pre-Processing Completed Notification** - When enabled *Arc Welder* will create a toast showing that pre-processing has completed, including some interesting statistics.  Default: Enabled
+* **Show Task Queued Notification** - When enabled, *Arc Welder* will create a toast showing that a new task has queued.  Default: Enabled
+* **Show Pre-Processing Started Notification** - When enabled, *Arc Welder* will create a toast showing that preprocessing has started.  Default: Disabled
+* **Show Pre-Processing Completed Notification** - When enabled *Arc Welder* will create a toast showing that pre-processing has completed.  Default: Enabled
 
 #### Logging Settings
 Unfortunately, *Arc Welder* currently does not use the logging settings from the OctoPrint Logging module.  This is because *Arc Welder* uses module-level logging and needs to log from inside of a c++ extension module that I created to do the actual processing in a reasonable amount of time.  I already had some code to do this from my other project, Octolapse, so I reused it here.  In the future I may improve this, but for now if you want to log anything besides exceptions, you will need to adjust the *Arc Welder* settings to do so.  You will still find the resulting log files in the OctoPrint logging module, though you can also download from the *Arc Welder* settings page.
