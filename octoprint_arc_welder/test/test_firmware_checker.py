@@ -123,8 +123,19 @@ class TestFirmwareChecker(unittest.TestCase):
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
         self.assertEqual(firmware_info["guid"], firmware_guid)
-        # try pre-release
+        # try my version
         firmware_guid = '1105400b-1e39-4540-a1bb-64cc2a28bbc7'
+        self.response = [
+            "FIRMWARE_NAME:Prusa-Firmware 3.9.0-RC3 based on Marlin "
+            "FIRMWARE_URL:https://github.com/prusa3d/Prusa-Firmware PROTOCOL_VERSION:1.0 MACHINE_TYPE:Prusa i3 MK2.5 "
+            "EXTRUDER_COUNT:1 UUID:00000000-0000-0000-0000-000000000000 "
+        ]
+        firmware_info = self.firmware_checker._get_firmware_version()
+        self.assertIsNotNone(firmware_info)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
+        self.assertTrue(firmware_info["g2_g3_supported"])
+        # try pre-release
+
         self.response = [
             "FIRMWARE_NAME:Prusa-Firmware 3.9.1-RC3 based on Marlin " \
             "FIRMWARE_URL:https://github.com/prusa3d/Prusa-Firmware PROTOCOL_VERSION:1.0 " \

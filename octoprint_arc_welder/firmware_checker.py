@@ -395,7 +395,10 @@ class FirmwareChecker:
                     if result["arcs_enabled"] is not None:
                         version_info["arcs_enabled"] = result["arcs_enabled"]
                     if result["g2_g3_supported"] is not None or version_info.get("arcs_enabled", None):
-                        version_info["g2_g3_supported"] = result["g2_g3_supported"]
+                        g2_g3_supported = version_info.get("g2_g3_supported", None)
+                        if version_info.get("arcs_enabled", None):
+                            g2_g3_supported = True
+                        version_info["g2_g3_supported"] = g2_g3_supported
 
                     # merge the dicts and break
                     result.update(version_info)

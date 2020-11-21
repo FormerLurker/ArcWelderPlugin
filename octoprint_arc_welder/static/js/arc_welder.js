@@ -565,13 +565,18 @@ $(function () {
                     if (self.g2_g3_z_parameter_supported()===null)
                     {
                         // g2_g3_z_parameter_supported support unknown
-                        warnings.push("Cannot determine if arc commands (G2/G3) support Z axis changes for use with vase mode.");
+                        if (ArcWelder.Tab.plugin_settings.allow_z_axis_changes()){
+                            warnings.push("Cannot determine if 3D Arc commands are supported (for use with vase mode), but 3D Arcs are currently enabled in the Arc Welder settings.  Please use with extreme caution!");
+                        }
+                        else {
+                            warnings.push("Cannot determine if 3D Arc commands are supported (for use with vase mode).  Since 3D arcs are currently disabled, this should be OK.");
+                        }
                     }
                     //TODO:  Check the settings and see if z is enabled.
-                    if (self.g2_g3_z_parameter_supported()===false)
+                    if (self.g2_g3_z_parameter_supported()===false && !ArcWelder.Tab.plugin_settings.allow_z_axis_changes())
                     {
                         // g2_g3_z_parameter_supported support unknown
-                        warnings.push("Arcs with Z changes aren't supported in this firmware, cannot use with vase mode.");
+                        warnings.push("3D Arcs are not supported by your firmware.  Since 3D arcs are currently disabled, this should be OK.");
                     }
                     if (self.arcs_enabled() ===null)
                     {
@@ -612,6 +617,33 @@ $(function () {
                     // Arcs not Enabled
                     errors.push("Arcs are not enabled in your printer's firmware.");
                 }
+                // Check G2/G3 influences extruder:
+                var g90_g91_influences_extruder_firmware = self.g90_g91_influences_extruder();
+                if (g90_g91_influences_extruder_firmware !== null)
+                {
+                    // Get the current setting
+                    g90_g91_influences_extruder_current = ArcWelder.Tab.plugin_settings.g90_g91_influences_extruder();
+                    if (ArcWelder.Tab.plugin_settings.use_octoprint_settings())
+                    {
+                        g90_g91_influences_extruder_current = ArcWelder.Tab.octoprint_settings.feature.g90InfluencesExtruder;
+                    }
+                    if (g90_g91_influences_extruder_firmware !=  g90_g91_influences_extruder_current)
+                    {
+                        if(g90_g91_influences_extruder_firmware){
+                            errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be ENABLED, but it is disabled.  Edit the Arc Welder settings, enable the G90/G91 Influences Extruder setting, and run the firmware check again.");
+                        }
+                        else{
+                            errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be DISABLED, but it is enabled.  Edit the Arc Welder settings, disable the G90/G91 Influences Extruder setting, and run the firmware check again.");
+                        }
+
+                    }
+                }
+
+                if (ArcWelder.Tab.plugin_settings.allow_z_axis_changes() && self.g2_g3_z_parameter_supported()===false)
+                {
+                   errors.push("3D Arcs are enabled, but they are not supported by your firmware.  Edit the Arc Welder settings, uncheck 'Allow 3D Arcs', and run the firmware check again.");
+                }
+
             }
             self.errors(errors);
 
@@ -983,6 +1015,7 @@ $(function () {
         self.onBeforeBinding = function () {
             // Make plugin setting access a little more terse
             self.plugin_settings = self.settings.settings.plugins.arc_welder;
+            self.octoprint_settings = self.settings.settings;
             self.version(self.plugin_settings.version());
             self.git_version(self.plugin_settings.git_version());
         };
