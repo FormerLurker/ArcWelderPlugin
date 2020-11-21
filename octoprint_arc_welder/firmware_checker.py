@@ -1211,7 +1211,7 @@ class FirmwareFileUpdater:
 
         # save the docs to the static folder, with overwrite
         for document in version_docs:
-            with open(os.path.join(firmware_docs_path, document["name"]), 'w') as firmware_type_file:
+            with open(os.path.join(firmware_docs_path, document["name"]), 'wb') as firmware_type_file:
                 firmware_type_file.write(document["data"])
 
         results["new_version"] = firmware_types["version"]
