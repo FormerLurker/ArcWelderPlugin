@@ -25,6 +25,7 @@
 
 #include "segmented_shape.h"
 #include <stdio.h>
+#include "utilities.h"
 #include <cmath>
 #include <iostream>
 #pragma region Operators for Vector and Point
@@ -245,7 +246,7 @@ bool circle::try_create_circle(const array_list<point>& points, const double max
 
 double circle::get_radians(const point& p1, const point& p2) const
 {
-	double distance_sq = pow(utilities::get_cartesian_distance(p1.x, p1.y, p2.x, p2.y), 2.0);
+	double distance_sq = std::pow(utilities::get_cartesian_distance(p1.x, p1.y, p2.x, p2.y), 2.0);
 	double two_r_sq = 2.0 * radius * radius;
 	return acos((two_r_sq - distance_sq) / two_r_sq);
 }
@@ -288,7 +289,7 @@ bool circle::is_over_deviation(const array_list<point>& points, const double res
 			if (z_step_per_distance == 0){
 				z_step_per_distance = current_z_stepper_distance;
 			}
-			if (!utilities::is_equal(z_step_per_distance, current_z_stepper_distance, std::pow(10, -1.0 * xyz_precision)))
+			if (!utilities::is_equal(z_step_per_distance, current_z_stepper_distance, std::pow(10.0, -1.0 * xyz_precision)))
 			{
 				// The z step is uneven, can't create arc				
 				return true;
@@ -387,7 +388,7 @@ bool arc::try_create_arc(
 		// We may be traveling in 3 space, calculate the arc_length of the spiral
 		if (start_point.z != end_point.z)
 		{
-			arc_length = std::hypot(arc_length, end_point.z - start_point.z);
+			arc_length = utilities::hypot(arc_length, end_point.z - start_point.z);
 		}
 	}
 	// Calculate the percent difference of the original path
@@ -409,7 +410,7 @@ bool arc::try_create_arc(
 			// We may be traveling in 3 space, calculate the arc_length of the spiral
 			if (start_point.z != end_point.z)
 			{
-				test_arc_length = std::hypot(arc_length, end_point.z - start_point.z);
+				test_arc_length = utilities::hypot(arc_length, end_point.z - start_point.z);
 			}
 		}
 		difference = (test_arc_length - approximate_length) / approximate_length;
@@ -425,7 +426,7 @@ bool arc::try_create_arc(
 	if (allow_z_axis_changes)
 	{
 		// Ensure the perimeter of the arc is less than that of a full circle
-		double perimeter = std::hypot(c.radius * 2.0 * PI_DOUBLE, end_point.z - start_point.z);
+		double perimeter = utilities::hypot(c.radius * 2.0 * PI_DOUBLE, end_point.z - start_point.z);
 		if (perimeter <= approximate_length) {
 			return false;
 		}

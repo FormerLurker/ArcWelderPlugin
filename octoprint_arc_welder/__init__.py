@@ -331,12 +331,17 @@ class ArcWelderPlugin(
         with ArcWelderPlugin.admin_permission.require(http_exception=403):
             response = {
                 "firmware_info": None,
+                "firmware_types_info": None,
                 "success": False,
-                "firmware_types_version": "unknown"
             }
             if self._firmware_checker:
+                firmware_types_info = self._firmware_checker.firmware_types_info
+                if firmware_types_info and "last_checked_date" in firmware_types_info:
+                    firmware_types_info["last_checked_date"] = (
+                        utilities.to_local_date_time_string(firmware_types_info["last_checked_date"])
+                    )
                 response["firmware_info"] = self._firmware_checker.current_firmware_info
-                response["firmware_types_version"] = self._firmware_checker.firmware_types_version
+                response["firmware_types_info"] = firmware_types_info
                 response["success"] = True
             return jsonify(response)
 
@@ -354,10 +359,20 @@ class ArcWelderPlugin(
             result = {
                 "success": False,
                 "new_version": None,
+                "firmware_info": None,
+                "firmware_types_info": None,
                 "error": None
             }
             if self._firmware_checker:
                 update_results = self._firmware_checker.check_for_updates()
+                current_firmware_info = self._firmware_checker.current_firmware_info
+                firmware_types_info = self._firmware_checker.firmware_types_info
+                if firmware_types_info and "last_checked_date" in firmware_types_info:
+                    firmware_types_info["last_checked_date"] = (
+                        utilities.to_local_date_time_string(firmware_types_info["last_checked_date"])
+                    )
+                result["firmware_types_info"] = firmware_types_info
+                result["firmware_info"] = current_firmware_info
                 if update_results["success"]:
                     result["new_version"] = update_results["new_version"]
                     result["success"] = True
@@ -416,15 +431,24 @@ class ArcWelderPlugin(
                 "check-firmware"
             )
         else:
+            firmware_types_info = self._firmware_checker.firmware_types_info
+            last_checked_date = firmware_types_info.get("last_checked_date",None)
+            if last_checked_date:
+                firmware_types_info["last_checked_date"] = utilities.to_local_date_time_string(last_checked_date)
             self.send_firmware_info_updated_message(
-                result["firmware_version"],  self._firmware_checker.firmware_types_version
+                result["firmware_version"],  firmware_types_info
             )
 
-    def send_firmware_info_updated_message(self, firmware_info, firmware_types_version):
+    def send_firmware_info_updated_message(self, firmware_info, firmware_types_info):
+        # convert the last_check_datetime to a local timezone
+        if firmware_info and "last_check_datetime" in firmware_info:
+            firmware_info["last_check_datetime"] = (
+                utilities.to_local_date_time_string(firmware_info["last_check_datetime"])
+            )
         data = {
             "message_type": "firmware-info-update",
             "firmware_info": firmware_info,
-            "firmware_types_version": firmware_types_version,
+            "firmware_types_info": firmware_types_info,
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 

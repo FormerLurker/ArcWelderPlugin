@@ -35,7 +35,7 @@ This line above enables arc support.  If this line does not exist, or if it is c
 
 Enabling arc support takes memory, and some boards (even some very popupar ones) don't have enough memory available to enable arcs without disabling other features.  If you find yourself in this position, I'd recommend reaching out to someone who knows your printer and board for advice.  It's definitely possible in the vast majority of cases.
 
-```#define MM_PER_ARC_SEGMENT      1 // (mm) Length (or minimum length) of each arc segment``
+```#define MM_PER_ARC_SEGMENT      1 // (mm) Length (or minimum length) of each arc segment```
 
 This setting represents the default length of an arc segment in mm.  The smaller this number, the more accurate G2/G3 commands will be.  However, this also will increase the number of total segments, which may impact performance.  In general, I recommend leaving this setting alone because of some of the other settings below.
 

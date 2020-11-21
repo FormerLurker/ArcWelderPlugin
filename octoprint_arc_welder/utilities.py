@@ -29,9 +29,10 @@ from __future__ import unicode_literals
 from pkg_resources import parse_version
 import six
 import os
+import sys
 import ntpath
-from io import StringIO
 from datetime import datetime
+import time
 import octoprint_arc_welder.log as log
 
 logging_configurator = log.LoggingConfigurator("arc_welder", "arc_welder.", "octoprint_arc_welder.")
@@ -242,6 +243,10 @@ def parse_settings_comment(line, tag, settings_dict):
     # We have found the tag.  Extract the parameters
     parameters_string = line[index:].strip()
     import csv
+    if sys.version_info[0] < 3:
+        from StringIO import StringIO
+    else:
+        from io import StringIO
     try:
         separated_parameters = csv.reader(
             StringIO(parameters_string),
@@ -252,7 +257,7 @@ def parse_settings_comment(line, tag, settings_dict):
             skipinitialspace=True,
             quoting=csv.QUOTE_MINIMAL
         )
-    except csv.Error:
+    except (csv.Error, TypeError) as e:
         logger.exception("Failed to parse arc welder gcode tag")
         return False
     results = {}
@@ -311,6 +316,8 @@ def parse_datetime(datetime_string):
 
 
 def is_version_in_versions(current_version_string, version_checks, compare_type="semantic"):
+    if not current_version_string:
+        return False
     if compare_type == "date":
         current_value = parse_datetime(current_version_string)
     elif compare_type == "semantic":
@@ -388,3 +395,21 @@ def is_version_in_versions(current_version_string, version_checks, compare_type=
         return False
     # all checks have passed, this is the right version
     return True
+
+
+UTC_DATE_TIME_FORMAT = "%m-%d-%Y %H:%M:%S"
+LOCAL_DATE_TIME_FORMAT = "%x %X"
+
+def utc_to_local(utc_datetime):
+    now_timestamp = time.time()
+    offset = datetime.fromtimestamp(now_timestamp) - datetime.utcfromtimestamp(now_timestamp)
+    return utc_datetime + offset
+
+
+def get_utc_time_string(utc_date_time):
+    return utc_date_time.strftime(UTC_DATE_TIME_FORMAT)
+
+
+def to_local_date_time_string(utc_date_string):
+    utc_datetime = datetime.strptime(utc_date_string, UTC_DATE_TIME_FORMAT)
+    return utc_to_local(utc_datetime).strftime(LOCAL_DATE_TIME_FORMAT)

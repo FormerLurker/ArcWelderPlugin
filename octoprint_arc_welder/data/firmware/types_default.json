@@ -4,7 +4,7 @@
 		"Prusa-Firmware": {
 			"functions": {
 				"is_firmware_type": "check_firmware_prusa",
-				"get_version": "get_version_prusa"
+				"version": "get_version_prusa"
 			},
 			"version_compare_type": "semantic",
 			"help_file": "firmware_prusa.md",
@@ -22,9 +22,10 @@
 					"supported": true,
 					"recommended": false,
 					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"arcs_enabled": true,
 					"g90_g91_influences_extruder": false,
-					"notes": "The default arc settings can cause flat edges for curves with a radius around 1-2mm, and some slowdown can be expected if MM_PER_ARC_SEGMENT is reduced below 1.0."
+					"notes": "The default arc settings can cause flat edges for very small arcs with a radius around 1-5mm."
 				},
 				{
 					"guid": "b8cf8ab2-333c-4812-a1af-ca2093ec9f0d",
@@ -32,6 +33,7 @@
 					"supported": true,
 					"recommended": "None",
 					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"arcs_enabled": true,
 					"is_future": true,
 					"g90_g91_influences_extruder": false,
@@ -42,7 +44,7 @@
 		"Prusa-Firmware-Buddy": {
 			"functions": {
 				"is_firmware_type": "check_firmware_prusa_buddy",
-				"get_version": "get_version_prusa_buddy"
+				"version": "get_version_prusa_buddy"
 			},
 			"version_compare_type": "semantic",
 			"help_file": "firmware_prusa_buddy.md",
@@ -60,6 +62,7 @@
 					"supported": true,
 					"recommended": false,
 					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"g90_g91_influences_extruder": true,
 					"notes": "This firmware has not been updated to include arc planning fixes implemented in Marlin 2.0.6."
 				},
@@ -77,7 +80,7 @@
 		"Marlin": {
 			"functions": {
 				"is_firmware_type": "check_firmware_marlin",
-				"get_version": "get_version_marlin"
+				"version": "get_version_marlin"
 			},
 			"version_compare_type": "semantic",
 			"help_file": "firmware_marlin.md",
@@ -91,14 +94,16 @@
 				},
 				{
 					"guid": "d2688900-92a6-411a-8d39-8374a44a478e",
-					"version": "<1.0.0",
+					"version": "<1.1.0",
 					"supported": false,
 					"recommended": false
 				},
 				{
 					"guid": "8aa1f350-65f3-4824-8c31-b7feb4abcbec",
-					"version": ">=1.0.0,<2.0.0",
+					"version": ">=1.1.0,<2.0.0",
 					"supported": true,
+					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"recommended": false
 				},
 				{
@@ -107,6 +112,7 @@
 					"supported": true,
 					"recommended": false,
 					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"g90_g91_influences_extruder": true
 				},
 				{
@@ -115,7 +121,9 @@
 					"supported": true,
 					"recommended": true,
 					"g2_g3_supported": true,
-					"g90_g91_influences_extruder": true
+					"g2_g3_z_parameter_supported": true,
+					"g90_g91_influences_extruder": true,
+					"help_file": "firmware_marlin_2.0.7.2.md"
 				},
 				{
 					"guid": "aa065880-71b5-4ebe-a90f-665433807758",
@@ -124,6 +132,7 @@
 					"recommended": true,
 					"is_future": true,
 					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"g90_g91_influences_extruder": true
 				}
 			]
@@ -131,7 +140,7 @@
 		"Virtual Marlin": {
 			"functions": {
 				"is_firmware_type": "check_firmware_virtual_marlin",
-				"get_version": "get_version_virtual_marlin",
+				"version": "get_version_virtual_marlin",
 				"arcs_enabled": "get_arcs_enabled_virtual_marlin"
 			},
 			"version_compare_type": "semantic",
@@ -143,6 +152,7 @@
 					"supported": true,
 					"recommended": true,
 					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"notes": "This is a virtual printer."
 				},
 				{
@@ -151,6 +161,7 @@
 					"supported": true,
 					"recommended": true,
 					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"is_future": true
 				}
 			]
@@ -158,7 +169,7 @@
 		"Klipper": {
 			"functions": {
 				"is_firmware_type": "check_firmware_klipper",
-				"get_version": "get_version_klipper",
+				"version": "get_version_klipper",
 				"clean_version": "clean_version_klipper"
 			},
 			"version_compare_type": "semantic",
@@ -174,6 +185,8 @@
 					"guid": "f691ee9a-fa2a-48ce-a11d-b97ebed177f7",
 					"version": ">=0.8.0,<0.9.0",
 					"supported": true,
+					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"recommended": false,
 					"notes": "Arc support is there, but there are bugs in absolute extrusion mode that could result in very little extrusion.  If you experience problems, upgrade to at least v{recommended_version}."
 				},
@@ -182,7 +195,8 @@
 					"version": "=0.9.0",
 					"supported": true,
 					"recommended": true,
-					"g2_g3_supported": true
+					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true
 				},
 				{
 					"guid": "aa065880-71b5-4ebe-a90f-665433807758",
@@ -190,6 +204,7 @@
 					"supported": true,
 					"recommended": true,
 					"g2_g3_supported": true,
+					"g2_g3_z_parameter_supported": true,
 					"is_future": true
 				}
 			]
@@ -197,57 +212,11 @@
 		"Smoothieware": {
 			"functions": {
 				"is_firmware_type": "check_firmware_smoothieware",
-				"get_version": "get_version_smoothieware",
-				"get_date": "get_date_smoothieware"
+				"arcs_enabled": "get_arcs_enabled_smoothieware",
+				"arcs_not": "get_arcs_not_enabled_smoothieware"
 			},
 			"version_compare_type": "date",
-			"help_file": "firmware_smoothieware.md",
-			"versions": [
-				{
-					"guid": "2d468d37-e8dc-467e-9505-0ea00640772e",
-					"version": "<Nov 04 2020 00:00:00",
-					"supported": false,
-					"recommended": false
-				},
-				{
-					"guid": "3a166cc2-ff62-4011-aa70-ffa96950a105",
-					"version": ">=Nov 04 2020 00:00:00",
-					"supported": true,
-					"recommended": true,
-					"is_future": true,
-					"g2_g3_supported": true
-				}
-			]
-		},
-		"RegexFirmwareTest": {
-			"name": "Regex Firmware Test",
-			"functions": {
-				"is_firmware_type": {"regex":"^(?:\\s*)RegexFirmware(\\s*)", "key": "FIRMWARE_NAME"},
-				"get_version": {"regex":"^(?:\\s*)RegexFirmware(?:\\s*)([0-9A-Za-z\\.]+)", "key": "FIRMWARE_NAME"},
-				"get_date": {"regex":"^(?:\\s*)RegexFirmware(?:\\s*).*\\((.*)\\)", "key": "FIRMWARE_NAME"},
-				"arcs_enabled": {"regex":"(?i).*(HASARCS:1)"},
-				"arcs_not_enabled": {"regex":"\\s*(0)\\s*", "KEY": "HASARCS"}
-			},
-			"version_compare_type": "semantic",
-			"help_file": "firmware_regex_firmware_test.md",
-			"versions": [
-				{
-					"guid": "2c926d8d-b72c-419b-bf54-5d273b881cb8",
-					"version": "<=1.0.0",
-					"supported": true,
-					"recommended": true,
-					"g2_g3_supported": true,
-					"notes": "This is a test printer."
-				},
-				{
-					"guid": "2f6ebc41-055b-41d3-9f8c-f2e1d67f95d0",
-					"version": ">1.0.0",
-					"supported": true,
-					"recommended": true,
-					"g2_g3_supported": true,
-					"is_future": true
-				}
-			]
+			"help_file": "firmware_smoothieware.md"
 		}
 	}
 }

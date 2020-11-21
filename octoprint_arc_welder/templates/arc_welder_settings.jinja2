@@ -103,13 +103,13 @@
                                 </div>
                             </div>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_allow_z_axis_changes"><strong>Allow Z-Axis Changes (for vase mode)</strong></label>
+                                <label class="control-label" for="arc_welder_allow_z_axis_changes"><strong>Allow 3D Arcs (for vase mode)</strong></label>
                                 <div class="controls">
                                     <input class="input-text" type="checkbox"
                                            id="arc_welder_allow_z_axis_changes"
                                            data-bind="checked: plugin_settings().allow_z_axis_changes">
                                     <a class="arc_welder_help" data-help-url="settings.allow_z_axis_changes.md"
-                                       data-help-title="Allow Z-Axis Changes (for vase mode)"></a><br/>
+                                       data-help-title="Allow 3D Arcs (for vase mode)"></a><br/>
                                     <span class="label label-important">WARNING</span> This setting is experimental, and not all firmware that supports arcs will support z axis changes.
                                 </div>
                             </div>
@@ -258,7 +258,13 @@
                             <div class="control-group">
                                 <label class="control-label" for="arc_welder_firmware_types_version"><strong>Library Version</strong></label>
                                 <div class="controls">
-                                    <span data-bind="text:firmware_info.firmware_types_version"></span></br>
+                                    <span data-bind="text:firmware_info.firmware_types_info().version"></span></br>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_last_checked_date"><strong>Last Check Date</strong></label>
+                                <div class="controls">
+                                    <span data-bind="text:firmware_info.firmware_types_info().last_checked_date"></span><span data-bind="visible: !firmware_info.firmware_types_info().last_check_success"> - Failed</span></br>
                                 </div>
                             </div>
                         </fieldset>

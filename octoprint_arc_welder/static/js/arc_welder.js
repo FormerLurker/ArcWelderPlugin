@@ -454,7 +454,7 @@ $(function () {
         self.previous_version_help_file = ko.observable();
         self.build_date = ko.observable();
         self.version_range = ko.observable();
-        self.version_guid = ko.observable();
+        self.guid = ko.observable();
         self.printer = ko.observable();
         self.supported = ko.observable().extend({
             arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
@@ -472,9 +472,19 @@ $(function () {
         self.arcs_enabled = ko.observable().extend({
             arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
         });
+        self.g2_g3_z_parameter_supported = ko.observable().extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
+        });
         self.g90_g91_influences_extruder = ko.observable().extend({
             arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
         });
+        self.last_check_datetime = ko.observable()
+        self.firmware_types_info_default = {
+            last_check_success:null,
+            last_checked_date:null,
+            version:null
+        };
+        self.firmware_types_info = ko.observable(self.firmware_types_info_default);
         self.arc_settings = ko.observable();
         self.errors = ko.observableArray([]);
         self.warnings = ko.observableArray([]);
@@ -488,7 +498,8 @@ $(function () {
         self.checking_firmware = ko.observable(false);
 
         self.update = function(data, firmware_types_version){
-            self.firmware_types_version(firmware_types_version);
+
+            self.firmware_types_info(firmware_types_version ?? self.firmware_types_info_default)
             data = data??{};
             self.loaded(true);
             self.success(data.success ?? null);
@@ -499,7 +510,7 @@ $(function () {
             self.previous_version_help_file(data.previous_version_help_file ?? null);
             self.build_date(data.build_date ?? null);
             self.version_range(data.version_range ?? null);
-            self.version_guid(data.version_guid ?? null);
+            self.guid(data.guid ?? null);
             self.printer(data.printer ?? null);
             self.supported(data.supported ?? null);
             self.recommended(data.recommended ?? null);
@@ -509,7 +520,9 @@ $(function () {
             self.m115_response(data.m115_response ?? null);
             self.g2_g3_supported(data.g2_g3_supported ?? null);
             self.arcs_enabled(data.arcs_enabled ?? null);
+            self.g2_g3_z_parameter_supported(data.g2_g3_z_parameter_supported ?? null);
             self.g90_g91_influences_extruder(data.g90_g91_influences_extruder ?? null);
+            self.last_check_datetime(data.last_check_datetime ?? null);
             self.arc_settings(data.arc_settings ?? null);
             self.fill_warnings();
             self.fill_errors();
@@ -549,6 +562,17 @@ $(function () {
                         // G2/G3 support unknown
                         warnings.push("Cannot determine if arc commands (G2/G3) are supported by your firmware.");
                     }
+                    if (self.g2_g3_z_parameter_supported()===null)
+                    {
+                        // g2_g3_z_parameter_supported support unknown
+                        warnings.push("Cannot determine if arc commands (G2/G3) support Z axis changes for use with vase mode.");
+                    }
+                    //TODO:  Check the settings and see if z is enabled.
+                    if (self.g2_g3_z_parameter_supported()===false)
+                    {
+                        // g2_g3_z_parameter_supported support unknown
+                        warnings.push("Arcs with Z changes aren't supported in this firmware, cannot use with vase mode.");
+                    }
                     if (self.arcs_enabled() ===null)
                     {
                         // Arcs enabled unknown
@@ -562,6 +586,8 @@ $(function () {
 
         self.fill_errors = function(){
             var errors = [];
+
+            //TODO:  Check make sure G90/G91 influences extruder is set correctly!
             if (!self.success())
             {
                 if (self.success() !== null)
@@ -644,12 +670,12 @@ $(function () {
                 contentType: "application/json",
                 success: function(data) {
                     var firmware_info = false;
-                    var firmware_types_version = data.firmware_types_version;
+                    var firmware_types_info = data.firmware_types_info;
                     if (data.success)
                     {
                        firmware_info = data.firmware_info;
                     }
-                    self.update(firmware_info, firmware_types_version);
+                    self.update(firmware_info, firmware_types_info);
 
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
@@ -686,9 +712,9 @@ $(function () {
                 contentType: "application/json",
                 success: function(data) {
                     self.checking_for_firmware_info_updates(false)
-                    if (data.success && data.new_version)
+                    if (data.success)
                     {
-                        self.firmware_types_version(data.new_version)
+                        self.update(data.firmware_info, data.firmware_types_info);
                     }
                     else if (!data.success)
                     {
@@ -1208,7 +1234,7 @@ $(function () {
                     break;
                 case "firmware-info-update":
                     // Update the firmware info
-                    self.firmware_info.update(data.firmware_info, data.firmware_types_version)
+                    self.firmware_info.update(data.firmware_info, data.firmware_types_info)
                     // signal that the check is finished.
                     self.firmware_info.checking_firmware(false);
                     break;

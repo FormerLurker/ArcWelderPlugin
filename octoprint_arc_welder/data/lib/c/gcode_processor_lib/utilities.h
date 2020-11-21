@@ -59,6 +59,9 @@ public:
 	static bool get_file_path(const std::string& file_path, std::string& path);
 	static bool get_temp_file_path_for_file(const std::string& file_path, std::string& temp_file_path);
 	static std::string create_uuid();
+	// Man I can't wait till I can drop python 2.7 support so I can stop doing everything myself.  s
+	// td::hypot doesn't work for msvc for python 2.7....
+	static double hypot(double x, double y);
 
 	
 protected:

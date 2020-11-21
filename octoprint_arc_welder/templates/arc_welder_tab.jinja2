@@ -156,7 +156,7 @@
                 </div>
                 <div class="row-fluid">
                     <div class="span4 text-right">
-                        <strong>Allow Z Axis Changes:</strong>
+                        <strong>Allow 3D Arcs:</strong>
                     </div>
                     <div class="span8">
                         <span data-bind="text: plugin_settings.allow_z_axis_changes"></span>
@@ -351,6 +351,14 @@
                     </div>
                     <div>
                         <div class="row-fluid">
+                            <div class="span4 text-right"><strong>3D-Arcs Supported:</strong></div>
+                            <div class="span8">
+                                <span data-bind="text: firmware_info.g2_g3_z_parameter_supported.formatted, attr: {class: firmware_info.g2_g3_z_parameter_supported.class}"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="row-fluid">
                             <div class="span4 text-right"><strong>Arcs Enabled:</strong></div>
                             <div class="span8" >
                                 <span data-bind="text: firmware_info.arcs_enabled.formatted, attr: {class: firmware_info.arcs_enabled.class}"></span>
@@ -392,6 +400,12 @@
                             </ul>
                             </div>
                         </div>
+                    </div>
+                    <div class="row-fluid">
+                        <div class="span4 text-right">
+                            Last Check On:
+                        </div>
+                        <div class="span8"><span data-bind="text: firmware_info.last_check_datetime"></span></div>
                     </div>
                 </div>
             </div>

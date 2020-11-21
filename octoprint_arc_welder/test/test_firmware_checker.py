@@ -26,6 +26,8 @@
 ##################################################################################
 import unittest
 import os
+import re
+import json
 from octoprint_arc_welder.firmware_checker import FirmwareChecker, PrinterRequest
 
 
@@ -38,7 +40,47 @@ class TestFirmwareChecker(unittest.TestCase):
         self.response = None
 
     def setUp(self):
-        self.firmware_checker = FirmwareChecker(None, self.base_folder, self.data_directory, None, load_defaults=True)
+        self.firmware_checker = FirmwareChecker(
+            "1.1", None, self.base_folder, self.data_directory, None, load_defaults=True
+        )
+
+        # Add regex firmware tests
+        regex_firmware_test = {
+            "name": "Regex Firmware Test",
+            "functions": {
+                "is_firmware_type": {"regex": r"^(?:\s*)RegexFirmware(\s*)", "key": "FIRMWARE_NAME"},
+                "version": {"regex": r"^(?:\s*)RegexFirmware(?:\s*)([0-9A-Za-z\.]+)", "key": "FIRMWARE_NAME"},
+                "build_date": {"regex": r"^(?:\s*)RegexFirmware(?:\s*)(?:[0-9A-Za-z\.]+)(?:\s*)([0-9\-]{4,})", "key": "FIRMWARE_NAME"},
+                "arcs_enabled": {"regex": r"(?i)(?:.*)(HASARCS:1)"},
+                "arcs_not_enabled": {"regex": r"\s*(0)\s*", "key": "HASARCS"}
+            },
+            "version_compare_type": "semantic",
+            "help_file": "firmware_regex_firmware_test.md",
+            "versions": [
+                {
+                    "guid": "2c926d8d-b72c-419b-bf54-5d273b881cb8",
+                    "version": "<=1.0.0",
+                    "supported": True,
+                    "recommended": True,
+                    "g2_g3_supported": True,
+                    "notes": "This is a test printer."
+                },
+                {
+                    "guid": "2f6ebc41-055b-41d3-9f8c-f2e1d67f95d0",
+                    "version": ">1.0.0",
+                    "supported": True,
+                    "recommended": True,
+                    "g2_g3_supported": True,
+                    "is_future": True
+                }
+            ]
+        }
+        # compile the regex functions
+        for key in regex_firmware_test["functions"]:
+            function = regex_firmware_test["functions"][key]
+            if "regex" in function:
+                function["regex"] = re.compile(function["regex"])
+        self.firmware_checker._firmware_types["types"]["RegexFirmware"] = regex_firmware_test
 
         def _get_m115_response():
             return self.response
@@ -58,7 +100,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # Try a release candidate, it should be <1.0.0
         firmware_guid = 'a555c60b-3b6c-4c60-acf6-ed7eb68edc07'
         self.response = [
@@ -68,7 +110,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Prusa Firmware >=1.0.0,<=3.9.1
         # try 1.0.0
@@ -80,7 +122,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # try pre-release
         firmware_guid = '1105400b-1e39-4540-a1bb-64cc2a28bbc7'
         self.response = [
@@ -90,7 +132,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # try current
         firmware_guid = '1105400b-1e39-4540-a1bb-64cc2a28bbc7'
         self.response = [
@@ -100,7 +142,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Prusa Firmware >3.9.1
         firmware_guid = 'b8cf8ab2-333c-4812-a1af-ca2093ec9f0d'
@@ -111,14 +153,14 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # Test is_future
         self.assertTrue(firmware_info.get("is_future", None))
         # Test the previous note
-        self.assertEqual(firmware_info.get("previous_notes", ""), "The default arc settings can cause flat edges for curves with a radius around 1-2mm, and some slowdown can be expected if MM_PER_ARC_SEGMENT is reduced below 1.0.")
+        self.assertEqual(firmware_info.get("previous_notes", ""),
+                         "The default arc settings can cause flat edges for very small arcs with a radius around 1-5mm.")
 
     def test_prusa_buddy_firmware_version_response(self):
-
         # Prusa Buddy Firmware <4.0.3
         firmware_guid = '948344d5-1da6-401b-b28c-201ab9fb27a4'
         self.response = [
@@ -128,7 +170,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # Try a release candidate
         self.response = [
             "FIRMWARE_NAME:Prusa-Firmware-Buddy 4.0.3-RC based on Marlin " \
@@ -137,7 +179,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Prusa Buddy Firmware >=4.0.3,<=4.2.1
         # try 4.0.3
@@ -149,7 +191,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # try pre-release
         self.response = [
             "FIRMWARE_NAME:Prusa-Firmware-Buddy 4.2.1.rc1 based on Marlin " \
@@ -159,7 +201,7 @@ class TestFirmwareChecker(unittest.TestCase):
         # Try high end
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # try current
         self.response = [
             "FIRMWARE_NAME:Prusa-Firmware-Buddy 4.2.1 based on Marlin " \
@@ -168,7 +210,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Prusa Buddy Firmware >4.2.1
         firmware_guid = 'be64a03b-8878-47c2-959d-4486c1e222b9'
@@ -179,7 +221,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # Test is_future
         self.assertTrue(firmware_info.get("is_future", None))
         # Test the previous note
@@ -189,7 +231,6 @@ class TestFirmwareChecker(unittest.TestCase):
         )
 
     def test_marlin_firmware_version_response(self):
-
         # Test "=bugfix-2.0.x"
         firmware_guid = '81848e9e-c41a-44dc-bddc-bf0e4df8f16b'
         self.response = [
@@ -198,7 +239,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Test "<1.0.0"
         firmware_guid = 'd2688900-92a6-411a-8d39-8374a44a478e'
@@ -208,7 +249,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # try pre-release
         self.response = [
             "FIRMWARE_NAME:Marlin 1.0.0rc1 (Github) SOURCE_CODE_URL:https://github.com/MarlinFirmware/Marlin "
@@ -216,11 +257,10 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
-
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Test ">=1.0.0,<2.0.0"
-        firmware_guid = '8aa1f350-65f3-4824-8c31-b7feb4abcbec'
+        firmware_guid = 'd2688900-92a6-411a-8d39-8374a44a478e'
         # test low end
         self.response = [
             "FIRMWARE_NAME:Marlin 1.0.0 (Github) SOURCE_CODE_URL:https://github.com/MarlinFirmware/Marlin "
@@ -228,7 +268,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # try pre-release
         self.response = [
             "FIRMWARE_NAME:Marlin 2.0.0.rc1 (Github) SOURCE_CODE_URL:https://github.com/MarlinFirmware/Marlin "
@@ -244,7 +284,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # Test pre-release
         self.response = [
             "FIRMWARE_NAME:Marlin 2.0.6rc1 (Github) SOURCE_CODE_URL:https://github.com/MarlinFirmware/Marlin "
@@ -252,7 +292,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Test ">=2.0.6,<=2.0.7.2"
         firmware_guid = '9fa65fea-2adc-4e35-94af-36dc555985f2'
@@ -263,7 +303,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # Test high end
         self.response = [
             "FIRMWARE_NAME:Marlin 2.0.7.2 (Github) SOURCE_CODE_URL:https://github.com/MarlinFirmware/Marlin "
@@ -271,7 +311,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Test ">2.0.7.2"
         firmware_guid = 'aa065880-71b5-4ebe-a90f-665433807758'
@@ -281,7 +321,7 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Test Future
         self.assertTrue(firmware_info.get("is_future", None))
@@ -289,19 +329,17 @@ class TestFirmwareChecker(unittest.TestCase):
         self.assertIsNone(firmware_info.get("previous_notes", None))
 
     def test_klipper_firmware_version_response(self):
-
         # Test "<0.8.0"
         firmware_guid = 'bae47fdc-d91a-465b-8f7b-c99a468e8153'
         self.response = ["FIRMWARE_NAME:Klipper FIRMWARE_VERSION:v0.7.0"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # try pre-release
         self.response = ["FIRMWARE_NAME:Klipper FIRMWARE_VERSION:v0.8.0.rc1"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
-
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Test ">=0.8.0,<0.9.0"
         firmware_guid = 'f691ee9a-fa2a-48ce-a11d-b97ebed177f7'
@@ -309,12 +347,12 @@ class TestFirmwareChecker(unittest.TestCase):
         self.response = ["FIRMWARE_NAME:Klipper FIRMWARE_VERSION:v0.8.0"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # try pre-release
         self.response = ["FIRMWARE_NAME:Klipper FIRMWARE_VERSION:v0.9.0rc1"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Test "=0.9.0"
         firmware_guid = '7da24715-4f3a-4dbf-8ab5-912221f3f26d'
@@ -322,14 +360,14 @@ class TestFirmwareChecker(unittest.TestCase):
         self.response = ["FIRMWARE_NAME:Klipper FIRMWARE_VERSION:v0.9.0"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
         # Test ">0.9.0"
         firmware_guid = 'aa065880-71b5-4ebe-a90f-665433807758'
         self.response = ["FIRMWARE_NAME:Klipper FIRMWARE_VERSION:v0.9.1"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
         # Test Future
         self.assertTrue(firmware_info.get("is_future", None))
         # Test the previous note
@@ -342,39 +380,98 @@ class TestFirmwareChecker(unittest.TestCase):
         self.response = ["FIRMWARE_VERSION:v0.8.0-700-ge4f3f60e FIRMWARE_NAME:Klipper"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
 
     def test_smoothieware_firmware_version_response(self):
         # Test "<Nov 30 2018 20:34:40"
-        firmware_guid = '2d468d37-e8dc-467e-9505-0ea00640772e'
         self.response = ["FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http%3A//smoothieware.org, "
                          "X-SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, "
                          "FIRMWARE_VERSION:edge-9348830, X-FIRMWARE_BUILD_DATE:Nov 02 2020 23:59:59, "
                          "X-SYSTEM_CLOCK:120MHz, X-AXES:5, X-GRBL_MODE:0, X-ARCS:1, X-CNC:0, X-MSD:1"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertIsNone(firmware_info["guid"])
+        self.assertTrue(firmware_info["arcs_enabled"])
+        self.assertTrue(firmware_info["g2_g3_supported"])
+        self.assertEqual(firmware_info["build_date"], "Nov 02 2020 23:59:59")
+        self.assertEqual(firmware_info["version"], "edge-9348830")
+        self.assertEqual(firmware_info["type"], "Smoothieware")
 
-        # Test ">=Nov 30 2018 20:34:40"
         # test low end
-        firmware_guid = '3a166cc2-ff62-4011-aa70-ffa96950a105'
         self.response = ["FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http%3A//smoothieware.org, "
                          "X-SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, "
                          "FIRMWARE_VERSION:edge-9348830, X-FIRMWARE_BUILD_DATE:Nov 4 2020 00:00:00, "
                          "X-SYSTEM_CLOCK:120MHz, X-AXES:5, X-GRBL_MODE:0, X-ARCS:1, X-CNC:0, X-MSD:1"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertIsNone(firmware_info["guid"])
+        self.assertTrue(firmware_info["arcs_enabled"])
+        self.assertTrue(firmware_info["g2_g3_supported"])
+        self.assertEqual(firmware_info["build_date"], "Nov 4 2020 00:00:00")
+        self.assertEqual(firmware_info["version"], "edge-9348830")
+        self.assertEqual(firmware_info["type"], "Smoothieware")
+
         # test future
         firmware_guid = '3a166cc2-ff62-4011-aa70-ffa96950a105'
         self.response = ["FIRMWARE_NAME:Smoothieware, FIRMWARE_URL:http%3A//smoothieware.org, "
                          "X-SOURCE_CODE_URL:https://github.com/Smoothieware/Smoothieware, "
                          "FIRMWARE_VERSION:edge-9348830, X-FIRMWARE_BUILD_DATE:Nov 04 2020 00:00:01, "
-                         "X-SYSTEM_CLOCK:120MHz, X-AXES:5, X-GRBL_MODE:0, X-ARCS:1, X-CNC:0, X-MSD:1"]
+                         "X-SYSTEM_CLOCK:120MHz, X-AXES:5, X-GRBL_MODE:0, X-CNC:0, X-MSD:1"]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
+        self.assertIsNone(firmware_info["guid"])
+        self.assertFalse(firmware_info["arcs_enabled"])
+        self.assertFalse(firmware_info["g2_g3_supported"])
+        self.assertEqual(firmware_info["build_date"], "Nov 04 2020 00:00:01")
+        self.assertEqual(firmware_info["version"], "edge-9348830")
+        self.assertEqual(firmware_info["type"], "Smoothieware")
 
+    def test_regex_firmware_version_response(self):
+        # Test RegexFirmware
+
+        # <=1.0
+        guid = "2c926d8d-b72c-419b-bf54-5d273b881cb8"
+        self.response = ["FIRMWARE_NAME:RegexFirmware 0.0.1rc2 01-01-2002, HASARCS:1"]
+        firmware_info = self.firmware_checker._get_firmware_version()
+        self.assertIsNotNone(firmware_info)
+        self.assertEqual(firmware_info["guid"], guid)
+        self.assertTrue(firmware_info["arcs_enabled"])
+        self.assertTrue(firmware_info["g2_g3_supported"])
+        self.assertEqual(firmware_info["build_date"], "01-01-2002")
+        self.assertEqual(firmware_info["version"], "0.0.1rc2")
+        self.assertEqual(firmware_info["type"], "RegexFirmware")
+        # release candidate < 1.0
+        self.response = ["FIRMWARE_NAME:RegexFirmware 1.0.0rc2 2020-02-03, HASARCS:0"]
+        firmware_info = self.firmware_checker._get_firmware_version()
+        self.assertIsNotNone(firmware_info)
+        self.assertEqual(firmware_info["guid"], guid)
+        self.assertFalse(firmware_info["arcs_enabled"])
+        self.assertTrue(firmware_info["g2_g3_supported"])
+        self.assertEqual(firmware_info["build_date"], "2020-02-03")
+        self.assertEqual(firmware_info["version"], "1.0.0rc2")
+        self.assertEqual(firmware_info["type"], "RegexFirmware")
+        # release == 1.0
+        self.response = ["FIRMWARE_NAME:RegexFirmware 1.0.0 2020-02-04"]
+        firmware_info = self.firmware_checker._get_firmware_version()
+        self.assertIsNotNone(firmware_info)
+        self.assertEqual(firmware_info["guid"], guid)
+        self.assertIsNone(firmware_info["arcs_enabled"])
+        self.assertTrue(firmware_info["g2_g3_supported"])
+        self.assertEqual(firmware_info["build_date"], "2020-02-04")
+        self.assertEqual(firmware_info["version"], "1.0.0")
+        self.assertEqual(firmware_info["type"], "RegexFirmware")
+
+        # release > 1.0
+        guid = "2f6ebc41-055b-41d3-9f8c-f2e1d67f95d0"
+        self.response = ["FIRMWARE_NAME:RegexFirmware 10.0.0"]
+        firmware_info = self.firmware_checker._get_firmware_version()
+        self.assertIsNotNone(firmware_info)
+        self.assertEqual(firmware_info["guid"], guid)
+        self.assertIsNone(firmware_info["arcs_enabled"])
+        self.assertTrue(firmware_info["g2_g3_supported"])
+        self.assertIsNone(firmware_info["build_date"])
+        self.assertEqual(firmware_info["version"], "10.0.0")
+        self.assertEqual(firmware_info["type"], "RegexFirmware")
 
 
     def test_parse_extended_capabilities(self):
@@ -411,10 +508,10 @@ class TestFirmwareChecker(unittest.TestCase):
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
         self.assertIsNotNone(firmware_info)
-        self.assertEqual(firmware_info["version_guid"], firmware_guid)
-        parsed_response = firmware_info.get("m115_parsed_response",None)
+        self.assertEqual(firmware_info["guid"], firmware_guid)
+        parsed_response = firmware_info.get("m115_parsed_response", None)
         self.assertIsNotNone(parsed_response)
-        capabilities = parsed_response.get(FirmwareChecker.MARLIN_EXTENDED_CAPABILITIES_KEY,None)
+        capabilities = parsed_response.get(FirmwareChecker.MARLIN_EXTENDED_CAPABILITIES_KEY, None)
         self.assertIsNotNone(capabilities)
         self.assertEqual(capabilities.get("SERIAL_XON_XOFF", None), "0")
         self.assertEqual(capabilities.get("BINARY_FILE_TRANSFER", None), "0")

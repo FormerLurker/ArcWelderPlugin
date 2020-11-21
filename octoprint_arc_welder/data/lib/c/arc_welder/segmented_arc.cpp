@@ -248,7 +248,7 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
 		// We may need to add a z coordinate
 		double z_initial = current_arc_.start_point.z;
 		double z_final = current_arc_.end_point.z;
-		if (!utilities::is_equal(z_initial, z_final, std::pow(10, -1 * xyz_precision_)))
+		if (!utilities::is_equal(z_initial, z_final, std::pow(10.0, -1.0 * xyz_precision_)))
 		{
 			// The z axis has changed within the precision of the gcode coordinates
 			gcode += " Z";
