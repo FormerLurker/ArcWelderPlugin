@@ -145,6 +145,8 @@ class ArcWelderPlugin(
             resolution_mm=0.05,
             path_tolerance_percent=5.0,
             max_radius_mm=1000*1000,  # 1KM, pretty big :)
+            min_arc_segments=0, # 0 to disable
+            mm_per_arc_segment=0,  # 0 to disable
             overwrite_source_file=False,
             target_prefix="",
             target_postfix=".aw",
@@ -588,6 +590,20 @@ class ArcWelderPlugin(
         if max_radius_mm is None:
             max_radius_mm = self.settings_default["max_radius_mm"]
         return max_radius_mm
+
+    @property
+    def _min_arc_segments(self):
+        min_arc_segments = self._settings.get_float(["min_arc_segments"])
+        if min_arc_segments is None or min_arc_segments < 0:
+            min_arc_segments = self.settings_default["min_arc_segments"]
+        return min_arc_segments
+
+    @property
+    def _mm_per_arc_segment(self):
+        mm_per_arc_segment = self._settings.get_float(["mm_per_arc_segment"])
+        if mm_per_arc_segment is None or mm_per_arc_segment < 0:
+            mm_per_arc_segment = self.settings_default["mm_per_arc_segment"]
+        return mm_per_arc_segment
 
     @property
     def _overwrite_source_file(self):
@@ -1110,8 +1126,18 @@ class ArcWelderPlugin(
         max_radius_mm = gcode_comment_settings.get("max_radius_mm", self._max_radius_mm)
         if max_radius_mm > 1000000:
             logger.warning(
-                "The max radius mm of %0.2fmm is greater than the recommended max of 1000000mm (1km).", resolution_mm
+                "The max radius mm of %0.2fmm is greater than the recommended max of 1000000mm (1km).", max_radius_mm
             )
+
+        min_arc_segments = gcode_comment_settings.get("min_arc_segments", self._min_arc_segments)
+        if min_arc_segments < 0:
+            logger.warning("The min arc segments value is less than 0.  Setting to the 0.")
+            min_arc_segments = 0
+
+        mm_per_arc_segment = gcode_comment_settings.get("mm_per_arc_segment", self._mm_per_arc_segment)
+        if mm_per_arc_segment < 0:
+            logger.warning("The mm per arc segment value is less than 0.  Setting to the 0.")
+            mm_per_arc_segment = 0
 
         allow_z_axis_changes = gcode_comment_settings.get(
             "allow_z_axis_changes", self._allow_z_axis_changes
@@ -1139,6 +1165,8 @@ class ArcWelderPlugin(
                 "resolution_mm": resolution_mm,
                 "path_tolerance_percent": path_tolerance_percent,
                 "max_radius_mm": max_radius_mm,
+                "min_arc_segments": min_arc_segments,
+                "mm_per_arc_segment": mm_per_arc_segment,
                 "g90_g91_influences_extruder": g90_g91_influences_extruder,
                 "allow_z_axis_changes": allow_z_axis_changes,
                 "log_level": self._gcode_conversion_log_level

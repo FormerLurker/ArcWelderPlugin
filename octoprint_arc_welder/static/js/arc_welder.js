@@ -163,9 +163,9 @@ $(function () {
     };
 
     ArcWelder.boolToPureComputedProperty = function(target, options){
-        var true_value = options.true_value ?? "true";
-        var false_value = options.false_value ?? "false";
-        var null_value = options.null_value ?? "null";
+        var true_value = options.true_value ?? "True";
+        var false_value = options.false_value ?? "False";
+        var null_value = options.null_value ?? "Null";
         var property_name = options.property_name ?? "boolToText"
         target[property_name] = ko.pureComputed( function(){
             var val = target();
@@ -438,11 +438,7 @@ $(function () {
             false_value: "text-error",
             null_value: "text-warning"
         }
-        self.bool_class_recommended_options = {
-            true_value: "text-success",
-            false_value: "text-warning",
-            null_value: "text-warning"
-        }
+
         self.loaded = ko.observable(false);
         self.success = ko.observable();
         self.type = ko.observable();
@@ -459,9 +455,7 @@ $(function () {
         self.supported = ko.observable().extend({
             arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
         });
-        self.recommended = ko.observable().extend({
-            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_recommended_options
-        });
+        self.known_issues = ko.observableArray();
         self.notes = ko.observable();
         self.previous_notes = ko.observable();
         self.error = ko.observable();
@@ -497,6 +491,9 @@ $(function () {
 
         self.checking_firmware = ko.observable(false);
 
+        self.has_known_issues = ko.pureComputed(function(){
+            return self.known_issues().length > 0;
+        });
         self.update = function(data, firmware_types_version){
 
             self.firmware_types_info(firmware_types_version ?? self.firmware_types_info_default)
@@ -513,7 +510,7 @@ $(function () {
             self.guid(data.guid ?? null);
             self.printer(data.printer ?? null);
             self.supported(data.supported ?? null);
-            self.recommended(data.recommended ?? null);
+            self.known_issues(data.known_issues ?? []);
             self.notes(data.notes ?? null);
             self.previous_notes(data.previous_notes ?? null);
             self.error(data.error ?? null);
@@ -527,7 +524,7 @@ $(function () {
             self.fill_warnings();
             self.fill_errors();
             self.has_errors(self.errors().length > 0);
-            self.has_warnings(self.warnings().length > 0);
+            self.has_warnings(self.warnings().length > 0 || self.has_known_issues());
             ArcWelder.Help.bindHelpLinks("#arc_welder_firmware_compatibility");
         };
 
@@ -550,12 +547,6 @@ $(function () {
                     if (self.supported()===false && self.arcs_enabled())
                     {
                         warnings.push("Your firmware version indicates that it is not supported, but arcs appear to be supported and enabled.  Use with caution.");
-                    }
-
-                    if ((self.supported()===true || self.arcs_enabled()===true) && self.recommended()===false)
-                    {
-                        // Not Recommended (only if supported)
-                        warnings.push("Your printer's firmware is not recommended for use with Arc Welder.  Quality and speed may be reduced.");
                     }
                     if (self.g2_g3_supported()===null)
                     {

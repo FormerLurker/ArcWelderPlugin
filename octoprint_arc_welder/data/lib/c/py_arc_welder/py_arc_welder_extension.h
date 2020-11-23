@@ -49,6 +49,8 @@ struct py_gcode_arc_args {
 		resolution_mm = DEFAULT_RESOLUTION_MM;
 		path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT;
 		max_radius_mm = DEFAULT_MAX_RADIUS_MM;
+		min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS;
+		mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT;
 		g90_g91_influences_extruder = DEFAULT_G90_G91_INFLUENCES_EXTREUDER;
 		allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES;
 		log_level = 0;
@@ -60,6 +62,8 @@ struct py_gcode_arc_args {
 		double resolution_mm_, 
 		double path_tolerance_percent_,
 		double max_radius_mm_,
+		int min_arc_segments_,
+		double mm_per_arc_segment_,
 		bool g90_g91_influences_extruder_, 
 		bool allow_z_axis_changes_,
 		int log_level_
@@ -70,6 +74,8 @@ struct py_gcode_arc_args {
 		resolution_mm = resolution_mm_;
 		path_tolerance_percent = path_tolerance_percent_;
 		max_radius_mm = max_radius_mm_;
+		min_arc_segments = min_arc_segments_;
+		mm_per_arc_segment = mm_per_arc_segment_;
 		allow_z_axis_changes = allow_z_axis_changes_;
 		g90_g91_influences_extruder = g90_g91_influences_extruder_;
 		log_level = log_level_;
@@ -82,6 +88,8 @@ struct py_gcode_arc_args {
 	bool allow_z_axis_changes;
 	bool g90_g91_influences_extruder;
 	double max_radius_mm;
+	int min_arc_segments;
+	double mm_per_arc_segment;
 	int log_level;
 };
 

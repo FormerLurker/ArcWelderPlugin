@@ -42,6 +42,8 @@ arc_welder::arc_welder(
 	double resolution_mm, 
 	double path_tolerance_percent,
 	double max_radius,
+	int min_arc_segments,
+	double mm_per_arc_segment,
 	bool g90_g91_influences_extruder, 
 	bool allow_z_axis_changes,
 	int buffer_size, 
@@ -51,6 +53,8 @@ arc_welder::arc_welder(
 			resolution_mm, 
 			path_tolerance_percent, 
 			max_radius,
+			min_arc_segments,
+			mm_per_arc_segment,
 			allow_z_axis_changes
 		), 
 		segment_statistics_(
@@ -183,11 +187,13 @@ arc_welder_results results;
 	error_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, ERROR);
 
 	std::stringstream stream;
-	stream << std::fixed << std::setprecision(5);
+	stream << std::fixed << std::setprecision(2);
 	stream << "arc_welder::process - Parameters received: source_file_path: '" <<
 		source_path_ << "', target_file_path:'" << target_path_ << "', resolution_mm:" <<
 		resolution_mm_ << "mm (+-" << current_arc_.get_resolution_mm() << "mm), path_tolerance_percent: " << current_arc_.get_path_tolerance_percent()  
-		<< ", max_radius_mm:" << current_arc_.get_max_radius() 
+		<< ", max_radius_mm:" << current_arc_.get_max_radius()
+		<< ", min_arc_segments:" << std::setprecision(0) <<current_arc_.get_min_arc_segments() 
+		<< ", mm_per_arc_segment:" << std::setprecision(0) << current_arc_.get_mm_per_arc_segment()
 		<< ", g90_91_influences_extruder: " << (p_source_position_->get_g90_91_influences_extruder() ? "True" : "False")
 		<< ", allow_z_axis_changes: " << (allow_z_axis_changes_ ? "True" : "False");
 	p_logger_->log(logger_type_, INFO, stream.str());

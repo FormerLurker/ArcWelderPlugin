@@ -480,7 +480,7 @@ bool gcode_parser::try_extract_double(char ** p_p_gcode, double * p_double, unsi
 			++p;
 		}
 		r += f / ten_pow(n);
-		*p_precision = n;
+		*p_precision = (unsigned char)n;
 	}
 	if (neg) {
 		r = -r;

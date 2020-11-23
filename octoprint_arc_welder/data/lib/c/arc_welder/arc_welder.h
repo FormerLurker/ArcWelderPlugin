@@ -158,7 +158,7 @@ struct source_target_segment_statistics {
 			int percent = 0;
 			if (source_count > 0)
 			{
-				percent = (((double)target_count - (double)source_count) / (double)source_count) * 100.0;
+				percent = (int)((((double)target_count - (double)source_count) / (double)source_count) * 100.0);
 				if (percent > max_percent)
 				{
 					max_percent = percent;
@@ -419,6 +419,8 @@ public:
 		double resolution_mm,
 		double path_tolerance_percent,
 		double max_radius,
+		int min_arc_segments,
+		double mm_per_arc_segment,
 		bool g90_g91_influences_extruder = DEFAULT_G90_G91_INFLUENCES_EXTRUDER,
 		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES,
 		int buffer_size = DEFAULT_GCODE_BUFFER_SIZE,

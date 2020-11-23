@@ -122,6 +122,8 @@ struct circle {
 
 #define DEFAULT_RESOLUTION_MM 0.05
 #define DEFAULT_ALLOW_Z_AXIS_CHANGES false
+#define DEFAULT_MIN_ARC_SEGMENTS 0
+#define DEFAULT_MM_PER_ARC_SEGMENT 0
 struct arc : circle
 {
 	arc() {
@@ -158,25 +160,31 @@ struct arc : circle
 		const point& mid_point, 
 		const point& end_point, 
 		arc& target_arc, 
-		double approximate_length, 
+		double approximate_length,
 		double resolution = DEFAULT_RESOLUTION_MM, 
-		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT, 
+		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
+		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
+		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
 		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES);
 	static bool try_create_arc(
 		const circle& c, 
 		const array_list<point>& points, 
 		arc& target_arc, 
-		double approximate_length, 
+		double approximate_length,
 		double resolution = DEFAULT_RESOLUTION_MM, 
 		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
+		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
+		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
 		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES);
 	static bool try_create_arc(
 		const array_list<point>& points, 
 		arc& target_arc, 
 		double approximate_length, 
-		double max_radius = DEFAULT_MAX_RADIUS_MM, 
+		double max_radius = DEFAULT_MAX_RADIUS_MM,
 		double resolution = DEFAULT_RESOLUTION_MM, 
 		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
+		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
+		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
 		int xyz_precision = DEFAULT_XYZ_PRECISION,
 		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES);
 };
@@ -184,6 +192,7 @@ double distance_from_segment(segment s, point p);
 
 #define DEFAULT_MIN_SEGMENTS 3
 #define DEFAULT_MAX_SEGMENTS 50
+
 class segmented_shape
 {
 public:
@@ -204,8 +213,8 @@ public:
 	double get_shape_e_relative();
 	void set_resolution_mm(double resolution_mm);
 	void reset_precision();
-	void update_xyz_precision(double precision);
-	void update_e_precision(double precision);
+	void update_xyz_precision(int precision);
+	void update_e_precision(int precision);
 	virtual bool is_shape() const;
 	// public virtual functions
 	virtual void clear();

@@ -218,7 +218,7 @@ std::istream& utilities::safe_get_line(std::istream& is, std::string& t)
 
 std::string utilities::center(std::string input, int width) 
 {
-	int input_width = input.length();
+	int input_width = (int)input.length();
 	int difference = width - input_width;
 	if (difference < 1)
 	{

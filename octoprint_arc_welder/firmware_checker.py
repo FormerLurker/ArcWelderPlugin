@@ -131,22 +131,26 @@ class FirmwareChecker:
                     logger.info("The firmware types file does not exist.  Creating from defaults.")
                 except ValueError as e:
                     logger.error("Could not parse the firmware types file.  Recreating from the defaults.")
-            if not types_library:
-                # The firmware types file either does not exist, or it is corrupt.  Recreate from the defaults
-                if not os.path.exists(os.path.dirname(self._firmware_types_path)):
-                    firmware_types_directory = os.path.dirname(self._firmware_types_path)
-                    logger.info("Creating firmware types folder at: %s", firmware_types_directory)
-                    os.makedirs(firmware_types_directory)
-                shutil.copy(self._firmware_types_default_path, self._firmware_types_path)
-                with open(self._firmware_types_path) as f:
-                    types_library = json.load(f)
-            if types_library:
-                if "version" not in types_library and not load_defaults:
-                    # we are using a dev version (1.0<version<1.1) that had an incomplete types file
-                    # Reload the defaults
-                    self._load_firmware_types(True)
-                    return
 
+            # load the defaults library (we need to make sure it's not newer than the version we have)
+
+            # The firmware types file either does not exist, or it is corrupt.  Recreate from the defaults
+            if not os.path.exists(os.path.dirname(self._firmware_types_path)):
+                firmware_types_directory = os.path.dirname(self._firmware_types_path)
+                logger.info("Creating firmware types folder at: %s", firmware_types_directory)
+                os.makedirs(firmware_types_directory)
+            shutil.copy(self._firmware_types_default_path, self._firmware_types_path)
+            with open(self._firmware_types_path) as f:
+                default_types_library = json.load(f)
+
+            load_defaults = (
+                not types_library or "version" not in types_library
+                or parse_version(types_library["version"]) < parse_version(default_types_library["version"])
+            )
+            if load_defaults:
+                types_library = default_types_library
+
+            if types_library:
                 self._firmware_types = types_library
 
                 # compile all regex functions
@@ -265,7 +269,7 @@ class FirmwareChecker:
             "guid": None,
             "printer": None,
             "supported": None,
-            "recommended": None,
+            "known_issues": [],
             "notes": None,
             "previous_notes": None,
             "type_help_file": None,
@@ -551,7 +555,7 @@ class FirmwareChecker:
         return build_date
 
     @staticmethod
-    def _try_extract_arcs_enabled(parsed_m115_response):
+    def _extract_arcs_enabled(parsed_m115_response):
         capabilities = parsed_m115_response.get(FirmwareChecker.MARLIN_EXTENDED_CAPABILITIES_KEY, dict())
         arcs = capabilities.get("ARCS", None)
         if arcs is not None:
@@ -684,7 +688,7 @@ class FirmwareChecker:
 
     @staticmethod
     def get_arcs_enabled_marlin(parsed_firmware_response):
-        return FirmwareChecker._try_extract_arcs_enabled(parsed_firmware_response)
+        return FirmwareChecker._extract_arcs_enabled(parsed_firmware_response)
 
     # Virtual Marlin Functions
     @staticmethod
@@ -708,7 +712,7 @@ class FirmwareChecker:
 
     @staticmethod
     def get_arcs_enabled_virtual_marlin(parsed_firmware_response):
-        return FirmwareChecker._try_extract_arcs_enabled(parsed_firmware_response)
+        return FirmwareChecker._extract_arcs_enabled(parsed_firmware_response)
 
     # Klipper Firmware Functions
     @staticmethod
@@ -863,7 +867,7 @@ class FirmwareChecker:
                 "error": "",
                 "firmware_version": None
             }
-            logger.info("Checking firmware version");
+            logger.info("Checking firmware version")
             firmware_version = self._get_firmware_version()
 
             if firmware_version["success"]:

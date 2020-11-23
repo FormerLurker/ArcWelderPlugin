@@ -61,7 +61,6 @@ class TestFirmwareChecker(unittest.TestCase):
                     "guid": "2c926d8d-b72c-419b-bf54-5d273b881cb8",
                     "version": "<=1.0.0",
                     "supported": True,
-                    "recommended": True,
                     "g2_g3_supported": True,
                     "notes": "This is a test printer."
                 },
@@ -69,7 +68,6 @@ class TestFirmwareChecker(unittest.TestCase):
                     "guid": "2f6ebc41-055b-41d3-9f8c-f2e1d67f95d0",
                     "version": ">1.0.0",
                     "supported": True,
-                    "recommended": True,
                     "g2_g3_supported": True,
                     "is_future": True
                 }

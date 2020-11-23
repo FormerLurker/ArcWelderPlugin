@@ -196,7 +196,7 @@ extern "C"
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 
-		py_arc_welder arc_welder_obj(args.guid, args.source_path, args.target_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.g90_g91_influences_extruder, args.allow_z_axis_changes, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
+		py_arc_welder arc_welder_obj(args.guid, args.source_path, args.target_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.min_arc_segments, args.mm_per_arc_segment, args.g90_g91_influences_extruder, args.allow_z_axis_changes, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
 		arc_welder_results results = arc_welder_obj.process();
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
@@ -298,6 +298,34 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 	if (args.max_radius_mm > DEFAULT_MAX_RADIUS_MM)
 	{
 		args.max_radius_mm = DEFAULT_MAX_RADIUS_MM; // Set to the default if no resolution is provided, or if it is less than 0.
+	}
+
+	// Extract the mm_per_arc_segment
+	PyObject* py_mm_per_arc_segment = PyDict_GetItemString(py_args, "mm_per_arc_segment");
+	if (py_mm_per_arc_segment == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve the mm_per_arc_segment parameter from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.mm_per_arc_segment = gcode_arc_converter::PyFloatOrInt_AsDouble(py_mm_per_arc_segment);
+	if (args.mm_per_arc_segment < 0)
+	{
+		args.mm_per_arc_segment = 0;
+	}
+
+	// Extract min_arc_segments
+	PyObject* py_min_arc_segments = PyDict_GetItemString(py_args, "min_arc_segments");
+	if (py_min_arc_segments == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve the min_arc_segments parameter from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.min_arc_segments = (int) gcode_arc_converter::PyIntOrLong_AsLong(py_min_arc_segments);
+	if (args.min_arc_segments < 0)
+	{
+		args.min_arc_segments = 0; // Set to the default if no resolution is provided, or if it is less than 0.
 	}
 
 	// Extract Allow Z Axis Changes
