@@ -35,7 +35,7 @@ segmented_arc::segmented_arc() : segmented_shape(DEFAULT_MIN_SEGMENTS, DEFAULT_M
 {
   max_radius_mm_ = DEFAULT_MAX_RADIUS_MM;
   min_arc_segments_ = DEFAULT_MIN_ARC_SEGMENTS,
-  allow_z_axis_changes_ = DEFAULT_ALLOW_Z_AXIS_CHANGES;
+  allow_3d_arcs_ = DEFAULT_allow_3d_arcs;
 }
 
 segmented_arc::segmented_arc(
@@ -46,7 +46,7 @@ segmented_arc::segmented_arc(
   double max_radius_mm,
   int min_arc_segments,
   double mm_per_arc_segment,
-  bool allow_z_axis_changes
+  bool allow_3d_arcs
 ) : segmented_shape(min_segments, max_segments, resolution_mm, path_tolerance_percent)
 {
   max_radius_mm_ = max_radius_mm;
@@ -63,7 +63,7 @@ segmented_arc::segmented_arc(
   {
     min_arc_segments_ = 0;
   }
-  allow_z_axis_changes_ = allow_z_axis_changes;
+  allow_3d_arcs_ = allow_3d_arcs;
 }
 
 segmented_arc::~segmented_arc()
@@ -122,7 +122,7 @@ bool segmented_arc::try_add_point(point p, double e_relative)
   if (points_.count() > 0)
   {
     point p1 = points_[points_.count() - 1];
-    if (allow_z_axis_changes_) {
+    if (allow_3d_arcs_) {
       // If we can draw arcs in 3 space, add in the distance of the z axis changes
       distance = utilities::get_cartesian_distance(p1.x, p1.y, p1.z, p.x, p.y, p.z);
     }
@@ -151,7 +151,7 @@ bool segmented_arc::try_add_point(point p, double e_relative)
     original_shape_length_ += distance;
     if (points_.count() == get_min_segments())
     {
-      if (!arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, xyz_precision_, allow_z_axis_changes_))
+      if (!arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, xyz_precision_, allow_3d_arcs_))
       {
         point_added = false;
         points_.pop_back();
@@ -183,7 +183,7 @@ bool segmented_arc::try_add_point(point p, double e_relative)
     // We have to remove the distance and e relative value
     // accumulated between the old arc start point and the new
     point new_initial_point = points_[0];
-    if (allow_z_axis_changes_) {
+    if (allow_3d_arcs_) {
       original_shape_length_ -= utilities::get_cartesian_distance(old_initial_point.x, old_initial_point.y, old_initial_point.z, new_initial_point.x, new_initial_point.y, new_initial_point.z);
     }
     else {
@@ -212,7 +212,7 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
   double previous_shape_length = original_shape_length_;
   original_shape_length_ += pd;
 
-  if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, xyz_precision_, allow_z_axis_changes_))
+  if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, xyz_precision_, allow_3d_arcs_))
   {
     if (!is_shape())
     {
@@ -266,7 +266,7 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
   gcode += " Y";
   gcode += utilities::to_string(current_arc_.end_point.y, xyz_precision_, buf, false);
 
-  if (allow_z_axis_changes_)
+  if (allow_3d_arcs_)
   {
     // We may need to add a z coordinate
     double z_initial = current_arc_.start_point.z;

@@ -34,6 +34,11 @@
     position: absolute;
 }
 
+.arc-welder .control-group .control-text {
+    width: 160px;
+    padding-top: 5px;
+}
+
 .arc-welder .progress span {
     position: absolute;
     top: 0;
@@ -121,6 +126,11 @@ div.ui-pnotify.arc-welder {
         opacity: 1;
     }
 }
+
+.arc-welder .no-margin {
+    margin: 0
+}
+
 .arc-welder .short-rows.row-fluid,
 .arc-welder .short-rows .row-fluid,
 .arc-welder .short-rows .span1,

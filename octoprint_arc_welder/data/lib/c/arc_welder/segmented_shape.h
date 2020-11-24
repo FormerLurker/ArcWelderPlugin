@@ -109,7 +109,7 @@ struct circle {
 
 	static bool try_create_circle(const point &p1, const point &p2, const point &p3, const double max_radius, circle& new_circle);
 	
-	static bool try_create_circle(const array_list<point>& points, const double max_radius, const double resolutino_mm, const int xyz_precision, bool allow_z_axis_changes, bool check_middle_only, circle& new_circle);
+	static bool try_create_circle(const array_list<point>& points, const double max_radius, const double resolutino_mm, const int xyz_precision, bool allow_3d_arcs, bool check_middle_only, circle& new_circle);
 
 	double get_radians(const point& p1, const point& p2) const;
 
@@ -117,11 +117,11 @@ struct circle {
 
 	point get_closest_point(const point& p) const;
 
-	bool is_over_deviation(const array_list<point>& points, const double resolution_mm, const int xyz_precision, const bool allow_z_axis_changes);
+	bool is_over_deviation(const array_list<point>& points, const double resolution_mm, const int xyz_precision, const bool allow_3d_arcs);
 };
 
 #define DEFAULT_RESOLUTION_MM 0.05
-#define DEFAULT_ALLOW_Z_AXIS_CHANGES false
+#define DEFAULT_allow_3d_arcs false
 #define DEFAULT_MIN_ARC_SEGMENTS 0
 #define DEFAULT_MM_PER_ARC_SEGMENT 0
 struct arc : circle
@@ -165,7 +165,7 @@ struct arc : circle
 		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
 		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
-		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES);
+		bool allow_3d_arcs = DEFAULT_allow_3d_arcs);
 	static bool try_create_arc(
 		const circle& c, 
 		const array_list<point>& points, 
@@ -175,7 +175,7 @@ struct arc : circle
 		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
 		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
-		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES);
+		bool allow_3d_arcs = DEFAULT_allow_3d_arcs);
 	static bool try_create_arc(
 		const array_list<point>& points, 
 		arc& target_arc, 
@@ -186,7 +186,7 @@ struct arc : circle
 		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
 		int xyz_precision = DEFAULT_XYZ_PRECISION,
-		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES);
+		bool allow_3d_arcs = DEFAULT_allow_3d_arcs);
 };
 double distance_from_segment(segment s, point p);
 

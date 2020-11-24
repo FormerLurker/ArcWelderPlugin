@@ -45,7 +45,7 @@ arc_welder::arc_welder(
 	int min_arc_segments,
 	double mm_per_arc_segment,
 	bool g90_g91_influences_extruder, 
-	bool allow_z_axis_changes,
+	bool allow_3d_arcs,
 	int buffer_size, 
 	progress_callback callback) : current_arc_(
 			DEFAULT_MIN_SEGMENTS, 
@@ -55,7 +55,7 @@ arc_welder::arc_welder(
 			max_radius,
 			min_arc_segments,
 			mm_per_arc_segment,
-			allow_z_axis_changes
+			allow_3d_arcs
 		), 
 		segment_statistics_(
 			segment_statistic_lengths, 
@@ -76,7 +76,7 @@ arc_welder::arc_welder(
 	source_path_ = source_path;
 	target_path_ = target_path;
 	gcode_position_args_ = get_args_(g90_g91_influences_extruder, buffer_size);
-	allow_z_axis_changes_ = allow_z_axis_changes;
+	allow_3d_arcs_ = allow_3d_arcs;
 	notification_period_seconds = 1;
 	lines_processed_ = 0;
 	gcodes_processed_ = 0;
@@ -195,7 +195,7 @@ arc_welder_results results;
 		<< ", min_arc_segments:" << std::setprecision(0) <<current_arc_.get_min_arc_segments() 
 		<< ", mm_per_arc_segment:" << std::setprecision(0) << current_arc_.get_mm_per_arc_segment()
 		<< ", g90_91_influences_extruder: " << (p_source_position_->get_g90_91_influences_extruder() ? "True" : "False")
-		<< ", allow_z_axis_changes: " << (allow_z_axis_changes_ ? "True" : "False");
+		<< ", allow_3d_arcs: " << (allow_3d_arcs_ ? "True" : "False");
 	p_logger_->log(logger_type_, INFO, stream.str());
 
 
@@ -389,7 +389,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 	{
 		double movement_length_mm;
 		
-		if (allow_z_axis_changes_) {
+		if (allow_3d_arcs_) {
 			movement_length_mm = utilities::get_cartesian_distance(p_pre_pos->x, p_pre_pos->y, p_pre_pos->z, p_cur_pos->x, p_cur_pos->y, p_cur_pos->z);
 		}
 		else {
@@ -423,7 +423,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 		}
 	}
 	
-	bool z_axis_ok = allow_z_axis_changes_ ||
+	bool z_axis_ok = allow_3d_arcs_ ||
 		utilities::is_equal(p_cur_pos->z, p_pre_pos->z);
 
 	if (
@@ -500,7 +500,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 			{
 				p_logger_->log(logger_type_, DEBUG, "Command '"+ cmd.command + "' is not G0/G1, skipping.  Gcode:" + cmd.gcode);
 			}
-			else if (!allow_z_axis_changes_ && !utilities::is_equal(p_cur_pos->z, p_pre_pos->z))
+			else if (!allow_3d_arcs_ && !utilities::is_equal(p_cur_pos->z, p_pre_pos->z))
 			{
 				p_logger_->log(logger_type_, DEBUG, "Z axis position changed, cannot convert:" + cmd.gcode);
 			}
@@ -695,7 +695,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 		{
 			position* prev_pos = p_source_position_->get_previous_position_ptr();
 			length = 0;
-			if (allow_z_axis_changes_)
+			if (allow_3d_arcs_)
 			{
 				length = utilities::get_cartesian_distance(cur_pos->x, cur_pos->y, cur_pos->z, prev_pos->x, prev_pos->y, prev_pos->z);
 			}

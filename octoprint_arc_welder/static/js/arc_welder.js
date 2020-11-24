@@ -556,7 +556,7 @@ $(function () {
                     if (self.g2_g3_z_parameter_supported()===null)
                     {
                         // g2_g3_z_parameter_supported support unknown
-                        if (ArcWelder.Tab.plugin_settings.allow_z_axis_changes()){
+                        if (ArcWelder.Tab.plugin_settings.allow_3d_arcs()){
                             warnings.push("Cannot determine if 3D Arc commands are supported (for use with vase mode), but 3D Arcs are currently enabled in the Arc Welder settings.  Please use with extreme caution!");
                         }
                         else {
@@ -564,7 +564,7 @@ $(function () {
                         }
                     }
                     //TODO:  Check the settings and see if z is enabled.
-                    if (self.g2_g3_z_parameter_supported()===false && !ArcWelder.Tab.plugin_settings.allow_z_axis_changes())
+                    if (self.g2_g3_z_parameter_supported()===false && !ArcWelder.Tab.plugin_settings.allow_3d_arcs())
                     {
                         // g2_g3_z_parameter_supported support unknown
                         warnings.push("3D Arcs are not supported by your firmware.  Since 3D arcs are currently disabled, this should be OK.");
@@ -630,7 +630,7 @@ $(function () {
                     }
                 }
 
-                if (ArcWelder.Tab.plugin_settings.allow_z_axis_changes() && self.g2_g3_z_parameter_supported()===false)
+                if (ArcWelder.Tab.plugin_settings.allow_3d_arcs() && self.g2_g3_z_parameter_supported()===false)
                 {
                    errors.push("3D Arcs are enabled, but they are not supported by your firmware.  Edit the Arc Welder settings, uncheck 'Allow 3D Arcs', and run the firmware check again.");
                 }
@@ -893,6 +893,11 @@ $(function () {
             self.loadStats(newValue);
             ArcWelder.setLocalStorage("stat_file_path", newValue.path)
             ArcWelder.setLocalStorage("stat_file_origin", newValue.origin);
+        });
+
+        self.firmware_compensation_enabled = ko.pureComputed(function(){
+            return self.plugin_settings.min_arc_segments() > 0
+                && self.plugin_settings.mm_per_arc_segment() > 0;
         });
 
         self.statistics_space_saved_string = ko.pureComputed(function(){

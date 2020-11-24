@@ -43,7 +43,7 @@ public:
 		double max_radius_mm = DEFAULT_MAX_RADIUS_MM,
 		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
-		bool allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES
+		bool allow_3d_arcs = DEFAULT_allow_3d_arcs
 	);
 	virtual ~segmented_arc();
 	virtual bool try_add_point(point p, double e_relative);
@@ -67,6 +67,6 @@ private:
 	double max_radius_mm_;
 	int min_arc_segments_;
 	double mm_per_arc_segment_;
-	bool allow_z_axis_changes_;
+	bool allow_3d_arcs_;
 };															
 

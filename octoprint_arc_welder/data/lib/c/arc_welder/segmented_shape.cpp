@@ -198,7 +198,7 @@ bool circle::try_create_circle(const point& p1, const point& p2, const point& p3
   return true;
 }
 
-bool circle::try_create_circle(const array_list<point>& points, const double max_radius, const double resolution_mm, const int xyz_precision, bool allow_z_axis_changes, bool check_middle_only, circle& new_circle)
+bool circle::try_create_circle(const array_list<point>& points, const double max_radius, const double resolution_mm, const int xyz_precision, bool allow_3d_arcs, bool check_middle_only, circle& new_circle)
 {
   int middle_index = points.count() / 2;
   int check_index;
@@ -210,7 +210,7 @@ bool circle::try_create_circle(const array_list<point>& points, const double max
     // Check the index
     if (circle::try_create_circle(points[0], points[check_index], points[points.count() - 1], max_radius, new_circle))
     {
-      if (!new_circle.is_over_deviation(points, resolution_mm, xyz_precision, allow_z_axis_changes))
+      if (!new_circle.is_over_deviation(points, resolution_mm, xyz_precision, allow_3d_arcs))
       {
         return true;
       }
@@ -269,19 +269,19 @@ point circle::get_closest_point(const point& p) const
   return point(px, py, pz, 0);
 }
 
-bool circle::is_over_deviation(const array_list<point>& points, const double resolution_mm, const int xyz_precision, const bool allow_z_axis_changes)
+bool circle::is_over_deviation(const array_list<point>& points, const double resolution_mm, const int xyz_precision, const bool allow_3d_arcs)
 {
   // We need to ensure that the Z steps are constand per linear travel unit
   double z_step_per_distance = 0;
   // Skip the first and last points since they will fit perfectly.
   // UNLESS allow z changes is set to true, then we need to do some different stuff
-  int final_index = points.count() - 1 + (allow_z_axis_changes ? 1 : 0);
+  int final_index = points.count() - 1 + (allow_3d_arcs ? 1 : 0);
   for (int index = 1; index < points.count() - 1; index++)
   {
     // Make sure the length from the center of our circle to the test point is 
     // at or below our max distance.
     double distance = distance = utilities::get_cartesian_distance(points[index].x, points[index].y, center.x, center.y);
-    if (allow_z_axis_changes) {
+    if (allow_3d_arcs) {
       double z1 = points[index - 1].z;
       double z2 = points[index].z;
 
@@ -334,7 +334,7 @@ bool arc::try_create_arc(
   double path_tolerance_percent,
   int min_arc_segments,
   double mm_per_arc_segment,
-  bool allow_z_axis_changes)
+  bool allow_3d_arcs)
 {
   double polar_start_theta = c.get_polar_radians(start_point);
   double polar_mid_theta = c.get_polar_radians(mid_point);
@@ -385,7 +385,7 @@ bool arc::try_create_arc(
   // got the direction wrong
   double arc_length = c.radius * angle_radians;
 
-  if (allow_z_axis_changes)
+  if (allow_3d_arcs)
   {
     // We may be traveling in 3 space, calculate the arc_length of the spiral
     if (start_point.z != end_point.z)
@@ -407,7 +407,7 @@ bool arc::try_create_arc(
     double test_radians = std::abs(angle_radians - 2 * PI_DOUBLE);
     // Calculate the length of that arc
     double test_arc_length = c.radius * test_radians;
-    if (allow_z_axis_changes)
+    if (allow_3d_arcs)
     {
       // We may be traveling in 3 space, calculate the arc_length of the spiral
       if (start_point.z != end_point.z)
@@ -425,7 +425,7 @@ bool arc::try_create_arc(
     direction = direction == 1 ? 2 : 1;
   }
 
-  if (allow_z_axis_changes)
+  if (allow_3d_arcs)
   {
     // Ensure the perimeter of the arc is less than that of a full circle
     double perimeter = utilities::hypot(c.radius * 2.0 * PI_DOUBLE, end_point.z - start_point.z);
@@ -477,10 +477,10 @@ bool arc::try_create_arc(
   double path_tolerance_percent,
   int min_arc_segments,
   double mm_per_arc_segment,
-  bool allow_z_axis_changes)
+  bool allow_3d_arcs)
 {
   int mid_point_index = ((points.count() - 2) / 2) + 1;
-  return arc::try_create_arc(c, points[0], points[mid_point_index], points[points.count() - 1], target_arc, approximate_length, resolution, path_tolerance_percent, min_arc_segments, mm_per_arc_segment, allow_z_axis_changes);
+  return arc::try_create_arc(c, points[0], points[mid_point_index], points[points.count() - 1], target_arc, approximate_length, resolution, path_tolerance_percent, min_arc_segments, mm_per_arc_segment, allow_3d_arcs);
 }
 bool arc::try_create_arc(
   const array_list<point>& points,
@@ -492,13 +492,13 @@ bool arc::try_create_arc(
   int min_arc_segments,
   double mm_per_arc_segment,
   int xyz_precision,
-  bool allow_z_axis_changes)
+  bool allow_3d_arcs)
 {
   circle test_circle;
-  if (circle::try_create_circle(points, max_radius_mm, resolution_mm, xyz_precision, allow_z_axis_changes, false, test_circle))
+  if (circle::try_create_circle(points, max_radius_mm, resolution_mm, xyz_precision, allow_3d_arcs, false, test_circle))
   {
     int mid_point_index = ((points.count() - 2) / 2) + 1;
-    return arc::try_create_arc(test_circle, points[0], points[mid_point_index], points[points.count() - 1], target_arc, approximate_length, resolution_mm, path_tolerance_percent, min_arc_segments, mm_per_arc_segment, allow_z_axis_changes);
+    return arc::try_create_arc(test_circle, points[0], points[mid_point_index], points[points.count() - 1], target_arc, approximate_length, resolution_mm, path_tolerance_percent, min_arc_segments, mm_per_arc_segment, allow_3d_arcs);
   }
   return false;
 }

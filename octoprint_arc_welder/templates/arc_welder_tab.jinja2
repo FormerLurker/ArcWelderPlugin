@@ -24,8 +24,11 @@
 # following email address: FormerLurker@pm.me
 ##################################################################################-->
 <div id="tab_plugin_arc_welder_controls" class="form-horizontal arc-welder">
+
     <div>
-        <H4>
+        <div class="row-fluid short-rows">
+        <div class="span6">
+            <H4 class="no-margin">
             <a href="#" class="no-underline"
                data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_current_preprocessor_tasks', toggle_observable: current_tasks_visible }">
                 Processor Tasks
@@ -34,6 +37,12 @@
                 <i class="fa fa-no-shadow fa-caret-down"></i>
             </a>
         </H4>
+        </div>
+        <div class="span6 text-right">
+            <a title="Open Arc Welder Settings" data-bind="click: function() {ArcWelder.openArcWelderSettings('settings');}" style=""><i class="fa fa-gear fa-lg"></i></a>
+        </div>
+    </div>
+
         <div id="arc_welder_current_preprocessor_tasks">
             <div data-bind="visible: preprocessing_tasks().length == 0">
                 <p>There are no gcode files in the queue.</p>
@@ -118,154 +127,94 @@
             <hr/>
         </div>
     </div>
-    <div data-bind="visible: plugin_settings.feature_settings.current_run_configuration_visible">
-        <H4>
-            <a href="#" class="no-underline"
-               data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_current_run_configuration', toggle_observable: run_configuration_visible }">
-                Current Run Configuration <i class="fa fa-no-shadow fa-caret-down"></i>
-            </a>
-        </H4>
-        <div id="arc_welder_current_run_configuration" class="short-rows">
-            <div data-bind="visible: plugin_settings.enabled">
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Plugin Status:</strong>
-                    </div>
-                    <div class="span8">
-                        Enabled
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Pre-Processing Types:</strong>
-                    </div>
-                    <div class="span8">
-                        <span data-bind="text: file_processing_setting_name"></span>
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>G90 Influences Extruder:</strong>
-                    </div>
-                    <div class="span8">
-                        <span data-bind="visible: plugin_settings.use_octoprint_settings"><span
-                                data-bind="text: settings.settings.feature.g90InfluencesExtruder"></span> (using octoprint settings)</span>
-                        <span data-bind="visible: !plugin_settings.use_octoprint_settings()"><span
-                                data-bind="text: plugin_settings.g90_g91_influences_extruder() ? 'True' : 'False' "></span></span>
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Allow 3D Arcs:</strong>
-                    </div>
-                    <div class="span8">
-                        <span data-bind="text: plugin_settings.allow_z_axis_changes() ? 'True' : 'False'"></span>
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Resolution:</strong>
-                    </div>
-                    <div class="span8">
-                        <span data-bind="text: plugin_settings.resolution_mm"></span>mm&nbsp;(max deviation <strong>&#177;<span
-                            data-bind="text:  plugin_settings.resolution_mm()/2.0"></span>mm</strong>)
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Path Tolerance:</strong>
-                    </div>
-                    <div class="span8">
-                        <span data-bind="text: plugin_settings.path_tolerance_percent"></span>%
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Maximum Arc Radius:</strong>
-                    </div>
-                    <div class="span8">
-                        <span data-bind="text: plugin_settings.max_radius_mm"></span>mm
-                    </div>
-                </div>
-                <div class="row-fluid" >
-                    <div class="span4 text-right">
-                        <strong>Firmware Compensation:</strong>
-                    </div>
-                    <div class="span8">
-                        <div class="text-warning" data-bind="visible: plugin_settings.min_arc_segments() > 0 && plugin_settings.mm_per_arc_segment() > 0">
-                            <span data-bind="text: plugin_settings.mm_per_arc_segment"></span>mm per arc, at minimum <span data-bind="text: plugin_settings.min_arc_segments"></span> segments per full circle
-                        </div>
-                        <div data-bind="visible: !(plugin_settings.min_arc_segments() > 0 && plugin_settings.mm_per_arc_segment() > 0)">
-                            Disabled
-                        </div>
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Output File Name:</strong>
-                    </div>
-                    <div class="span8">
-                        <span data-bind="visible: overwrite_source_file">Gcode files will be overwritten after processing.</span>
-                        <div data-bind="visible: !overwrite_source_file()">
-                            <span data-bind="visible: plugin_settings.target_prefix() != ''">
-                                <strong><span data-bind="text: plugin_settings.target_prefix"></span></strong>
-                            </span>source_file_name<span
-                                data-bind="visible: plugin_settings.target_postfix() != ''"><strong><span
-                                data-bind="text: plugin_settings.target_postfix"></span></strong></span>.gcode
-                        </div>
-
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Delete Source File:</strong>
-                    </div>
-                    <div class="span8">
-                        <div data-bind="visible: overwrite_source_file">
-                            <span>The source file will be overwritten, based on other the other plugin settings.</span>
-                        </div>
-                        <div data-bind="visible: !overwrite_source_file()">
-                            <span data-bind="text: source_file_delete_setting_name"></span>
-                        </div>
-
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Print After Processing:</strong>
-                    </div>
-                    <div class="span8">
-                        <span data-bind="text: print_file_setting_name"></span>
-                    </div>
-                </div>
-                <div class="row-fluid">
-                    <div class="span4 text-right">
-                        <strong>Select After Processing:</strong>
-                    </div>
-                    <div class="span8">
-                        <span data-bind="text: select_file_setting_name"></span>
-                    </div>
-                </div>
+    <H4>
+        <a id="arc_welder_show_statistics" href="#" class="no-underline"
+           data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc-welder-stats-container', toggle_observable: file_statistics_visible }">
+                File Statistics
+            <i class="fa fa-no-shadow fa-caret-down"></i>
+        </a>
+    </H4>
+    <div id="arc-welder-stats-container">
+        <div id="arc-welder-no-stats-div" data-bind="visible: !statistics_available()">
+            <div data-bind="visible: is_selected_file_welded">
+                <h5>Statistics Unavailable for <span data-bind="text:selected_filename"></span></h5>
+                <p>The selected file was welded, but contains no statistics. It may have been welded before being
+                    uploaded into OctoPrint, or the metadata was lost somehow.</p>
             </div>
-            <div data-bind="visible: !plugin_settings.enabled()">
-                <dl class="row-fluid">
-                    <div class="span4 text-right"><strong>Plugin Status:</strong></div>
-                    <div class="span8">
-                        Disabled - All processing is disabled, but statistics will still be visible.
-                    </div>
-                </dl>
+            <div data-bind="visible: !is_selected_file_welded() && selected_filename()">
+                <h5><a href="javaScript:void(0)" class="no-click no-underline">No Arc Welding Detected.</a></h5>
+                <p>Either '<span data-bind="text:selected_filename"></span>' has not been processed by Arc Welder,
+                    or the comments added by Arc Welder have been stripped from the gcode.</p>
+            </div>
+            <div data-bind="visible: !is_selected_file_welded() && !selected_filename()">
+                <h5>No File Selected</h5>
+            </div>
+
+        </div>
+        <div id="arc-welder-stats" data-bind="visible: statistics_available" class="short-rows">
+            <div class="row-fluid">
+                <div class="span12">
+                    <h5>Arc-Welder Statistics for <span data-bind="text:selected_filename_title"></span> File</h5>
+                </div>
             </div>
             <div class="row-fluid">
-                <div class="span12 text-right">
-                    <button class="btn btn-primary"
-                            data-bind="click: function() {ArcWelder.openArcWelderSettings('settings');}"
-                            title="Open Arc Welder settings">
-                        Edit Settings
-                    </button>
+                <div class="span4 text-right"><strong>Source File:</strong></div>
+                <div class="span8"><sapn data-bind="text:statistics_source_name, attr:{title:statistics_source_name}"></sapn></div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Target File:</strong></div>
+                <div class="span8"><sapn data-bind="text:statistics_target_name, attr:{title:statistics_target_name}"></sapn></div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Arcs:</strong></div>
+                <div class="span8">
+                    Created <span data-bind="text: statistics_arcs_created.formatted"></span> from <span data-bind="text: statistics_points_compressed.formatted"></span> extrusions
                 </div>
             </div>
-            <hr/>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Target/Source Extrusions:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_target_file_total_count.formatted"></span>
+                    &#8260;
+                    <span data-bind="text: statistics_source_file_total_count.formatted"></span>
+                    =&nbsp;<span data-bind="text: Math.abs(statistics_total_count_reduction_percent())"></span>%
+                    <span data-bind="text: statistics_total_count_reduction_percent() < 0 ? 'reduction' : 'increase'"></span>
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Compression:</strong></div>
+                <div class="span8">
+                     <span data-bind="text: statistics_compression_ratio"></span>&#8758;1 (<span data-bind="text: statistics_compression_percent"></span>%)
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>File Size:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_source_file_size.formatted"></span> - <span data-bind="text: statistics_space_saved_string"></span> = <span data-bind="text: statistics_target_file_size.formatted"></span>
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Line Count:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_lines_processed.formatted"></span> - <span data-bind="text: statistics_points_compressed.formatted"></span> = <span data-bind="text: statistics_target_file_lines"></span>
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right"><strong>Processing Time:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_seconds_elapsed.formatted"></span>
+                </div>
+            </div>
+            <div class="row-fluid">
+                <div class="span4 text-right">
+                    <strong>Segment Length Statistics:</strong>
+                </div>
+                <div class="span8 text-center">
+                    <pre class="text-center statistics-text" data-bind="text: statistics_segment_statistics_text"></pre>
+                </div>
+            </div>
         </div>
+        <hr/>
     </div>
     <div data-bind="visible: plugin_settings.feature_settings.check_firmware() != ArcWelder.CHECK_FIRMWARE_DISABLED">
         <H4>
@@ -430,92 +379,144 @@
             <hr/>
         </div>
     </div>
-    <H4>
-        <a id="arc_welder_show_statistics" href="#" class="no-underline"
-           data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc-welder-stats-container', toggle_observable: file_statistics_visible }">
-                Processed File Statistics
-            <i class="fa fa-no-shadow fa-caret-down"></i>
-        </a>
-    </H4>
-    <div id="arc-welder-stats-container">
-        <div id="arc-welder-no-stats-div" data-bind="visible: !statistics_available()">
-            <div data-bind="visible: is_selected_file_welded">
-                <h5>Statistics Unavailable for <span data-bind="text:selected_filename"></span></h5>
-                <p>The selected file was welded, but contains no statistics. It may have been welded before being
-                    uploaded into OctoPrint, or the metadata was lost somehow.</p>
-            </div>
-            <div data-bind="visible: !is_selected_file_welded() && selected_filename()">
-                <h5><a href="javaScript:void(0)" class="no-click no-underline">No Arc Welding Detected.</a></h5>
-                <p>Either '<span data-bind="text:selected_filename"></span>' has not been processed by Arc Welder,
-                    or the comments added by Arc Welder have been stripped from the gcode.</p>
-            </div>
-            <div data-bind="visible: !is_selected_file_welded() && !selected_filename()">
-                <h5>No File Selected</h5>
-            </div>
+    <div data-bind="visible: plugin_settings.feature_settings.current_run_configuration_visible">
+        <H4>
+            <a href="#" class="no-underline"
+               data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_current_run_configuration', toggle_observable: run_configuration_visible }">
+                Current Run Configuration <i class="fa fa-no-shadow fa-caret-down"></i>
+            </a>
+        </H4>
+        <div id="arc_welder_current_run_configuration" class="short-rows">
+            <div data-bind="visible: plugin_settings.enabled">
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Plugin Status:</strong>
+                    </div>
+                    <div class="span8">
+                        Enabled
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Pre-Processing Types:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: file_processing_setting_name"></span>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>G90 Influences Extruder:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="visible: plugin_settings.use_octoprint_settings"><span
+                                data-bind="text: settings.settings.feature.g90InfluencesExtruder"></span> (using octoprint settings)</span>
+                        <span data-bind="visible: !plugin_settings.use_octoprint_settings()"><span
+                                data-bind="text: plugin_settings.g90_g91_influences_extruder() ? 'True' : 'False' "></span></span>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Allow 3D Arcs:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.allow_3d_arcs() ? 'True' : 'False'"></span>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Resolution:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.resolution_mm"></span>mm&nbsp;(max deviation <strong>&#177;<span
+                            data-bind="text:  plugin_settings.resolution_mm()/2.0"></span>mm</strong>)
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Path Tolerance:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.path_tolerance_percent"></span>%
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Maximum Arc Radius:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.max_radius_mm"></span>mm
+                    </div>
+                </div>
+                <div class="row-fluid" >
+                    <div class="span4 text-right">
+                        <strong>Firmware Compensation:</strong>
+                    </div>
+                    <div class="span8">
+                        <div class="text-warning" data-bind="visible: firmware_compensation_enabled">
+                            <span data-bind="text: plugin_settings.mm_per_arc_segment"></span>mm per arc, at minimum <span data-bind="text: plugin_settings.min_arc_segments"></span> segments per full circle
+                        </div>
+                        <div data-bind="visible: !firmware_compensation_enabled()">
+                            Disabled
+                        </div>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Output File Name:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="visible: overwrite_source_file">Gcode files will be overwritten after processing.</span>
+                        <div data-bind="visible: !overwrite_source_file()">
+                            <span data-bind="visible: plugin_settings.target_prefix() != ''">
+                                <strong><span data-bind="text: plugin_settings.target_prefix"></span></strong>
+                            </span>source_file_name<span
+                                data-bind="visible: plugin_settings.target_postfix() != ''"><strong><span
+                                data-bind="text: plugin_settings.target_postfix"></span></strong></span>.gcode
+                        </div>
 
-        </div>
-        <div id="arc-welder-stats" data-bind="visible: statistics_available" class="short-rows">
-            <div class="row-fluid">
-                <div class="span12">
-                    <h5>Arc-Welder Statistics for <span data-bind="text:selected_filename_title"></span> File</h5>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Delete Source File:</strong>
+                    </div>
+                    <div class="span8">
+                        <div data-bind="visible: overwrite_source_file">
+                            <span>The source file will be overwritten, based on other the other plugin settings.</span>
+                        </div>
+                        <div data-bind="visible: !overwrite_source_file()">
+                            <span data-bind="text: source_file_delete_setting_name"></span>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Print After Processing:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: print_file_setting_name"></span>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Select After Processing:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: select_file_setting_name"></span>
+                    </div>
                 </div>
             </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Source File:</strong></div>
-                <div class="span8"><sapn data-bind="text:statistics_source_name, attr:{title:statistics_source_name}"></sapn></div>
+            <div data-bind="visible: !plugin_settings.enabled()">
+                <dl class="row-fluid">
+                    <div class="span4 text-right"><strong>Plugin Status:</strong></div>
+                    <div class="span8">
+                        Disabled - All processing is disabled, but statistics will still be visible.
+                    </div>
+                </dl>
             </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Target File:</strong></div>
-                <div class="span8"><sapn data-bind="text:statistics_target_name, attr:{title:statistics_target_name}"></sapn></div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Arcs:</strong></div>
-                <div class="span8">
-                    Created <span data-bind="text: statistics_arcs_created.formatted"></span> from <span data-bind="text: statistics_points_compressed.formatted"></span> extrusions
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Target/Source Extrusions:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_target_file_total_count.formatted"></span>
-                    &#8260;
-                    <span data-bind="text: statistics_source_file_total_count.formatted"></span>
-                    =&nbsp;<span data-bind="text: Math.abs(statistics_total_count_reduction_percent())"></span>%
-                    <span data-bind="text: statistics_total_count_reduction_percent() < 0 ? 'reduction' : 'increase'"></span>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Compression:</strong></div>
-                <div class="span8">
-                     <span data-bind="text: statistics_compression_ratio"></span>&#8758;1 (<span data-bind="text: statistics_compression_percent"></span>%)
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>File Size:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_source_file_size.formatted"></span> - <span data-bind="text: statistics_space_saved_string"></span> = <span data-bind="text: statistics_target_file_size.formatted"></span>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Line Count:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_lines_processed.formatted"></span> - <span data-bind="text: statistics_points_compressed.formatted"></span> = <span data-bind="text: statistics_target_file_lines"></span>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Processing Time:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_seconds_elapsed.formatted"></span>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right">
-                    <strong>Segment Length Statistics:</strong>
-                </div>
-                <div class="span8 text-center">
-                    <pre class="text-center statistics-text" data-bind="text: statistics_segment_statistics_text"></pre>
-                </div>
-            </div>
+            <hr/>
         </div>
     </div>
     <div class="row-fluid">

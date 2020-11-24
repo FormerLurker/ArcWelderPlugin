@@ -141,7 +141,7 @@ class ArcWelderPlugin(
         self.settings_default = dict(
             use_octoprint_settings=True,
             g90_g91_influences_extruder=False,
-            allow_z_axis_changes=False,
+            allow_3d_arcs=False,
             resolution_mm=0.05,
             path_tolerance_percent=5.0,
             max_radius_mm=1000*1000,  # 1KM, pretty big :)
@@ -561,9 +561,9 @@ class ArcWelderPlugin(
         return g90_g91_influences_extruder
 
     @property
-    def _allow_z_axis_changes(self):
+    def _allow_3d_arcs(self):
         return self._settings.get_boolean(
-            ["allow_z_axis_changes"]
+            ["allow_3d_arcs"]
         )
 
     @property
@@ -1139,8 +1139,8 @@ class ArcWelderPlugin(
             logger.warning("The mm per arc segment value is less than 0.  Setting to the 0.")
             mm_per_arc_segment = 0
 
-        allow_z_axis_changes = gcode_comment_settings.get(
-            "allow_z_axis_changes", self._allow_z_axis_changes
+        allow_3d_arcs = gcode_comment_settings.get(
+            "allow_3d_arcs", self._allow_3d_arcs
         )
 
         g90_g91_influences_extruder = gcode_comment_settings.get(
@@ -1168,7 +1168,7 @@ class ArcWelderPlugin(
                 "min_arc_segments": min_arc_segments,
                 "mm_per_arc_segment": mm_per_arc_segment,
                 "g90_g91_influences_extruder": g90_g91_influences_extruder,
-                "allow_z_axis_changes": allow_z_axis_changes,
+                "allow_3d_arcs": allow_3d_arcs,
                 "log_level": self._gcode_conversion_log_level
             }
         }

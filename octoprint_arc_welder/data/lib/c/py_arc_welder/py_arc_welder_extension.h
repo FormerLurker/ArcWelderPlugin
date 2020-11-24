@@ -52,7 +52,7 @@ struct py_gcode_arc_args {
 		min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS;
 		mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT;
 		g90_g91_influences_extruder = DEFAULT_G90_G91_INFLUENCES_EXTREUDER;
-		allow_z_axis_changes = DEFAULT_ALLOW_Z_AXIS_CHANGES;
+		allow_3d_arcs = DEFAULT_allow_3d_arcs;
 		log_level = 0;
 	}
 	py_gcode_arc_args(
@@ -65,7 +65,7 @@ struct py_gcode_arc_args {
 		int min_arc_segments_,
 		double mm_per_arc_segment_,
 		bool g90_g91_influences_extruder_, 
-		bool allow_z_axis_changes_,
+		bool allow_3d_arcs_,
 		int log_level_
 	) {
 		guid = guid_;
@@ -76,7 +76,7 @@ struct py_gcode_arc_args {
 		max_radius_mm = max_radius_mm_;
 		min_arc_segments = min_arc_segments_;
 		mm_per_arc_segment = mm_per_arc_segment_;
-		allow_z_axis_changes = allow_z_axis_changes_;
+		allow_3d_arcs = allow_3d_arcs_;
 		g90_g91_influences_extruder = g90_g91_influences_extruder_;
 		log_level = log_level_;
 	}
@@ -85,7 +85,7 @@ struct py_gcode_arc_args {
 	std::string target_path;
 	double resolution_mm;
 	double path_tolerance_percent;
-	bool allow_z_axis_changes;
+	bool allow_3d_arcs;
 	bool g90_g91_influences_extruder;
 	double max_radius_mm;
 	int min_arc_segments;

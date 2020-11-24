@@ -67,6 +67,11 @@ $(function() {
             )
         });
 
+        self.firmware_compensation_enabled = ko.pureComputed(function(){
+            return self.plugin_settings().min_arc_segments() > 0
+                && self.plugin_settings().mm_per_arc_segment() > 0;
+        });
+
         self.onBeforeBinding = function() {
             // Make plugin setting access a little more terse
             self.plugin_settings(self.settings.settings.plugins.arc_welder);

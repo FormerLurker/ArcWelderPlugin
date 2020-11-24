@@ -45,7 +45,7 @@ public:
 		int min_arc_segments,
 		double mm_per_arc_segment,
 		bool g90_g91_influences_extruder,
-		bool allow_z_axis_changes,
+		bool allow_3d_arcs,
 		int buffer_size, 
 		PyObject* py_progress_callback
 		): arc_welder(
@@ -58,7 +58,7 @@ public:
 			min_arc_segments,
 			mm_per_arc_segment,
 			g90_g91_influences_extruder,
-			allow_z_axis_changes,
+			allow_3d_arcs,
 			buffer_size
   ){
 		guid_ = guid;

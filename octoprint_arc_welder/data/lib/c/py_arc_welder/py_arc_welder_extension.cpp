@@ -196,7 +196,7 @@ extern "C"
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 
-		py_arc_welder arc_welder_obj(args.guid, args.source_path, args.target_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.min_arc_segments, args.mm_per_arc_segment, args.g90_g91_influences_extruder, args.allow_z_axis_changes, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
+		py_arc_welder arc_welder_obj(args.guid, args.source_path, args.target_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.min_arc_segments, args.mm_per_arc_segment, args.g90_g91_influences_extruder, args.allow_3d_arcs, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
 		arc_welder_results results = arc_welder_obj.process();
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
@@ -329,15 +329,15 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 	}
 
 	// Extract Allow Z Axis Changes
-	// allow_z_axis_changes
-	PyObject* py_allow_z_axis_changes = PyDict_GetItemString(py_args, "allow_z_axis_changes");
-	if (py_allow_z_axis_changes == NULL)
+	// allow_3d_arcs
+	PyObject* py_allow_3d_arcs = PyDict_GetItemString(py_args, "allow_3d_arcs");
+	if (py_allow_3d_arcs == NULL)
 	{
-		std::string message = "ParseArgs - Unable to retrieve allow_z_axis_changes from the args.";
+		std::string message = "ParseArgs - Unable to retrieve allow_3d_arcs from the args.";
 		p_py_logger->log_exception(GCODE_CONVERSION, message);
 		return false;
 	}
-	args.allow_z_axis_changes = PyLong_AsLong(py_allow_z_axis_changes) > 0;
+	args.allow_3d_arcs = PyLong_AsLong(py_allow_3d_arcs) > 0;
 
 	// Extract G90/G91 influences extruder
 	// g90_influences_extruder
