@@ -145,8 +145,9 @@ class ArcWelderPlugin(
             resolution_mm=0.05,
             path_tolerance_percent=5.0,
             max_radius_mm=1000*1000,  # 1KM, pretty big :)
-            min_arc_segments=0, # 0 to disable
-            mm_per_arc_segment=0,  # 0 to disable
+            firmware_compensation_enabled=False,
+            min_arc_segments=12,  # 0 to disable
+            mm_per_arc_segment=1.0,  # 0 to disable
             overwrite_source_file=False,
             target_prefix="",
             target_postfix=".aw",
@@ -590,6 +591,13 @@ class ArcWelderPlugin(
         if max_radius_mm is None:
             max_radius_mm = self.settings_default["max_radius_mm"]
         return max_radius_mm
+
+    @property
+    def _firmware_compensation_enabled(self):
+        firmware_compensation_enabled = self._settings.get_boolean(["firmware_compensation_enabled"])
+        if firmware_compensation_enabled is None:
+            firmware_compensation_enabled = False
+        return firmware_compensation_enabled
 
     @property
     def _min_arc_segments(self):
@@ -1129,15 +1137,19 @@ class ArcWelderPlugin(
                 "The max radius mm of %0.2fmm is greater than the recommended max of 1000000mm (1km).", max_radius_mm
             )
 
-        min_arc_segments = gcode_comment_settings.get("min_arc_segments", self._min_arc_segments)
-        if min_arc_segments < 0:
-            logger.warning("The min arc segments value is less than 0.  Setting to the 0.")
+        if not self._firmware_compensation_enabled:
             min_arc_segments = 0
-
-        mm_per_arc_segment = gcode_comment_settings.get("mm_per_arc_segment", self._mm_per_arc_segment)
-        if mm_per_arc_segment < 0:
-            logger.warning("The mm per arc segment value is less than 0.  Setting to the 0.")
             mm_per_arc_segment = 0
+        else:
+            min_arc_segments = gcode_comment_settings.get("min_arc_segments", self._min_arc_segments)
+            if min_arc_segments < 0:
+                logger.warning("The min arc segments value is less than 0.  Setting to the 0.")
+                min_arc_segments = 0
+
+            mm_per_arc_segment = gcode_comment_settings.get("mm_per_arc_segment", self._mm_per_arc_segment)
+            if mm_per_arc_segment < 0:
+                logger.warning("The mm per arc segment value is less than 0.  Setting to the 0.")
+                mm_per_arc_segment = 0
 
         allow_3d_arcs = gcode_comment_settings.get(
             "allow_3d_arcs", self._allow_3d_arcs

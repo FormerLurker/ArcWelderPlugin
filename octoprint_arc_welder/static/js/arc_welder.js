@@ -456,6 +456,7 @@ $(function () {
             arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
         });
         self.known_issues = ko.observableArray();
+        self.is_future = ko.observable();
         self.notes = ko.observable();
         self.previous_notes = ko.observable();
         self.error = ko.observable();
@@ -511,6 +512,7 @@ $(function () {
             self.printer(data.printer ?? null);
             self.supported(data.supported ?? null);
             self.known_issues(data.known_issues ?? []);
+            self.is_future(data.is_future ?? null)
             self.notes(data.notes ?? null);
             self.previous_notes(data.previous_notes ?? null);
             self.error(data.error ?? null);
@@ -896,7 +898,8 @@ $(function () {
         });
 
         self.firmware_compensation_enabled = ko.pureComputed(function(){
-            return self.plugin_settings.min_arc_segments() > 0
+            return self.plugin_settings.firmware_compensation_enabled()
+                && self.plugin_settings.min_arc_segments() > 0
                 && self.plugin_settings.mm_per_arc_segment() > 0;
         });
 

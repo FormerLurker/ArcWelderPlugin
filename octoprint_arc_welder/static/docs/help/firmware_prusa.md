@@ -4,7 +4,7 @@ Arc performance on the Mk2 and Mk3 is quite good except for very small arcs, whi
 
 At the time of this writing, firmware for the Mk2 and Mk3 run on a fork of Marlin 1, so the arc support enhancements made in Marlin 2.0.6 are not yet included.  I've been working on improving arc support in this firmware, and will update this document if there is any movement.
 
-In the meantime, you can use the new *Firmware Compensation* functionality in the *Arc Welder* settings.  Set *MM Per Arc Segment* to 1.0, and I recommend setting *Minimum Arc Segments* to 12.  You can adjust *Minimum Arc Segments* slightly up or down depending on your needs, but don't go too much higher or lower than that else you will see either poor compression (higher values) or will notice flat edges again for arcs of a small radius (lower values).
+In the meantime, you can use the new *Firmware Compensation* functionality in the *Arc Welder* settings.  To use it, first enable *Firmware Compensation*, then set *MM Per Arc Segment* to 1.0 (the firmware default).  I recommend setting *Minimum Arc Segments* to 12.  You can adjust *Minimum Arc Segments* slightly up or down depending on your needs, but don't go too much higher or lower than that else you will see either poor compression (higher values) or will notice flat edges again for arcs of a small radius (lower values).
 
 You can find the latest configuration file [here](https://github.com/prusa3d/Prusa-Firmware/blob/MK3/Firmware/Configuration_adv.h).
 Here are the firmware settings that apply to Arc Welder:

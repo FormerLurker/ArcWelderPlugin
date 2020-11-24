@@ -1,5 +1,7 @@
 Marlin version since v2.0.6 are fully recommended for use with Arc Welder as long as arc support is enabled.  If you are running an older version, I highly recommend you upgrade to the latest version.
 
+If you are running an older version of marlin, and the firmware checker is reporting that arcs of a small radius may be flat, you can use the new *Firmware Compensation* functionality in the *Arc Welder* settings.  I recommend printing a test model to determine if this is actually a problem for you.  If it is you will see a flat edge on the roof of a Benchy.  In order for compensation to work properly, you will need to match the *MM Per Arc Segment* in Arc Welder to the value for *MM_PER_ARC_SEGMENT* in your firmware (typically 1.0).  I recommend setting *Minimum Arc Segments* to 12.  You can adjust *Minimum Arc Segments* slightly up or down depending on your needs, but don't go too much higher or lower than that else you will see either poor compression (higher values) or will notice flat edges again for arcs of a small radius (lower values).
+
 If the *EXTENDED_CAPABILITIES_REPORT* firmware setting is enabled, Arc Welder will be able to detect if arcs are enabled.
 
 ## Configuring Marlin

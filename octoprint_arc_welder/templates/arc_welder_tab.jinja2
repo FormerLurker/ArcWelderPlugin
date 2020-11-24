@@ -340,6 +340,14 @@
                             </div>
                         </div>
                     </div>
+                    <div data-bind="visible: firmware_info.is_future">
+                        <div class="row-fluid">
+                            <div class="span4 text-right"><strong>Newer Version:</strong></div>
+                            <div class="span8">
+                                <span>This firmware is newer than the most recent version in the Firmware Library.  Some info may be outdated.</span>
+                            </div>
+                        </div>
+                    </div>
                     <div data-bind="visible: firmware_info.previous_notes">
                         <div class="row-fluid">
                             <div class="span4 text-right"><strong>Notes:</strong></div>

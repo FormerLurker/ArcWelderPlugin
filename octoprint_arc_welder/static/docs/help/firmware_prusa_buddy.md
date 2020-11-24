@@ -2,6 +2,8 @@ Arc support is enabled by default on all Prusa running Buddy firmware.  You shou
 
 Arc performance on Buddy is quite good except for very small arcs, which can be printed as having noticeably flat edges.  This will only be visible on some models (you can see it on the roof of a Benchy, for example) and can be mostly corrected by reducing the MM_PER_ARC_SEGMENT setting.  Lowering the value too much will cause performance problems (suttering on arcs).  I've not had an opportunity to try one of these printers, so if you want to change these settings, you will have to experiment.  Also, changing this setting requires you to recompile the firmware, so you may want to stick with models that don't have arcs with a radius greater than about 4mm for now.
 
+Alternatively, you can use the new *Firmware Compensation* functionality in the *Arc Welder* settings.  To use it, first enable *Firmware Compensation*, then set *MM Per Arc Segment* to 1.0 (the firmware default).  I recommend setting *Minimum Arc Segments* to 12.  You can adjust *Minimum Arc Segments* slightly up or down depending on your needs, but don't go too much higher or lower than that else you will see either poor compression (higher values) or will notice flat edges again for arcs of a small radius (lower values).
+
 You can find the latest configuration file for the Prusa Mini [here](https://github.com/prusa3d/Prusa-Firmware-Buddy/blob/master/include/marlin/Configuration_A3ides_2209_MINI_adv.h).
 Here are the firmware settings that apply to Arc Welder:
 

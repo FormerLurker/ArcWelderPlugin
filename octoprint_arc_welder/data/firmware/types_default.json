@@ -62,8 +62,7 @@
 					"known_issues": ["The default arc settings can cause flat edges for very small arcs with a radius around 1-5mm.  You can mitigate this with the 'Firmware Compensation' settings at the cost of less compression."],
 					"g2_g3_supported": true,
 					"g2_g3_z_parameter_supported": true,
-					"g90_g91_influences_extruder": true,
-					"notes": "This firmware has not been updated to include arc planning fixes implemented in Marlin 2.0.6."
+					"g90_g91_influences_extruder": true
 				},
 				{
 					"guid": "be64a03b-8878-47c2-959d-4486c1e222b9",
@@ -177,9 +176,9 @@
 					"guid": "f691ee9a-fa2a-48ce-a11d-b97ebed177f7",
 					"version": ">=0.8.0,<0.9.0",
 					"supported": true,
+					"known_issues": ["Arc support is there, but there are bugs in absolute extrusion mode that could result in very little extrusion.  If you experience problems, upgrade to the newest version."],
 					"g2_g3_supported": true,
-					"g2_g3_z_parameter_supported": true,
-					"notes": "Arc support is there, but there are bugs in absolute extrusion mode that could result in very little extrusion.  If you experience problems, upgrade to the newest version."
+					"g2_g3_z_parameter_supported": true
 				},
 				{
 					"guid": "7da24715-4f3a-4dbf-8ab5-912221f3f26d",
