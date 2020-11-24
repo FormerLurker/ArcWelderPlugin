@@ -481,14 +481,6 @@ $(function () {
         };
         self.firmware_types_info = ko.observable(self.firmware_types_info_default);
         self.arc_settings = ko.observable();
-        self.errors = ko.observableArray([]);
-        self.warnings = ko.observableArray([]);
-        self.has_warnings = ko.observable(null).extend({
-            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
-        });
-        self.has_errors = ko.observable(null).extend({
-            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
-        });
 
         self.checking_firmware = ko.observable(false);
 
@@ -496,7 +488,6 @@ $(function () {
             return self.known_issues().length > 0;
         });
         self.update = function(data, firmware_types_version){
-
             self.firmware_types_info(firmware_types_version ?? self.firmware_types_info_default)
             data = data??{};
             self.loaded(true);
@@ -523,55 +514,64 @@ $(function () {
             self.g90_g91_influences_extruder(data.g90_g91_influences_extruder ?? null);
             self.last_check_datetime(data.last_check_datetime ?? null);
             self.arc_settings(data.arc_settings ?? null);
-            self.fill_warnings();
-            self.fill_errors();
-            self.has_errors(self.errors().length > 0);
-            self.has_warnings(self.warnings().length > 0 || self.has_known_issues());
             ArcWelder.Help.bindHelpLinks("#arc_welder_firmware_compatibility");
         };
 
-        self.fill_warnings = function(){
+        self.has_warnings = ko.pureComputed(function(){
+            return self.warnings().length > 0 || self.has_known_issues();
+        }).extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
+        });;
+
+        self.warnings = ko.pureComputed(function(){
+            var success = self.success();
+            var type = self.type();
+            var version = self.version();
+            var supported = self.supported();
+            var arcs_enabled = self.arcs_enabled();
+            var g2_g3_supported = self.g2_g3_supported;
+            var g2_g3_z_parameter_supported = self.g2_g3_z_parameter_supported();
+            var allow_3d_arcs = ArcWelder.Tab.plugin_settings.allow_3d_arcs()
             var warnings = [];
-            if (self.success() === null)
+            if (success === null)
             {
                 warnings.push("No firmware check has been completed.  Please make sure your printer is connected, then click 'Check Firmware'.");
             }
-            else if (self.success()) {
-                if (self.type() === null){
+            else if (success) {
+                if (type === null){
                     warnings.push("Arc welder was unable to identity this firmware.  It might not support arc commands, or it may have bugs, but it may work fine.  Use with caution");
                 }
-                else if (self.version() === null)
+                else if (version === null)
                 {
                     warnings.push("Arc welder was unable to identity firmware version.  It might not support arc commands, or it may have bugs, but it may work fine.  Use with caution");
                 }
                 else
                 {
-                    if (self.supported()===false && self.arcs_enabled())
+                    if (supported===false && arcs_enabled)
                     {
                         warnings.push("Your firmware version indicates that it is not supported, but arcs appear to be supported and enabled.  Use with caution.");
                     }
-                    if (self.g2_g3_supported()===null)
+                    if (g2_g3_supported===null)
                     {
                         // G2/G3 support unknown
                         warnings.push("Cannot determine if arc commands (G2/G3) are supported by your firmware.");
                     }
-                    if (self.g2_g3_z_parameter_supported()===null)
+                    if (g2_g3_z_parameter_supported===null)
                     {
                         // g2_g3_z_parameter_supported support unknown
-                        if (ArcWelder.Tab.plugin_settings.allow_3d_arcs()){
+                        if (allow_3d_arcs){
                             warnings.push("Cannot determine if 3D Arc commands are supported (for use with vase mode), but 3D Arcs are currently enabled in the Arc Welder settings.  Please use with extreme caution!");
                         }
                         else {
                             warnings.push("Cannot determine if 3D Arc commands are supported (for use with vase mode).  Since 3D arcs are currently disabled, this should be OK.");
                         }
                     }
-                    //TODO:  Check the settings and see if z is enabled.
-                    if (self.g2_g3_z_parameter_supported()===false && !ArcWelder.Tab.plugin_settings.allow_3d_arcs())
+                    if (g2_g3_z_parameter_supported===false && !allow_3d_arcs)
                     {
                         // g2_g3_z_parameter_supported support unknown
                         warnings.push("3D Arcs are not supported by your firmware.  Since 3D arcs are currently disabled, this should be OK.");
                     }
-                    if (self.arcs_enabled() ===null)
+                    if (arcs_enabled ===null)
                     {
                         // Arcs enabled unknown
                         warnings.push("Cannot determine if arc commands are enabled in your firmware.");
@@ -579,68 +579,88 @@ $(function () {
                 }
 
             }
-            self.warnings(warnings);
-        }
+            return warnings;
+        });
 
-        self.fill_errors = function(){
+        self.has_errors = ko.pureComputed(function(){
+            return self.errors().length > 0;
+        }).extend({
+            arc_welder_bool_formatted:self.bool_display_options, arc_welder_bool_class: self.bool_class_options
+        });
+
+        self.errors = ko.pureComputed(function(){
             var errors = [];
+            // Call the observables up front so this is recalculated properly.
+            var success = self.success();
+            var supported = self.supported();
+            var arcs_enabled = self.arcs_enabled();
+            var g2_g3_supported = self.g2_g3_supported();
+            var g90_influences_extruder_setting_correct = self.g90_influences_extruder_setting_correct();
+            var g90_g91_influences_extruder = self.g90_g91_influences_extruder();
+            var allow_3d_arcs = ArcWelder.Tab.plugin_settings.allow_3d_arcs();
+            var g2_g3_z_parameter_supported = self.g2_g3_z_parameter_supported();
 
-            //TODO:  Check make sure G90/G91 influences extruder is set correctly!
-            if (!self.success())
+            if (!success)
             {
-                if (self.success() !== null)
+                if (success !== null)
                 {
                     errors.push("The last firmware check failed.  Please try again.  Click the help link for troubleshooting tips.");
                 }
             }
             else
             {
-                if (self.supported()===false && !self.arcs_enabled())
+                if (supported===false && !arcs_enabled)
                 {
                     // Not Supported
                     errors.push("Your printer's firmware is not supported.");
                 }
-                else if (self.g2_g3_supported()===false)
+                else if (g2_g3_supported===false)
                 {
                     // G2/G3 not supported
                     errors.push("Your printer's firmware does not support G2/G3 (arc) commands.");
                 }
-                else if (self.arcs_enabled()===false)
+                else if (arcs_enabled===false)
                 {
                     // Arcs not Enabled
                     errors.push("Arcs are not enabled in your printer's firmware.");
                 }
                 // Check G2/G3 influences extruder:
-                var g90_g91_influences_extruder_firmware = self.g90_g91_influences_extruder();
-                if (g90_g91_influences_extruder_firmware !== null)
-                {
-                    // Get the current setting
-                    g90_g91_influences_extruder_current = ArcWelder.Tab.plugin_settings.g90_g91_influences_extruder();
-                    if (ArcWelder.Tab.plugin_settings.use_octoprint_settings())
-                    {
-                        g90_g91_influences_extruder_current = ArcWelder.Tab.octoprint_settings.feature.g90InfluencesExtruder;
-                    }
-                    if (g90_g91_influences_extruder_firmware !=  g90_g91_influences_extruder_current)
-                    {
-                        if(g90_g91_influences_extruder_firmware){
-                            errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be ENABLED, but it is disabled.  Edit the Arc Welder settings, enable the G90/G91 Influences Extruder setting, and run the firmware check again.");
-                        }
-                        else{
-                            errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be DISABLED, but it is enabled.  Edit the Arc Welder settings, disable the G90/G91 Influences Extruder setting, and run the firmware check again.");
-                        }
 
+                if (!g90_influences_extruder_setting_correct)
+                {
+                    if(g90_g91_influences_extruder){
+                        errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be ENABLED, but it is disabled.  Edit the Arc Welder settings, enable the G90/G91 Influences Extruder setting, and run the firmware check again.");
+                    }
+                    else{
+                        errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be DISABLED, but it is enabled.  Edit the Arc Welder settings, disable the G90/G91 Influences Extruder setting, and run the firmware check again.");
                     }
                 }
-
-                if (ArcWelder.Tab.plugin_settings.allow_3d_arcs() && self.g2_g3_z_parameter_supported()===false)
+                if (allow_3d_arcs && g2_g3_z_parameter_supported===false)
                 {
                    errors.push("3D Arcs are enabled, but they are not supported by your firmware.  Edit the Arc Welder settings, uncheck 'Allow 3D Arcs', and run the firmware check again.");
                 }
 
             }
-            self.errors(errors);
+            return errors;
+        });
 
-        }
+        self.g90_influences_extruder_setting_correct = ko.pureComputed(function(){
+            var g90_g91_influences_extruder_firmware = self.g90_g91_influences_extruder();
+            if (g90_g91_influences_extruder_firmware !== null)
+            {
+                // Get the current setting
+                g90_g91_influences_extruder_current = ArcWelder.Tab.plugin_settings.g90_g91_influences_extruder();
+                if (ArcWelder.Tab.plugin_settings.use_octoprint_settings())
+                {
+                    g90_g91_influences_extruder_current = ArcWelder.Tab.octoprint_settings.feature.g90InfluencesExtruder();
+                }
+                if (g90_g91_influences_extruder_firmware !=  g90_g91_influences_extruder_current)
+                {
+                    return false;
+                }
+            }
+            return true;
+        });
 
         self.checkFirmware = function(){
             if (self.checking_firmware())
