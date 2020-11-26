@@ -962,11 +962,11 @@ class FirmwareChecker:
 
     @staticmethod
     def _check_for_unknown_command_response(response_text):
-        return response_text.strip().upper().contains("UNKNOWN COMMAND")
+        return "UNKNOWN COMMAND" in response_text.strip().upper()
 
     @staticmethod
     def _check_for_bad_parameter_response(response_text):
-        return response_text.strip().upper().contains("G2/G3 BAD PARAMETER")
+        return "G2/G3 BAD PARAMETER" in response_text.strip().upper()
 
     @staticmethod
     def _check_m115_response(response_text):

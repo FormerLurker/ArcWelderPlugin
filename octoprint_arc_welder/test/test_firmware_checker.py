@@ -482,7 +482,6 @@ class TestFirmwareChecker(unittest.TestCase):
         self.assertEqual(firmware_info["version"], "10.0.0")
         self.assertEqual(firmware_info["type"], "RegexFirmware")
 
-
     def test_parse_extended_capabilities(self):
         firmware_guid = '9fa65fea-2adc-4e35-94af-36dc555985f2'
         self.response = [
