@@ -30,6 +30,7 @@ from __future__ import unicode_literals
 import time
 import datetime
 from distutils.version import LooseVersion
+import copy
 from six import string_types
 from past.builtins import xrange
 from flask import request, jsonify
@@ -765,28 +766,11 @@ class ArcWelderPlugin(
             FileDestinations.LOCAL, target_path, "arc_welder", True, overwrite=True, merge=False
         )
         progress = results["progress"]
-        metadata = {
-            "total_count_reduction_percent": progress["total_count_reduction_percent"],
-            "source_file_total_length": progress["source_file_total_length"],
-            "target_file_total_length": progress["target_file_total_length"],
-            "source_file_total_count": progress["source_file_total_count"],
-            "target_file_total_count": progress["target_file_total_count"],
-            "segment_statistics_text": progress["segment_statistics_text"],
-            "seconds_elapsed": progress["seconds_elapsed"],
-            "gcodes_processed": progress["gcodes_processed"],
-            "lines_processed": progress["lines_processed"],
-            "points_compressed": progress["points_compressed"],
-            "arcs_created": progress["arcs_created"],
-            "source_file_size": progress["source_file_size"],
-            "source_file_position": progress["source_file_position"],
-            "target_file_size": progress["target_file_size"],
-            "compression_ratio": progress["compression_ratio"],
-            "compression_percent": progress["compression_percent"],
-            "source_name": source_name,
-            "target_name": target_name,
-            "guid": progress["guid"]
-        }
-
+        # copy the progress so we don't change the original
+        metadata = copy.copy(progress)
+        # add source and target name
+        metadata["source_name"] = source_name
+        metadata["target_name"] = target_name
         self._file_manager.set_additional_metadata(
             FileDestinations.LOCAL,
             target_path,
@@ -912,28 +896,16 @@ class ArcWelderPlugin(
         self.send_preprocessing_tasks_update()
 
     def preprocessing_progress(self, progress, current_task):
-        data = {
-            "message_type": "preprocessing-progress",
-            "guid": progress["guid"],
-            "percent_complete": progress["percent_complete"],
-            "seconds_elapsed": progress["seconds_elapsed"],
-            "seconds_remaining": progress["seconds_remaining"],
-            "gcodes_processed": progress["gcodes_processed"],
-            "lines_processed": progress["lines_processed"],
-            "points_compressed": progress["points_compressed"],
-            "arcs_created": progress["arcs_created"],
-            "source_file_size": progress["source_file_size"],
-            "source_file_position": progress["source_file_position"],
-            "source_file_total_count": progress["source_file_total_count"],
-            "target_file_total_count": progress["target_file_total_count"],
-            "total_count_reduction_percent": progress["total_count_reduction_percent"],
-            "target_file_size": progress["target_file_size"],
-            "compression_ratio": progress["compression_ratio"],
-            "compression_percent": progress["compression_percent"],
-            "source_name": current_task["octoprint_args"]["source_name"],
-            "target_name": current_task["octoprint_args"]["target_name"],
-            "guid": progress["guid"]
-        }
+        # Need to copy the dict else we will alter the original!  Might be a good idea to do this in the callback...
+        data = copy.copy(progress)
+        # remove the segment statistics text, it is large and currently unused
+        data.pop("segment_statistics_text")
+
+        # add the sorce and target name as well as the message type from the task
+        data["source_name"] = current_task["octoprint_args"]["source_name"]
+        data["target_name"] = current_task["octoprint_args"]["target_name"]
+        data["message_type"] = "preprocessing-progress"
+
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def preprocessing_cancelled(self, task, auto_cancelled):

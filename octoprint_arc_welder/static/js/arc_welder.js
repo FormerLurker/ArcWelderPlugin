@@ -136,6 +136,14 @@ $(function () {
         }
         return 0;
     };
+
+    ArcWelder.getPercent = function(numerator, denominator){
+        if (denominator != 0)
+        {
+            return (numerator/denominator) * 100.0;
+        }
+        return 0;
+    };
     // extenders
 
     ko.extenders.arc_welder_numeric = function (target, precision) {
@@ -837,6 +845,7 @@ $(function () {
         self.statistics_lines_processed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_points_compressed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_arcs_created = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_num_firmware_compensations = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_source_file_size = ko.observable().extend({arc_welder_file_size: 1});
         self.statistics_source_file_position = ko.observable();
         self.statistics_target_file_size = ko.observable().extend({arc_welder_file_size: 1});
@@ -851,6 +860,7 @@ $(function () {
         self.progress_seconds_elapsed = ko.observable().extend({arc_welder_timer: {format:"timer"}});
         self.progress_seconds_remaining = ko.observable().extend({arc_welder_timer: {format:"estimate"}});
         self.progress_arcs_created = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.progress_num_firmware_compensations = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.progress_points_compressed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.progress_source_file_size = ko.observable().extend({arc_welder_file_size: 1});
         self.progress_target_file_size = ko.observable().extend({arc_welder_file_size: 1});
@@ -974,6 +984,20 @@ $(function () {
             }
             return tasks;
         });
+
+        self.progress_firmware_compensation_percent = ko.pureComputed(function(){
+            var arcs_created = self.progress_arcs_created();
+            var num_firmware_compensations = self.progress_num_firmware_compensations();
+            var total = arcs_created + num_firmware_compensations;
+            return ArcWelder.getPercentChange(arcs_created, total);
+        }).extend({arc_welder_numeric: 1});
+
+        self.statistics_firmware_compensation_percent = ko.pureComputed(function(){
+            var arcs_created = self.statistics_arcs_created();
+            var num_firmware_compensations = self.statistics_num_firmware_compensations();
+            var total = arcs_created + num_firmware_compensations;
+            return ArcWelder.getPercentChange(arcs_created, total);
+        }).extend({arc_welder_numeric: 1});
 
         self.file_processing_setting_name = ko.pureComputed(function(){
             return ArcWelder.getOptionNameForValue(
@@ -1137,6 +1161,7 @@ $(function () {
                 self.statistics_lines_processed(statistics.lines_processed);
                 self.statistics_points_compressed(statistics.points_compressed);
                 self.statistics_arcs_created(statistics.arcs_created);
+                self.statistics_num_firmware_compensations(statistics.num_firmware_compensations);
                 self.statistics_source_file_size(statistics.source_file_size);
                 self.statistics_source_file_position(statistics.source_file_position);
                 self.statistics_target_file_size(statistics.target_file_size);
@@ -1299,6 +1324,7 @@ $(function () {
             self.progress_seconds_elapsed(progress.seconds_elapsed);
             self.progress_seconds_remaining(progress.seconds_remaining);
             self.progress_arcs_created(progress.arcs_created);
+            self.progress_num_firmware_compensations(progress.num_firmware_compensations);
             self.progress_points_compressed(progress.points_compressed);
             self.progress_compression_ratio(progress.compression_ratio);
             self.progress_compression_percent(progress.compression_percent);

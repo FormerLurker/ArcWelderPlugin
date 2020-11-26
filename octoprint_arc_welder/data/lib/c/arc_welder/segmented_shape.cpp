@@ -332,8 +332,6 @@ bool arc::try_create_arc(
   double approximate_length,
   double resolution,
   double path_tolerance_percent,
-  int min_arc_segments,
-  double mm_per_arc_segment,
   bool allow_3d_arcs)
 {
   double polar_start_theta = c.get_polar_radians(start_point);
@@ -439,20 +437,6 @@ bool arc::try_create_arc(
     angle_radians *= -1.0;
   }
 
-  // See how many arcs will be interpolated
-  if (min_arc_segments > 0 && mm_per_arc_segment > 0)
-  {
-    double circumference = 2.0*PI_DOUBLE*c.radius;
-    int num_segments = (int)std::ceil(circumference/mm_per_arc_segment);
-    if (num_segments < min_arc_segments) {
-      // We might be able to salvage this.  See if there would be enough segments if we use an arc of the current size
-      num_segments = (int)std::ceil(circumference / arc_length);
-      if (num_segments < min_arc_segments) {
-        return false;
-      }
-    }
-  }
-
   target_arc.center.x = c.center.x;
   target_arc.center.y = c.center.y;
   target_arc.center.z = c.center.z;
@@ -469,20 +453,6 @@ bool arc::try_create_arc(
 }
 
 bool arc::try_create_arc(
-  const circle& c,
-  const array_list<point>& points,
-  arc& target_arc,
-  double approximate_length,
-  double resolution,
-  double path_tolerance_percent,
-  int min_arc_segments,
-  double mm_per_arc_segment,
-  bool allow_3d_arcs)
-{
-  int mid_point_index = ((points.count() - 2) / 2) + 1;
-  return arc::try_create_arc(c, points[0], points[mid_point_index], points[points.count() - 1], target_arc, approximate_length, resolution, path_tolerance_percent, min_arc_segments, mm_per_arc_segment, allow_3d_arcs);
-}
-bool arc::try_create_arc(
   const array_list<point>& points,
   arc& target_arc,
   double approximate_length,
@@ -497,11 +467,14 @@ bool arc::try_create_arc(
   circle test_circle;
   if (circle::try_create_circle(points, max_radius_mm, resolution_mm, xyz_precision, allow_3d_arcs, false, test_circle))
   {
+    // We could save a bit of processing power and do our firmware compensation here, but we won't be able to track statistics for this easily.
+    // moved check to segmented_arc.cpp
     int mid_point_index = ((points.count() - 2) / 2) + 1;
-    return arc::try_create_arc(test_circle, points[0], points[mid_point_index], points[points.count() - 1], target_arc, approximate_length, resolution_mm, path_tolerance_percent, min_arc_segments, mm_per_arc_segment, allow_3d_arcs);
+    return arc::try_create_arc(test_circle, points[0], points[mid_point_index], points[points.count() - 1], target_arc, approximate_length, resolution_mm, path_tolerance_percent, allow_3d_arcs);
   }
   return false;
 }
+
 #pragma endregion
 
 segmented_shape::segmented_shape(int min_segments, int max_segments, double resolution_mm, double path_tolerance_percnet) : points_(max_segments)

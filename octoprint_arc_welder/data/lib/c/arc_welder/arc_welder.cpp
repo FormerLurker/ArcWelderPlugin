@@ -355,7 +355,7 @@ arc_welder_progress arc_welder::get_progress_(long source_file_position, double 
 		progress.compression_ratio = (static_cast<float>(source_file_position) / static_cast<float>(progress.target_file_size));
 		progress.compression_percent = (1.0 - (static_cast<float>(progress.target_file_size) / static_cast<float>(source_file_position))) * 100.0f;
 	}
-
+	progress.num_firmware_compensations = current_arc_.get_num_firmware_compensations();
 	progress.segment_statistics = segment_statistics_;
 	return progress;
 	

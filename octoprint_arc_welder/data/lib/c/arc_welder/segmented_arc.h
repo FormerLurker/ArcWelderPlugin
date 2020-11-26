@@ -56,6 +56,7 @@ public:
 	double get_max_radius() const;
 	int get_min_arc_segments() const;
 	double get_mm_per_arc_segment() const;
+	int get_num_firmware_compensations() const;
 
 private:
 	bool try_add_point_internal_(point p, double pd);
@@ -67,6 +68,7 @@ private:
 	double max_radius_mm_;
 	int min_arc_segments_;
 	double mm_per_arc_segment_;
+	int num_firmware_compensations_;
 	bool allow_3d_arcs_;
 };															
 

@@ -36,6 +36,7 @@ segmented_arc::segmented_arc() : segmented_shape(DEFAULT_MIN_SEGMENTS, DEFAULT_M
   max_radius_mm_ = DEFAULT_MAX_RADIUS_MM;
   min_arc_segments_ = DEFAULT_MIN_ARC_SEGMENTS,
   allow_3d_arcs_ = DEFAULT_allow_3d_arcs;
+  num_firmware_compensations_ = 0;
 }
 
 segmented_arc::segmented_arc(
@@ -64,6 +65,7 @@ segmented_arc::segmented_arc(
     min_arc_segments_ = 0;
   }
   allow_3d_arcs_ = allow_3d_arcs;
+  num_firmware_compensations_ = 0;
 }
 
 segmented_arc::~segmented_arc()
@@ -96,6 +98,11 @@ double segmented_arc::get_max_radius() const
 int segmented_arc::get_min_arc_segments() const
 {
   return min_arc_segments_;
+}
+
+int segmented_arc::get_num_firmware_compensations() const
+{
+  return num_firmware_compensations_;
 }
 
 double segmented_arc::get_mm_per_arc_segment() const
@@ -149,15 +156,6 @@ bool segmented_arc::try_add_point(point p, double e_relative)
     point_added = true;
     points_.push_back(p);
     original_shape_length_ += distance;
-    if (points_.count() == get_min_segments())
-    {
-      if (!arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, xyz_precision_, allow_3d_arcs_))
-      {
-        point_added = false;
-        points_.pop_back();
-        original_shape_length_ -= distance;
-      }
-    }
   }
   else
   {
@@ -214,11 +212,30 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
 
   if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, xyz_precision_, allow_3d_arcs_))
   {
-    if (!is_shape())
+    // See how many arcs will be interpolated
+    bool firmware_corrected = false;
+    if (min_arc_segments_ > 0 && mm_per_arc_segment_ > 0)
     {
-      set_is_shape(true);
+      double circumference = 2.0 * PI_DOUBLE * current_arc_.radius;
+      int num_segments = (int)std::floor(circumference / min_arc_segments_);
+      if (num_segments < min_arc_segments_) {
+        //num_segments = (int)std::ceil(circumference/approximate_length) * (int)std::ceil(approximate_length / mm_per_arc_segment);
+        num_segments = (int)std::floor(circumference / original_shape_length_);
+        if (num_segments < min_arc_segments_) {
+          firmware_corrected = true;
+          num_firmware_compensations_++; 
+        }
+      }
     }
-    return true;
+
+    if (!firmware_corrected)
+    {
+      if (!is_shape())
+      {
+        set_is_shape(true);
+      }
+      return true;
+    }
   }
   // Can't create the arc.  Remove the point and remove the previous segment length.
   points_.pop_back();

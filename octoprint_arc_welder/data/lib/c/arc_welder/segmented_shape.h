@@ -163,19 +163,8 @@ struct arc : circle
 		double approximate_length,
 		double resolution = DEFAULT_RESOLUTION_MM, 
 		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
-		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
-		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
 		bool allow_3d_arcs = DEFAULT_allow_3d_arcs);
-	static bool try_create_arc(
-		const circle& c, 
-		const array_list<point>& points, 
-		arc& target_arc, 
-		double approximate_length,
-		double resolution = DEFAULT_RESOLUTION_MM, 
-		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
-		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
-		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
-		bool allow_3d_arcs = DEFAULT_allow_3d_arcs);
+
 	static bool try_create_arc(
 		const array_list<point>& points, 
 		arc& target_arc, 

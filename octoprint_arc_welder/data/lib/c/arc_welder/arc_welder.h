@@ -352,6 +352,7 @@ struct arc_welder_progress {
 		lines_processed = 0;
 		points_compressed = 0;
 		arcs_created = 0;
+		num_firmware_compensations = 0;
 		source_file_size = 0;
 		source_file_position = 0;
 		target_file_size = 0;
@@ -365,6 +366,7 @@ struct arc_welder_progress {
 	int lines_processed;
 	int points_compressed;
 	int arcs_created;
+	int num_firmware_compensations;
 	double compression_ratio;
 	double compression_percent;
 	long source_file_position;
@@ -381,6 +383,7 @@ struct arc_welder_progress {
 		stream << ", current_file_line: " << lines_processed;
 		stream << ", points_compressed: " << points_compressed;
 		stream << ", arcs_created: " << arcs_created;
+		stream << ", num_firmware_compensations: " << num_firmware_compensations;
 		stream << ", compression_ratio: " << compression_ratio;
 		stream << ", size_reduction: " << compression_percent << "% ";
 		return stream.str();
