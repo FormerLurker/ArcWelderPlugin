@@ -48,10 +48,10 @@ int main(int argc, char* argv[])
 	// Initialize the Python interpreter.  Required.
 	Py_Initialize();
 	// We are not using threads, do not enable.
-	std::cout << "Initializing threads...";
-	if (!PyEval_ThreadsInitialized()) {
-		PyEval_InitThreads();
-	}
+	//std::cout << "Initializing threads...";
+	//if (!PyEval_ThreadsInitialized()) {
+	//	PyEval_InitThreads();
+	//}
 	// Optionally import the module; alternatively, import can be deferred until the embedded script imports it.
 	PyImport_ImportModule("PyArcWelder");
 	PyMem_RawFree(program);
@@ -159,9 +159,7 @@ extern "C" void initPyArcWelder(void)
 	logger_levels.push_back(log_levels::CRITICAL);
 	p_py_logger = new py_logger(logger_names, logger_levels);
 	p_py_logger->initialize_loggers();
-	std::string message = "PyArcWelder V0.1.0rc1.dev2 imported - Copyright (C) 2019  Brad Hochgesang...";
-	p_py_logger->log(GCODE_CONVERSION, INFO, message);
-	p_py_logger->set_log_level(ERROR);
+	p_py_logger->set_log_level(INFO);
 	std::cout << " Initialization Complete\r\n";
 
 #if PY_MAJOR_VERSION >= 3

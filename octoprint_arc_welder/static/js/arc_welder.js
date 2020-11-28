@@ -205,7 +205,6 @@ $(function () {
             return "";
         if (seconds <= 0)
             seconds = 0;
-
         seconds = Math.round(seconds);
 
         var hours = Math.floor(seconds / 3600);
@@ -244,6 +243,10 @@ $(function () {
         else if (format == "long")
         {
             var longTime = "";
+            if (hours < 1 && minutes < 1 && seconds < 1)
+            {
+                return "Less than 1 second";
+            }
             if (hours>0)
             {
                 longTime += hours.toString() + " hours";
