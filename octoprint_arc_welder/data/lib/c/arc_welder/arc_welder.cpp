@@ -205,7 +205,7 @@ arc_welder_results results;
 	bool continue_processing = true;
 	
 	p_logger_->log(logger_type_, DEBUG, "Configuring progress updates.");
-	int read_lines_before_clock_check = 5000;
+	int read_lines_before_clock_check = 1000;
 	double next_update_time = get_next_update_time();
 	const clock_t start_clock = clock();
 	p_logger_->log(logger_type_, DEBUG, "Getting source file size.");
@@ -247,6 +247,8 @@ arc_welder_results results;
 	
 	parsed_command cmd;
 	// Communicate every second
+	p_logger_->log(logger_type_, DEBUG, "Sending initial progress update.");
+	continue_processing = on_progress_(get_progress_(static_cast<long>(gcodeFile.tellg()), static_cast<double>(start_clock)));
 	p_logger_->log(logger_type_, DEBUG, "Processing source file.");
 	while (std::getline(gcodeFile, line) && continue_processing)
 	{
@@ -278,7 +280,7 @@ arc_welder_results results;
 		process_gcode(cmd, false, false);
 
 		// Only continue to process if we've found a command and either a progress_callback_ is supplied, or debug loggin is enabled.
-		if (has_gcode && (progress_callback_ != NULL || info_logging_enabled_))
+		if (has_gcode)
 		{
 			if ((lines_processed_ % read_lines_before_clock_check) == 0 && next_update_time < clock())
 			{
@@ -302,12 +304,12 @@ arc_welder_results results;
 	p_logger_->log(logger_type_, DEBUG, "Fetching the final progress struct.");
 
 	arc_welder_progress final_progress = get_progress_(static_cast<long>(file_size_), static_cast<double>(start_clock));
-	if (progress_callback_ != NULL || info_logging_enabled_)
+	if (debug_logging_enabled_)
 	{
-		// Sending final progress update message
-		p_logger_->log(logger_type_, VERBOSE, "Sending final progress update message.");
-		on_progress_(arc_welder_progress(final_progress));
+		p_logger_->log(logger_type_, DEBUG, "Sending final progress update message.");
 	}
+	on_progress_(arc_welder_progress(final_progress));
+	
 	p_logger_->log(logger_type_, DEBUG, "Processing complete, closing source and target file.");
 	output_file_.close();
 	gcodeFile.close();

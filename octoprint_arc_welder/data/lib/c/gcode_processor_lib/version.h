@@ -1,5 +1,6 @@
 #ifndef VERSION_H
 #define VERSION_H
+  #define HAS_GENERATED_VERSION
   #ifndef HAS_GENERATED_VERSION
     #define GIT_BRANCH "Unknown"
     #define GIT_COMMIT_HASH "Unknown"
@@ -12,3 +13,4 @@
     #include "version.generated.h"
   #endif
 #endif
+

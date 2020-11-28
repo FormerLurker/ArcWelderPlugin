@@ -51,9 +51,10 @@ void logger::set_log_level_by_value(const int logger_type, const int level_value
 }
 void logger::set_log_level_by_value(const int level_value)
 {
+	int log_level = get_log_level_for_value(level_value);
 	for (int type_index = 0; type_index < num_loggers_; type_index++)
 	{
-		logger_levels_[type_index] = get_log_level_for_value(level_value);
+		logger_levels_[type_index] = log_level;
 	}
 }
 void logger::set_log_level(const int logger_type, const int log_level)

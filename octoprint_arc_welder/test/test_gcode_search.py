@@ -25,10 +25,15 @@
 # following email address: FormerLurker@pm.me
 ##################################################################################
 import unittest
+
 import sys
 import octoprint_arc_welder.utilities as utilities
 from octoprint_arc_welder import ArcWelderPlugin
 
+if sys.version_info[0] < 3:
+    from StringIO import StringIO
+else:
+    from io import StringIO
 
 class TestGcodeSearch(unittest.TestCase):
     def __init__(self, *args, **kwargs):
@@ -42,11 +47,6 @@ class TestGcodeSearch(unittest.TestCase):
         ]
 
     def test_file_search(self):
-        if sys.version_info[0] < 3:
-            from StringIO import StringIO
-        else:
-            from io import StringIO
-
         # test is_welded
         test_string = """
             ; Postprocessed by [ArcWelder](https://github.com/FormerLurker/ArcWelderLib)
@@ -247,4 +247,16 @@ class TestGcodeSearch(unittest.TestCase):
         self.assertDictEqual(
             utilities.parse_settings_comment(test_string, self.tag, self.settings),
             {"POSTFIX": ".aw", "PREFIX": "arc,welded", "RESOLUTION-MM": 0.2}
+        )
+
+    def test_unicode(self):
+        test_string = """
+                    ; Postprocessed by [ArcWelder](https://github.com/FormerLurker/ArcWelderLib)
+                    ; Copyright(C) 2020 - Brad Hochgesang
+                    é; arc_welder_resolution_mm = 0.05 é
+                    ; arc_welder_g90_influences_extruder = False
+                """
+        self.assertDictEqual(
+            utilities._search_gcode_file(StringIO(test_string), self.search_functions),
+            {"is_welded": True}
         )

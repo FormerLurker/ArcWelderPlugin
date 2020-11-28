@@ -100,6 +100,7 @@ bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 		
 	PyGILState_STATE gstate = PyGILState_Ensure();
 	PyObject* pContinueProcessing = PyObject_CallObject(py_progress_callback_, func_args);
+	PyGILState_Release(gstate);
 	Py_DECREF(func_args);
 	Py_DECREF(py_dict);
 	bool continue_processing;
@@ -120,6 +121,6 @@ bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 		}
 		Py_DECREF(pContinueProcessing);
 	}
-	PyGILState_Release(gstate);
+	
 	return continue_processing;
 }

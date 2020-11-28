@@ -72,6 +72,15 @@ namespace gcode_arc_converter {
 #endif
 	}
 
+	PyObject* PyBytesOrString_FromString(std::string str)
+	{
+#if PY_MAJOR_VERSION >= 3
+		return PyBytes_FromString(str.c_str());
+#else
+		return PyString_FromString(str.c_str());
+#endif
+	}
+
 	double PyFloatOrInt_AsDouble(PyObject* py_double_or_int)
 	{
 		if (PyFloat_CheckExact(py_double_or_int))

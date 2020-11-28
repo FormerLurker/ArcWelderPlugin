@@ -26,6 +26,7 @@
 ##################################################################################
 from __future__ import absolute_import
 from __future__ import unicode_literals
+from builtins import dict, str
 from pkg_resources import parse_version
 import six
 import os
@@ -114,7 +115,7 @@ COMMENT_SEARCH_TYPE_CONTAINS = "contains"
 def search_gcode_file(path_on_disk, search_functions):
     try:
         logger.debug("Searching '%s' for processing info.", path_on_disk)
-        with open(path_on_disk, "r") as f:
+        with open(path_on_disk, "rb") as f:
             return _search_gcode_file(f, search_functions)
     except (IOError, OSError) as e:
         logger.exception("Could not read the added gcode file at %s.", path_on_disk)
@@ -134,9 +135,10 @@ def _search_gcode_file(gcode_file, search_function_list, lines_to_search=100):
         # increment our line counter and read the next line
         lines_read += 1
         line = gcode_file.readline(1000)
+        line = line.decode("UTF-8", 'replace')
 
         # find the first index of the comment
-        comment_start_index = line.find(";")+1
+        comment_start_index = str(line).find(";")+1
         if comment_start_index == 0:
             # no comment, continue
             continue

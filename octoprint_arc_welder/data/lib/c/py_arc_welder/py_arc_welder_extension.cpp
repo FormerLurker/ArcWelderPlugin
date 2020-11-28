@@ -28,6 +28,7 @@
 #include "arc_welder.h"
 #include "py_logger.h"
 #include "python_helpers.h"
+#include "version.h"
 
 #if PY_MAJOR_VERSION >= 3
 int main(int argc, char* argv[])
@@ -47,10 +48,10 @@ int main(int argc, char* argv[])
 	// Initialize the Python interpreter.  Required.
 	Py_Initialize();
 	// We are not using threads, do not enable.
-	/*std::cout << "Initializing threads...";
+	std::cout << "Initializing threads...";
 	if (!PyEval_ThreadsInitialized()) {
 		PyEval_InitThreads();
-	}*/
+	}
 	// Optionally import the module; alternatively, import can be deferred until the embedded script imports it.
 	PyImport_ImportModule("PyArcWelder");
 	PyMem_RawFree(program);
@@ -126,8 +127,9 @@ PyInit_PyArcWelder(void)
 extern "C" void initPyArcWelder(void)
 #endif
 {
-	std::cout << "Initializing PyArcWelder V0.1.0rc1.dev2 - Copyright (C) 2019  Brad Hochgesang.";
-
+	std::cout << "Initializing PyArcWelder";
+	std::cout << "\nVersion: " << GIT_TAGGED_VERSION << ", Branch: " << GIT_BRANCH << ", BuildDate: " << BUILD_DATE;
+	std::cout << "\nCopyright(C) " << COPYRIGHT_DATE << " - " << AUTHOR;
 #if PY_MAJOR_VERSION >= 3
 	std::cout << " Python 3+ Detected...";
 	PyObject* module = PyModule_Create(&moduledef);
@@ -159,7 +161,7 @@ extern "C" void initPyArcWelder(void)
 	p_py_logger->initialize_loggers();
 	std::string message = "PyArcWelder V0.1.0rc1.dev2 imported - Copyright (C) 2019  Brad Hochgesang...";
 	p_py_logger->log(GCODE_CONVERSION, INFO, message);
-	p_py_logger->set_log_level_by_value(DEBUG);
+	p_py_logger->set_log_level(ERROR);
 	std::cout << " Initialization Complete\r\n";
 
 #if PY_MAJOR_VERSION >= 3
@@ -190,8 +192,7 @@ extern "C"
 		{
 			return NULL;
 		}
-		p_py_logger->set_log_level_by_value(args.log_level);
-		
+		p_py_logger->set_log_level(args.log_level);
 
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);

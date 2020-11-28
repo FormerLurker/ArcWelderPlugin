@@ -165,9 +165,7 @@ class TestFirmwareChecker(unittest.TestCase):
         self.assertEqual(firmware_info["guid"], firmware_guid)
         # Test is_future
         self.assertTrue(firmware_info.get("is_future", None))
-        # Test the previous note
-        self.assertEqual(firmware_info.get("previous_notes", ""),
-                         "The default arc settings can cause flat edges for very small arcs with a radius around 1-5mm.")
+
 
     def test_prusa_buddy_firmware_version_response(self):
         # Prusa Buddy Firmware <4.0.3
@@ -233,11 +231,7 @@ class TestFirmwareChecker(unittest.TestCase):
         self.assertEqual(firmware_info["guid"], firmware_guid)
         # Test is_future
         self.assertTrue(firmware_info.get("is_future", None))
-        # Test the previous note
-        self.assertEqual(
-            firmware_info.get("previous_notes", ""),
-            "This firmware has not been updated to include arc planning fixes implemented in Marlin 2.0.6."
-        )
+        # todo:  test previous notes.
 
     def test_marlin_firmware_version_response(self):
         # Test "=bugfix-2.0.x"
@@ -253,7 +247,7 @@ class TestFirmwareChecker(unittest.TestCase):
         # Test "<1.0.0"
         firmware_guid = 'd2688900-92a6-411a-8d39-8374a44a478e'
         self.response = [
-            "FIRMWARE_NAME:Marlin 0.0.1 (Github) SOURCE_CODE_URL:https://github.com/MarlinFirmware/Marlin "
+            "FIRMWARE_NAME:Marlin 0x.0.1 (Github) SOURCE_CODE_URL:https://github.com/MarlinFirmware/Marlin "
             "PROTOCOL_VERSION:1.0 MACHINE_TYPE:RepRap EXTRUDER_COUNT:1 UUID:cede2a2f-41a2-4748-9b12-c55c62f367ff "
         ]
         firmware_info = self.firmware_checker._get_firmware_version()
