@@ -950,11 +950,14 @@ class FirmwareChecker:
 
     @staticmethod
     def _check_g2_response(response_text):
-        return (
-            FirmwareChecker._check_for_ok_response(response_text)
-            or FirmwareChecker._check_for_unknown_command_response(response_text)
-            or FirmwareChecker._check_for_bad_parameter_response(response_text)
-        )
+        if FirmwareChecker._check_for_ok_response(response_text):
+            return True, response_text
+        if FirmwareChecker._check_for_unknown_command_response(response_text):
+            return True, response_text
+        if FirmwareChecker._check_for_bad_parameter_response(response_text):
+            return True, "ok"
+        return False, response_text
+
 
     @staticmethod
     def _check_for_ok_response(response_text):
@@ -970,7 +973,7 @@ class FirmwareChecker:
 
     @staticmethod
     def _check_m115_response(response_text):
-        return "FIRMWARE_NAME" in response_text
+        return "FIRMWARE_NAME" in response_text, response_text
 
     def _get_is_request_open(self):
         return self._printer_request is not None and not self._printer_request.response_ended
@@ -1087,7 +1090,9 @@ class FirmwareChecker:
                             if self._printer_request.response_started == False:
                                 logger.verbose("on_gcode_received: checking response '%s'.", clean_line)
                                 # ensure atomic writes here
-                                success = self._printer_request.check_response(clean_line)
+                                success, new_line = self._printer_request.check_response(clean_line)
+                                if clean_line != new_line:
+                                    line = new_line + "\n"
                                 self._printer_request.response_started = success
                                 if success:
                                     logger.verbose("on_gcode_received: Response found.")
@@ -1127,7 +1132,8 @@ class FirmwareChecker:
                             self._request_signal.set()
                 except Exception as e:
                     logger.exception("on_gcode_received: An error occurred while checking the printer response.")
-        # ALWAYS return the line
+        # ALWAYS return the line UNLESS this is a naked G2/G3, in which case we want to return OK.
+
         return line
 
 
@@ -1156,7 +1162,7 @@ class PrinterRequest:
         return self.gcode_sent
 
     def check_response(self, response_string):
-        return self.check_response_function(response_string) or False
+        return self.check_response_function(response_string)
 
 
 class FirmwareFileUpdater:
