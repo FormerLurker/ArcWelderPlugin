@@ -1332,12 +1332,13 @@ class ArcWelderPlugin(
                 elif prerelease_channel == "rc/devel":
                     is_prerelease = True
                     prerelease_channel = "rc/devel"
-            ArcWelderPlugin.arc_welder_update_info["displayVersion"] = self._plugin_version
-            ArcWelderPlugin.arc_welder_update_info["current"] = self._plugin_version
+
             ArcWelderPlugin.arc_welder_update_info["prerelease"] = is_prerelease
             if prerelease_channel is not None:
                 ArcWelderPlugin.arc_welder_update_info["prerelease_channel"] = prerelease_channel
 
+        ArcWelderPlugin.arc_welder_update_info["displayVersion"] = self._plugin_version
+        ArcWelderPlugin.arc_welder_update_info["current"] = self._plugin_version
         return dict(
             arc_welder=ArcWelderPlugin.arc_welder_update_info
         )
