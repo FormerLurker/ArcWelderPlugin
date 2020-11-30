@@ -209,7 +209,7 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
   points_.push_back(p);
   double previous_shape_length = original_shape_length_;
   original_shape_length_ += pd;
-
+  arc original_arc = current_arc_;
   if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, xyz_precision_, allow_3d_arcs_))
   {
     // See how many arcs will be interpolated
@@ -223,6 +223,7 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
         num_segments = (int)std::floor(circumference / original_shape_length_);
         if (num_segments < min_arc_segments_) {
           firmware_corrected = true;
+          current_arc_ = original_arc;
           num_firmware_compensations_++; 
         }
       }

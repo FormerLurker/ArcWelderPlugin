@@ -410,7 +410,7 @@ bool arc::try_create_arc(
       // We may be traveling in 3 space, calculate the arc_length of the spiral
       if (start_point.z != end_point.z)
       {
-        test_arc_length = utilities::hypot(arc_length, end_point.z - start_point.z);
+        test_arc_length = utilities::hypot(test_arc_length, end_point.z - start_point.z);
       }
     }
     difference = (test_arc_length - approximate_length) / approximate_length;
