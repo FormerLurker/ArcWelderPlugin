@@ -1478,12 +1478,12 @@ $(function () {
 
         self.addProcessButtonToFileManager = function(current_page, is_printing) {
             self.removeFileManagerItems();
-            console.log("Adding Buttons");
+            //console.log("Adding Buttons");
             for(var file_index=0; file_index < current_page.length; file_index++)
             {
                 // Get the current file
                 var file = current_page[file_index];
-                console.log("Adding Buttons for file with hash: " + file.hash);
+                // console.log("Adding Buttons for file with hash: " + file.hash);
                 // Only process machine code
                 if (file.type !== "machinecode")
                     continue;
@@ -1672,7 +1672,7 @@ $(function () {
                 self.file_statistics_visible.update_visible();
                 return;
             }
-            console.log("Button Clicked: " + file_data.path);
+            //console.log("Button Clicked: " + file_data.path);
             // disable the element
             $(event.target).addClass("disabled");
             // Request that the file be processed

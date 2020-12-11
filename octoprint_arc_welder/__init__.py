@@ -41,6 +41,7 @@ from shutil import copyfile
 from octoprint.server.util.tornado import LargeResponseHandler
 from octoprint.server import util, app
 from octoprint.filemanager import FileDestinations
+from octoprint.filemanager.storage import StorageError
 from octoprint.server.util.flask import restricted_access
 from octoprint.events import Events
 import octoprint_arc_welder.log as log
@@ -746,10 +747,23 @@ class ArcWelderPlugin(
         if source_path == target_path:
             logger.info("Overwriting source file '%s' with the processed file '%s'.", source_name, target_name)
             # first remove the source file
-            self._file_manager.remove_file(target_path)
+            cant_overwrite = False
+            try:
+                self._remove_file_from_filemanager(source_path)
+                cant_overwrite = True
+            except StorageError:
+                logger.error(
+                    "Unable to overwrite the target file, it is currently in use.  Writing to new file."
+                )
+                # get a collision free filename and save it like that
+                target_directory, target_name = self._get_collision_free_filepath(target_path)
+                target_path = self._file_manager.join_path(FileDestinations.LOCAL, target_directory, target_name)
+                logger.info("Saving target to new collision free path at %s", target_name)
+                task["octoprint_args"]["cant_overwrite"] = True
+                task["octoprint_args"]["target_path"] = target_path
+                task["octoprint_args"]["target_name"] = target_name
         else:
             logger.info("Arc compression complete, creating a new gcode file: %s", target_name)
-
 
         new_file_object = octoprint.filemanager.util.DiskFileWrapper(
             target_name, processor_args["target_path"], move=True
@@ -831,6 +845,48 @@ class ArcWelderPlugin(
                 )
 
         return metadata
+
+    def _remove_file_from_filemanager(self, path):
+        num_tries = 0
+        seconds_to_wait = 2
+        max_tries = 5
+        while True:
+            try:
+                self._file_manager.remove_file(FileDestinations.LOCAL, path)
+                break
+            except StorageError as e:
+                logger.warning(
+                    "Unable to overwrite the target file, it is currently in use.  Trying again in {0} seconds".format(seconds_to_wait)
+                )
+                num_tries += 1
+                if num_tries < max_tries:
+                    time.sleep(seconds_to_wait)
+                else:
+                    logger.error(
+                        "Reached max retries for deleting the source file.  Aborting."
+                    )
+                    raise e
+
+    def _get_collision_free_filepath(self, path):
+        directory, filename = self._file_manager.split_path(FileDestinations.LOCAL, path)
+        extension = utilities.get_extension_from_filename(filename)
+        filename_no_extension = utilities.remove_extension_from_filename(filename)
+
+        original_filename = filename_no_extension
+        file_number = 0
+        # Check to see if the file exists, if it does add a number to the end and continue
+        while self._file_manager.file_exists(
+                FileDestinations.LOCAL,
+                self._file_manager.join_path(
+                    FileDestinations.LOCAL,
+                    directory,
+                    "{0}.{1}".format(filename_no_extension, extension)
+                )
+        ):
+            file_number += 1
+            filename_no_extension = "{0}_{1}".format(original_filename, file_number)
+
+        return directory, "{0}.{1}".format(filename_no_extension, extension)
 
     def copy_thumbnail(self, thumbnail_src, thumbnail_path, gcode_filename):
         # get the plugin implementation
@@ -956,6 +1012,7 @@ class ArcWelderPlugin(
             }
             self._plugin_manager.send_plugin_message(self._identifier, data)
             return
+
         if (
             delete_after_processing
             and self._file_manager.file_exists(FileDestinations.LOCAL, octoprint_args["source_path"])
@@ -980,6 +1037,16 @@ class ArcWelderPlugin(
             "task": task
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
+
+        if task["octoprint_args"].get("cant_overwrite", False):
+            self.send_notification_toast(
+                "warning",
+                "Unable to Overwrite Source File",
+                "The source file is in use and cannot be overwritten.  The target file was renamed to '{0}'.".format(task["octoprint_args"]["target_name"]),
+                False,
+                "unable-to-overwrite",
+                []
+            )
 
         if select_after_processing or print_after_processing:
             try:
@@ -1244,6 +1311,25 @@ class ArcWelderPlugin(
             )
             return False
 
+        # if we are going to overwrite or delete the target file, cancel preprocessing
+        if (
+                task["octoprint_args"]["delete_after_processing"] or
+                task["octoprint_args"]["source_path"] == task["octoprint_args"]["target_path"]
+        ):
+            # these are private members, make sure they exist
+            if (
+                    hasattr(self._file_manager, "_analysis_queue_entry") and
+                    hasattr(self._file_manager, "_analysis_queue")
+            ):
+                try:
+                    queue_entry = self._file_manager._analysis_queue_entry(
+                        FileDestinations.LOCAL, task["octoprint_args"]["source_path"]
+                    )
+                    self._file_manager._analysis_queue.dequeue(queue_entry)
+                except e:
+                    # this may be too broad, but I don't want any errors here!
+                    logger.exception("Unable to remove the currently processing file from the analysis queue.")
+                    pass
         if self._show_queued_notification:
             message = "Successfully queued {0} for processing.".format(task["octoprint_args"]["source_name"])
             if self._printer.is_printing():

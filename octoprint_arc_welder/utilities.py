@@ -61,7 +61,6 @@ def get_extension_from_filename(filename):
             return extension[1:]
     return ""
 
-
 def dict_encode(d):
     # helpers for dealing with bytes (string) values delivered by the converter
     # socks.js doesn't like mixed encoding

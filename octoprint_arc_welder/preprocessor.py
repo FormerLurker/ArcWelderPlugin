@@ -291,10 +291,7 @@ class PreProcessorWorker(threading.Thread):
         # Make sure everything is in unicode (str for python3) because mixed encoding
         # messes with things.
 
-        #encoded_results = utilities.dict_encode(results)
-        #encoded_results["source_name"] = source_name
         results["source_name"] = source_name
-        #if encoded_results.get("is_cadncelled", False):
         if results.get("is_cancelled", False):
             cancelled_by_print = False
             if task.get("cancelled_on_print_start", False):
@@ -315,18 +312,15 @@ class PreProcessorWorker(threading.Thread):
                     "Preprocessing of %s has been cancelled by the user."
                     , task["processor_args"]["source_path"])
             self._cancel_callback(task, cancelled_by_print)
-        #elif encoded_results["success"]:
         elif results["success"]:
             logger.info("Preprocessing of %s completed.", task["processor_args"]["source_path"])
             with self.r_lock:
                 # Clear out info about the current job
                 self._current_task = None
             self._success_callback(
-                #task, encoded_results
                 task, results
             )
         else:
-            #self._failed_callback(task, encoded_results["message"])
             self._failed_callback(task, results["message"])
 
         logger.info("Deleting temporary source.gcode file.")

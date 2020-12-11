@@ -62,9 +62,8 @@ class FirmwareChecker:
     FIRMWARE_TYPES_DEFAULT_JSON_PATH = ["data", "firmware", "types_default.json"]
     CURRENT_FIRMWARE_JSON_PATH = ["firmware", "current.json"]
 
-    def __init__(self, plugin_version, printer, base_folder, data_directory, request_complete_callback,
-        load_defaults=False
-    ):
+    def __init__(
+            self, plugin_version, printer, base_folder, data_directory, request_complete_callback, load_defaults=False):
         try:
             self._plugin_version = plugin_version
             self._firmware_types_default_path = os.path.join(
@@ -953,7 +952,7 @@ class FirmwareChecker:
         if FirmwareChecker._check_for_ok_response(response_text):
             return True, response_text
         if FirmwareChecker._check_for_unknown_command_response(response_text):
-            return True, response_text
+            return True, "ok"
         if FirmwareChecker._check_for_bad_parameter_response(response_text):
             return True, "ok"
         return False, response_text
