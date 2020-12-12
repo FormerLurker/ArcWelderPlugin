@@ -43,7 +43,9 @@ public:
 		double max_radius_mm = DEFAULT_MAX_RADIUS_MM,
 		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
-		bool allow_3d_arcs = DEFAULT_allow_3d_arcs
+		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS,
+		unsigned char default_xyz_precision = DEFAULT_XYZ_PRECISION,
+		unsigned char default_e_precision = DEFAULT_E_PRECISION
 	);
 	virtual ~segmented_arc();
 	virtual bool try_add_point(point p, double e_relative);

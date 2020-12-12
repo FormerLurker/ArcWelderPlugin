@@ -46,6 +46,9 @@ arc_welder::arc_welder(
 	double mm_per_arc_segment,
 	bool g90_g91_influences_extruder, 
 	bool allow_3d_arcs,
+	bool allow_dynamic_precision,
+	unsigned char default_xyz_precision,
+	unsigned char default_e_precision,
 	int buffer_size, 
 	progress_callback callback) : current_arc_(
 			DEFAULT_MIN_SEGMENTS, 
@@ -55,7 +58,9 @@ arc_welder::arc_welder(
 			max_radius,
 			min_arc_segments,
 			mm_per_arc_segment,
-			allow_3d_arcs
+			allow_3d_arcs,
+			default_xyz_precision,
+			default_e_precision
 		), 
 		segment_statistics_(
 			segment_statistic_lengths, 
@@ -77,6 +82,7 @@ arc_welder::arc_welder(
 	target_path_ = target_path;
 	gcode_position_args_ = get_args_(g90_g91_influences_extruder, buffer_size);
 	allow_3d_arcs_ = allow_3d_arcs;
+	allow_dynamic_precision_ = allow_dynamic_precision;
 	notification_period_seconds = 1;
 	lines_processed_ = 0;
 	gcodes_processed_ = 0;
@@ -195,7 +201,10 @@ arc_welder_results results;
 		<< ", min_arc_segments:" << std::setprecision(0) <<current_arc_.get_min_arc_segments() 
 		<< ", mm_per_arc_segment:" << std::setprecision(0) << current_arc_.get_mm_per_arc_segment()
 		<< ", g90_91_influences_extruder: " << (p_source_position_->get_g90_91_influences_extruder() ? "True" : "False")
-		<< ", allow_3d_arcs: " << (allow_3d_arcs_ ? "True" : "False");
+		<< ", allow_3d_arcs: " << (allow_3d_arcs_ ? "True" : "False")
+		<< ", allow_dynamic_precision: " << (allow_dynamic_precision_ ? "True" : "False")
+		<< ", default_xyz_precision: " << std::setprecision(0) << (current_arc_.get_xyz_precision())
+		<< ", default_e_precision: " << std::setprecision(0) << (current_arc_.get_e_precision());
 	p_logger_->log(logger_type_, INFO, stream.str());
 
 
@@ -407,7 +416,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 	// We need to make sure the printer is using absolute xyz, is extruding, and the extruder axis mode is the same as that of the previous position
 	// TODO: Handle relative XYZ axis.  This is possible, but maybe not so important.
 	bool is_g1_g2 = cmd.command == "G0" || cmd.command == "G1";
-	if (is_g1_g2)
+	if (allow_dynamic_precision_ && is_g1_g2)
 	{
 		for (std::vector<parsed_command_parameter>::iterator it = cmd.parameters.begin(); it != cmd.parameters.end(); ++it)
 		{

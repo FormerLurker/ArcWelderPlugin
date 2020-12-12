@@ -195,7 +195,24 @@ extern "C"
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 
-		py_arc_welder arc_welder_obj(args.guid, args.source_path, args.target_path, p_py_logger, args.resolution_mm, args.path_tolerance_percent, args.max_radius_mm, args.min_arc_segments, args.mm_per_arc_segment, args.g90_g91_influences_extruder, args.allow_3d_arcs, DEFAULT_GCODE_BUFFER_SIZE, py_progress_callback);
+		py_arc_welder arc_welder_obj(
+			args.guid, 
+			args.source_path, 
+			args.target_path, 
+			p_py_logger, 
+			args.resolution_mm, 
+			args.path_tolerance_percent, 
+			args.max_radius_mm, 
+			args.min_arc_segments, 
+			args.mm_per_arc_segment, 
+			args.g90_g91_influences_extruder, 
+			args.allow_3d_arcs, 
+			args.allow_dynamic_precision, 
+			args.default_xyz_precision, 
+			args.default_e_precision, 
+			DEFAULT_GCODE_BUFFER_SIZE, 
+			py_progress_callback
+		);
 		arc_welder_results results = arc_welder_obj.process();
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
@@ -271,6 +288,36 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 		args.resolution_mm = 0.05; // Set to the default if no resolution is provided, or if it is less than 0.
 	}
 
+	// extract allow_dynamic_precision
+	PyObject* py_allow_dynamic_precision = PyDict_GetItemString(py_args, "allow_dynamic_precision");
+	if (py_allow_dynamic_precision == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve allow_dynamic_precision from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.allow_dynamic_precision = PyLong_AsLong(py_allow_dynamic_precision) > 0;
+
+	// extract default_xyz_precision
+	PyObject* py_default_xyz_precision = PyDict_GetItemString(py_args, "default_xyz_precision");
+	if (py_default_xyz_precision == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve the default_xyz_precision parameter from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.default_xyz_precision = gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_xyz_precision);
+
+	// extract default_e_precision
+	PyObject* py_default_e_precision = PyDict_GetItemString(py_args, "default_e_precision");
+	if (py_default_e_precision == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve the default_e_precision parameter from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.default_e_precision = gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_e_precision);
+
 	// Extract the path tolerance_percent
 	PyObject* py_path_tolerance_percent = PyDict_GetItemString(py_args, "path_tolerance_percent");
 	if (py_path_tolerance_percent == NULL)
@@ -327,8 +374,7 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 		args.min_arc_segments = 0; // Set to the default if no resolution is provided, or if it is less than 0.
 	}
 
-	// Extract Allow Z Axis Changes
-	// allow_3d_arcs
+	// extract allow_3d_arcs
 	PyObject* py_allow_3d_arcs = PyDict_GetItemString(py_args, "allow_3d_arcs");
 	if (py_allow_3d_arcs == NULL)
 	{

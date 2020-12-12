@@ -144,6 +144,9 @@ class ArcWelderPlugin(
             use_octoprint_settings=True,
             g90_g91_influences_extruder=False,
             allow_3d_arcs=False,
+            allow_dynamic_precision=False,
+            default_xyz_precision=3,
+            default_e_precision=5,
             resolution_mm=0.05,
             path_tolerance_percent=5.0,
             max_radius_mm=1000*1000,  # 1KM, pretty big :)
@@ -565,9 +568,19 @@ class ArcWelderPlugin(
 
     @property
     def _allow_3d_arcs(self):
-        return self._settings.get_boolean(
-            ["allow_3d_arcs"]
-        )
+        return self._settings.get_boolean(["allow_3d_arcs"])
+
+    @property
+    def _allow_dynamic_precision(self):
+        return self._settings.get_boolean(['allow_dynamic_precision'])
+
+    @property
+    def _default_xyz_precision(self):
+        return self._settings.get_float(["default_xyz_precision"])
+
+    @property
+    def _default_e_precision(self):
+        return self._settings.get_float(["default_e_precision"])
 
     @property
     def _resolution_mm(self):
@@ -847,6 +860,7 @@ class ArcWelderPlugin(
         return metadata
 
     def _remove_file_from_filemanager(self, path):
+
         num_tries = 0
         seconds_to_wait = 2
         max_tries = 5
@@ -931,12 +945,26 @@ class ArcWelderPlugin(
             "\n\tsource_path: %s"
             "\n\tresolution_mm: %.3f"
             "\n\tpath_tolerance_percent: %.3f"
+            "\n\tmax_radius_mm: %d"
+            "\n\tmm_per_arc_segment: %.3f"
+            "\n\tmin_arc_segments: %d"
             "\n\tg90_g91_influences_extruder: %r"
+            "\n\tallow_3d_arcs: %r"
+            "\n\tallow_dynamic_precision: %r"
+            "\n\tdefault_xyz_precision: %d"
+            "\n\tdefault_e_precision: %d"
             "\n\tlog_level: %d",
             processor_args["source_path"],
             processor_args["resolution_mm"],
             processor_args["path_tolerance_percent"],
+            processor_args["max_radius_mm"],
+            processor_args["min_arc_segments"],
+            processor_args["mm_per_arc_segment"],
             processor_args["g90_g91_influences_extruder"],
+            processor_args["allow_3d_arcs"],
+            processor_args["allow_dynamic_precision"],
+            processor_args["default_xyz_precision"],
+            processor_args["default_e_precision"],
             processor_args["log_level"]
         )
 
@@ -1197,6 +1225,11 @@ class ArcWelderPlugin(
         g90_g91_influences_extruder = gcode_comment_settings.get(
             "g90_g91_influences_extruder", self._g90_g91_influences_extruder
         )
+
+        allow_dynamic_precision = self._allow_dynamic_precision
+        default_xyz_precision = self._default_xyz_precision
+        default_e_precision = self._default_e_precision
+
         # determine the target file name and path
         target_name, target_path = self.get_output_file_name_and_path(source_path, gcode_comment_settings)
         return {
@@ -1220,6 +1253,9 @@ class ArcWelderPlugin(
                 "mm_per_arc_segment": mm_per_arc_segment,
                 "g90_g91_influences_extruder": g90_g91_influences_extruder,
                 "allow_3d_arcs": allow_3d_arcs,
+                "allow_dynamic_precision": allow_dynamic_precision,
+                "default_xyz_precision": default_xyz_precision,
+                "default_e_precision": default_e_precision,
                 "log_level": self._gcode_conversion_log_level
             }
         }

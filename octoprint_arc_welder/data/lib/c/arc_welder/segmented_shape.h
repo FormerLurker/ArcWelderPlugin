@@ -121,7 +121,7 @@ struct circle {
 };
 
 #define DEFAULT_RESOLUTION_MM 0.05
-#define DEFAULT_allow_3d_arcs false
+#define DEFAULT_ALLOW_3D_ARCS false
 #define DEFAULT_MIN_ARC_SEGMENTS 0
 #define DEFAULT_MM_PER_ARC_SEGMENT 0
 struct arc : circle
@@ -153,6 +153,9 @@ struct arc : circle
 	double max_deviation;
 	point start_point;
 	point end_point;
+
+	double get_i() const;
+	double get_j() const;
 	// Statis functions
 	static bool try_create_arc(
 		const circle& c, 
@@ -163,7 +166,7 @@ struct arc : circle
 		double approximate_length,
 		double resolution = DEFAULT_RESOLUTION_MM, 
 		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
-		bool allow_3d_arcs = DEFAULT_allow_3d_arcs);
+		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS);
 
 	static bool try_create_arc(
 		const array_list<point>& points, 
@@ -175,7 +178,7 @@ struct arc : circle
 		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
 		int xyz_precision = DEFAULT_XYZ_PRECISION,
-		bool allow_3d_arcs = DEFAULT_allow_3d_arcs);
+		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS);
 };
 double distance_from_segment(segment s, point p);
 
@@ -189,7 +192,9 @@ public:
 	segmented_shape(int min_segments = DEFAULT_MIN_SEGMENTS,
 		int max_segments = DEFAULT_MAX_SEGMENTS, 
 		double resolution_mm = DEFAULT_RESOLUTION_MM, 
-		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT
+		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
+		unsigned char default_xyz_precision = DEFAULT_XYZ_PRECISION,
+		unsigned char default_e_precision = DEFAULT_E_PRECISION
 	);
 	segmented_shape& operator=(const segmented_shape& pos);
 	virtual ~segmented_shape();
@@ -202,8 +207,8 @@ public:
 	double get_shape_e_relative();
 	void set_resolution_mm(double resolution_mm);
 	void reset_precision();
-	void update_xyz_precision(int precision);
-	void update_e_precision(int precision);
+	void update_xyz_precision(unsigned char precision);
+	void update_e_precision(unsigned char precision);
 	virtual bool is_shape() const;
 	// public virtual functions
 	virtual void clear();
@@ -213,11 +218,12 @@ public:
 	virtual std::string get_shape_gcode_absolute(double e_abs_start);
 	virtual std::string get_shape_gcode_relative();
 	bool is_extruding();
+	unsigned char get_xyz_precision() const;
+	unsigned char get_e_precision() const;
+	double get_xyz_tolerance() const;
 protected:
 	array_list<point> points_;
 	void set_is_shape(bool value);
-	unsigned char xyz_precision_;
-	unsigned char e_precision_;
 	double original_shape_length_;	
 	double e_relative_;
 	bool is_extruding_;
@@ -227,5 +233,10 @@ protected:
 private:
 	int min_segments_;
 	int max_segments_;
+	unsigned char xyz_precision_;
+	double xyz_tolerance_;
+	unsigned char e_precision_;
+	void set_xyz_tolerance_from_precision();
+	void set_xyz_precision(unsigned char precision);
 	
 };

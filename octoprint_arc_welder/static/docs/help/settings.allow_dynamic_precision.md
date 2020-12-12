@@ -1,0 +1,3 @@
+When enabled, arc welder will examine the precision of the X, Y, and Z parameters within your gcode to determine how much precision to create within the output file.  Arc Welder will only increase the precision from the xyz and e default values, and will never decrease it.  Also, the precision will increase only after it is encountered within the source gcode file, so your precision will start at the default value, and may increase if more precision is encountered.  X, Y, Z, I and J precision is separate from E precision, and they will increase separately.
+
+Note: Increasing this value too high will slow down serial communication, increase file size, and may introduce checksum errors depending on your firmware.

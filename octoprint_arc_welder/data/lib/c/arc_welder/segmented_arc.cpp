@@ -35,7 +35,8 @@ segmented_arc::segmented_arc() : segmented_shape(DEFAULT_MIN_SEGMENTS, DEFAULT_M
 {
   max_radius_mm_ = DEFAULT_MAX_RADIUS_MM;
   min_arc_segments_ = DEFAULT_MIN_ARC_SEGMENTS,
-  allow_3d_arcs_ = DEFAULT_allow_3d_arcs;
+  mm_per_arc_segment_ = DEFAULT_MM_PER_ARC_SEGMENT;
+  allow_3d_arcs_ = DEFAULT_ALLOW_3D_ARCS;
   num_firmware_compensations_ = 0;
 }
 
@@ -47,8 +48,10 @@ segmented_arc::segmented_arc(
   double max_radius_mm,
   int min_arc_segments,
   double mm_per_arc_segment,
-  bool allow_3d_arcs
-) : segmented_shape(min_segments, max_segments, resolution_mm, path_tolerance_percent)
+  bool allow_3d_arcs,
+  unsigned char default_xyz_precision,
+  unsigned char default_e_precision
+) : segmented_shape(min_segments, max_segments, resolution_mm, path_tolerance_percent, default_xyz_precision, default_e_precision)
 {
   max_radius_mm_ = max_radius_mm;
   if (max_radius_mm > DEFAULT_MAX_RADIUS_MM) {
@@ -210,10 +213,10 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
   double previous_shape_length = original_shape_length_;
   original_shape_length_ += pd;
   arc original_arc = current_arc_;
-  if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, xyz_precision_, allow_3d_arcs_))
+  if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, get_xyz_precision(), allow_3d_arcs_))
   {
     // See how many arcs will be interpolated
-    bool firmware_corrected = false;
+    bool abort_arc = false;
     if (min_arc_segments_ > 0 && mm_per_arc_segment_ > 0)
     {
       double circumference = 2.0 * PI_DOUBLE * current_arc_.radius;
@@ -222,14 +225,24 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
         //num_segments = (int)std::ceil(circumference/approximate_length) * (int)std::ceil(approximate_length / mm_per_arc_segment);
         num_segments = (int)std::floor(circumference / original_shape_length_);
         if (num_segments < min_arc_segments_) {
-          firmware_corrected = true;
-          current_arc_ = original_arc;
+          abort_arc = true;
           num_firmware_compensations_++; 
         }
       }
     }
+    // check for I=0 and J=0
+    if (!abort_arc && utilities::is_zero(current_arc_.get_i(), get_xyz_tolerance()) && utilities::is_zero(current_arc_.get_j(), get_xyz_tolerance()))
+    {
+      abort_arc = true;
+    }
 
-    if (!firmware_corrected)
+    if (abort_arc)
+    {
+      // This arc has been cancelled either due to firmware correction,
+      // or because both I and J == 0
+      current_arc_ = original_arc;
+    }
+    else if (!abort_arc)
     {
       if (!is_shape())
       {
@@ -262,8 +275,8 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
   std::string gcode;
 
 
-  double i = current_arc_.center.x - current_arc_.start_point.x;
-  double j = current_arc_.center.y - current_arc_.start_point.y;
+  double i = current_arc_.get_i();
+  double j = current_arc_.get_j();
   // Here is where the performance part kicks in (these are expensive calls) that makes things a bit ugly.
   // there are a few cases we need to take into consideration before choosing our sprintf string
   // create the XYZ portion
@@ -279,35 +292,40 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
   }
   // Add X, Y, I and J
   gcode += " X";
-  gcode += utilities::to_string(current_arc_.end_point.x, xyz_precision_, buf, false);
+  gcode += utilities::to_string(current_arc_.end_point.x, get_xyz_precision(), buf, false);
 
   gcode += " Y";
-  gcode += utilities::to_string(current_arc_.end_point.y, xyz_precision_, buf, false);
+  gcode += utilities::to_string(current_arc_.end_point.y, get_xyz_precision(), buf, false);
 
   if (allow_3d_arcs_)
   {
     // We may need to add a z coordinate
     double z_initial = current_arc_.start_point.z;
     double z_final = current_arc_.end_point.z;
-    if (!utilities::is_equal(z_initial, z_final, std::pow(10.0, -1.0 * xyz_precision_)))
+    if (!utilities::is_equal(z_initial, z_final, get_xyz_tolerance()))
     {
       // The z axis has changed within the precision of the gcode coordinates
       gcode += " Z";
-      gcode += utilities::to_string(current_arc_.end_point.z, xyz_precision_, buf, false);
+      gcode += utilities::to_string(current_arc_.end_point.z, get_xyz_precision(), buf, false);
     }
   }
 
-  gcode += " I";
-  gcode += utilities::to_string(i, xyz_precision_, buf, false);
-
-  gcode += " J";
-  gcode += utilities::to_string(j, xyz_precision_, buf, false);
+  if (!utilities::is_zero(i, get_xyz_tolerance()))
+  {
+    gcode += " I";
+    gcode += utilities::to_string(i, get_xyz_precision(), buf, false);
+  }
+  if (!utilities::is_zero(j, get_xyz_tolerance()))
+  {
+    gcode += " J";
+    gcode += utilities::to_string(j, get_xyz_precision(), buf, false);
+  }
 
   // Add E if it appears
   if (has_e)
   {
     gcode += " E";
-    gcode += utilities::to_string(e, e_precision_, buf, false);
+    gcode += utilities::to_string(e, get_e_precision(), buf, false);
   }
 
   // Add F if it appears

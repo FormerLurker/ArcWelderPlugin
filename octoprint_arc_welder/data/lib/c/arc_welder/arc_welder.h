@@ -412,6 +412,7 @@ struct arc_welder_results {
 };
 #define DEFAULT_GCODE_BUFFER_SIZE 1000
 #define DEFAULT_G90_G91_INFLUENCES_EXTRUDER false
+#define DEFAULT_ALLOW_DYNAMIC_PRECISION false
 class arc_welder
 {
 public:
@@ -425,7 +426,10 @@ public:
 		int min_arc_segments,
 		double mm_per_arc_segment,
 		bool g90_g91_influences_extruder = DEFAULT_G90_G91_INFLUENCES_EXTRUDER,
-		bool allow_3d_arcs = DEFAULT_allow_3d_arcs,
+		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS,
+		bool allow_dynamic_precision = DEFAULT_ALLOW_DYNAMIC_PRECISION,
+		unsigned char default_xyz_precision = DEFAULT_XYZ_PRECISION,
+		unsigned char default_e_precision = DEFAULT_E_PRECISION,
 		int buffer_size = DEFAULT_GCODE_BUFFER_SIZE,
 		progress_callback callback = NULL);
 	void set_logger_type(int logger_type);
@@ -451,6 +455,7 @@ private:
 	std::string target_path_;
 	double resolution_mm_;
 	gcode_position_args gcode_position_args_;
+	bool allow_dynamic_precision_;
 	bool allow_3d_arcs_;
 	long file_size_;
 	int lines_processed_;

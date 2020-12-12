@@ -323,6 +323,16 @@ bool circle::is_over_deviation(const array_list<point>& points, const double res
 
 #pragma region Arc Functions
 
+double arc::get_i() const
+{
+  return center.x - start_point.x;
+}
+
+double arc::get_j() const
+{
+  return center.y - start_point.y;
+}
+
 bool arc::try_create_arc(
   const circle& c,
   const point& start_point,
@@ -477,11 +487,11 @@ bool arc::try_create_arc(
 
 #pragma endregion
 
-segmented_shape::segmented_shape(int min_segments, int max_segments, double resolution_mm, double path_tolerance_percnet) : points_(max_segments)
+segmented_shape::segmented_shape(int min_segments, int max_segments, double resolution_mm, double path_tolerance_percnet, unsigned char default_xyz_precision, unsigned char default_e_precision) : points_(max_segments)
 {
 
-  xyz_precision_ = DEFAULT_XYZ_PRECISION;
-  e_precision_ = DEFAULT_E_PRECISION;
+  set_xyz_precision(default_xyz_precision);
+  e_precision_ = default_e_precision;
   max_segments_ = max_segments;
   path_tolerance_percent_ = path_tolerance_percnet;
   resolution_mm_ = resolution_mm / 2.0; // divide by 2 because it is + or - 1/2 of the desired resolution.
@@ -500,21 +510,47 @@ segmented_shape::~segmented_shape()
 
 }
 
+unsigned char segmented_shape::get_xyz_precision() const
+{
+  return xyz_precision_;
+}
+
+double segmented_shape::get_xyz_tolerance() const
+{
+  return xyz_tolerance_;
+}
+
+unsigned char segmented_shape::get_e_precision() const
+{
+  return e_precision_;
+}
+
+void segmented_shape::set_xyz_precision(unsigned char precision)
+{
+  xyz_precision_ = precision;
+  set_xyz_tolerance_from_precision();
+}
+
+void segmented_shape::set_xyz_tolerance_from_precision()
+{
+  xyz_tolerance_ = std::pow(10.0, -1.0 * static_cast<double>(xyz_precision_));
+}
+
 void segmented_shape::reset_precision()
 {
-  xyz_precision_ = DEFAULT_XYZ_PRECISION;
+  set_xyz_precision(DEFAULT_XYZ_PRECISION);
   e_precision_ = DEFAULT_E_PRECISION;
 }
 
-void segmented_shape::update_xyz_precision(int precision)
+void segmented_shape::update_xyz_precision(unsigned char precision)
 {
   if (xyz_precision_ < precision)
   {
-    xyz_precision_ = precision;
+    set_xyz_precision(precision);
   }
 }
 
-void segmented_shape::update_e_precision(int precision)
+void segmented_shape::update_e_precision(unsigned char precision)
 {
   if (e_precision_ < precision)
   {

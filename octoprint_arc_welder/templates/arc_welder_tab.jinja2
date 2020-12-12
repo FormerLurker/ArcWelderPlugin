@@ -464,6 +464,30 @@
                 </div>
                 <div class="row-fluid">
                     <div class="span4 text-right">
+                        <strong>Dynamic GCode Precision:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.allow_dynamic_precision() ? 'Enabled' : 'Disabled'"></span>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Default XYZ Precision:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.default_xyz_precision()"></span> decimal places
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Default E Precision:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.default_e_precision()"></span> decimal places
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
                         <strong>Maximum Arc Radius:</strong>
                     </div>
                     <div class="span8">
