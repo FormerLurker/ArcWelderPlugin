@@ -307,6 +307,18 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 		return false;
 	}
 	args.default_xyz_precision = gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_xyz_precision);
+	if (args.default_xyz_precision < 3)
+	{
+		std::string message = "ParseArgs - The default XYZ precision received was less than 3, which could cause problems printing arcs.  Setting to 3.";
+		p_py_logger->log(WARNING, GCODE_CONVERSION, message);
+		args.default_xyz_precision = 3;
+	}
+	else if (args.default_xyz_precision > 6)
+	{
+		std::string message = "ParseArgs - The default XYZ precision received was greater than 6, which could can cause checksum errors depending on your firmware.  Setting to 6.";
+		p_py_logger->log(WARNING, GCODE_CONVERSION, message);
+		args.default_xyz_precision = 6;
+	}
 
 	// extract default_e_precision
 	PyObject* py_default_e_precision = PyDict_GetItemString(py_args, "default_e_precision");
@@ -317,6 +329,18 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 		return false;
 	}
 	args.default_e_precision = gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_e_precision);
+	if (args.default_e_precision < 3)
+	{
+		std::string message = "ParseArgs - The default E precision received was less than 3, which could cause extrusion problems.  Setting to 3.";
+		p_py_logger->log(WARNING, GCODE_CONVERSION, message);
+		args.default_e_precision = 3;
+	}
+	else if (args.default_e_precision > 6)
+	{
+		std::string message = "ParseArgs - The default E precision received was greater than 6, which could can cause checksum errors depending on your firmware.  Setting to 6.";
+		p_py_logger->log(WARNING, GCODE_CONVERSION, message);
+		args.default_e_precision = 6;
+	}
 
 	// Extract the path tolerance_percent
 	PyObject* py_path_tolerance_percent = PyDict_GetItemString(py_args, "path_tolerance_percent");

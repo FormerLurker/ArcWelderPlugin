@@ -988,6 +988,39 @@ $(function () {
             return tasks;
         });
 
+        self.default_xyz_precision = ko.pureComputed(function(){
+            var precision = self.plugin_settings.default_xyz_precision();
+            if (!precision)
+            {
+                precision = 3;
+            }
+
+            return self.get_precision(precision);
+        });
+
+        self.default_e_precision = ko.pureComputed(function(){
+            var precision = self.plugin_settings.default_e_precision();
+            if (!precision)
+            {
+                precision = 5;
+            }
+            return self.get_precision(precision);
+        });
+
+        self.get_precision = function (default_precision)
+        {
+            if (default_precision < 3)
+            {
+                default_precision = 3;
+            }
+            else if (default_precision > 6)
+            {
+                default_precision = 6;
+            }
+            return default_precision;
+        };
+
+
         self.progress_firmware_compensation_percent = ko.pureComputed(function(){
             var arcs_created = self.progress_arcs_created();
             var num_firmware_compensations = self.progress_num_firmware_compensations();

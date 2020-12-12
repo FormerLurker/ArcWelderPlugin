@@ -1228,7 +1228,20 @@ class ArcWelderPlugin(
 
         allow_dynamic_precision = self._allow_dynamic_precision
         default_xyz_precision = self._default_xyz_precision
+        if not default_xyz_precision:
+            default_xyz_precision = 3
+        elif default_xyz_precision < 3:
+            default_xyz_precision = 3
+        elif default_xyz_precision > 6:
+            default_xyz_precision = 6
+
         default_e_precision = self._default_e_precision
+        if not default_e_precision:
+            default_e_precision = 5
+        elif default_e_precision < 3:
+            default_e_precision = 3
+        elif default_e_precision > 6:
+            default_e_precision = 6
 
         # determine the target file name and path
         target_name, target_path = self.get_output_file_name_and_path(source_path, gcode_comment_settings)
