@@ -327,7 +327,7 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
   if (has_f)
   {
     gcode += " F";
-    gcode += utilities::dtos(f, get_xyz_precision());
+    gcode += utilities::dtos(f, 0);
   }
 
   return gcode;

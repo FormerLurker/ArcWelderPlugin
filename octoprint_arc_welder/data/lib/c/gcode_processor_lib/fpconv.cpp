@@ -362,7 +362,7 @@ static int emit_digits_decimal(char* digits, int ndigits, char* dest, int K, boo
   int offset = ndigits - absv(K);
   
   // round the number in dest
-  unsigned char terminator_location = offset + precision + 1;
+  unsigned char terminator_location;
   /* fp < 1.0 -> write leading zero */
   if (offset <= 0) {
     offset = -offset;
@@ -371,15 +371,8 @@ static int emit_digits_decimal(char* digits, int ndigits, char* dest, int K, boo
     memset(dest + 2, '0', offset);
     memcpy(dest + offset + 2, digits, ndigits);
     length = ndigits + 2 + offset;
-    terminator_location += exp;
-    if (ndigits < terminator_location)
-    {
-      // add 0s as necessary
-      for (int zero_index = terminator_location; zero_index > ndigits+1; zero_index--)
-      {
-        dest[zero_index] = '0';
-      }
-    }
+    terminator_location = 2 + precision;
+    
     /* fp > 1.0 */
   }
   else {
@@ -387,8 +380,17 @@ static int emit_digits_decimal(char* digits, int ndigits, char* dest, int K, boo
     dest[offset] = '.';
     memcpy(dest + offset + 1, digits + offset, ndigits - offset);
     length = ndigits + 1;
+    terminator_location = offset + precision + 1;
   }
-  
+
+  if (ndigits < terminator_location)
+  {
+    // add 0s as necessary
+    for (int zero_index = terminator_location; zero_index >= length; zero_index--)
+    {
+      dest[zero_index] = '0';
+    }
+  }
   
   
   if (terminator_location < 24)

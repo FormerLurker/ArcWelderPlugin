@@ -297,5 +297,18 @@ std::string utilities::dtos(double x, unsigned char precision)
 	static char buffer[FPCONV_BUFFER_LENGTH];
 	char* p = buffer;
 	buffer[fpconv_dtos(x, buffer, precision)] = '\0';
+	/* This is code that can be used to compare the output of the 
+		 modified fpconv_dtos function to the ofstream output
+		 Note:  It currently only fails for some checks where the original double does not store
+					  perfectly.  In this case I actually think the dtos output is better than ostringstream!
+	std::ostringstream stream;
+	stream << std::fixed;
+	stream << std::setprecision(precision) << x;
+	
+	if (std::string(buffer) != stream.str())
+	{
+		std::cout << std::fixed << "Failed to convert: " << std::setprecision(24) << x << " Precision:" << std::setprecision(0) << static_cast <int> (precision) << " String:" << std::string(buffer) << " Stream:" << stream.str() << std::endl;
+	}
+	*/
 	return buffer;
 }
