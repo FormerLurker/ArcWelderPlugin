@@ -95,7 +95,7 @@ public:
 		count_++;
 	}
 	
-	T pop_front()
+	T& pop_front()
 	{
 		if (count_ == 0)
 		{
@@ -108,7 +108,7 @@ public:
 		return items_[prev_start];
 	}
 
-	T pop_back()
+	T& pop_back()
 	{
 		if (count_ == 0)
 		{
@@ -123,7 +123,7 @@ public:
 		return items_[(front_index_ + index + max_size_) % max_size_];
 	}
 
-	T get(int index) const
+	T& get(int index) const
 	{
 		return items_[(front_index_ + index + max_size_) % max_size_];
 	}

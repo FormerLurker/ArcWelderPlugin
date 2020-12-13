@@ -24,6 +24,7 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include "fpconv.h"
 
 const std::string utilities::WHITESPACE_ = " \n\r\t\f\v";
 const char utilities::GUID_RANGE[] = "0123456789abcdef";
@@ -72,7 +73,7 @@ double utilities::get_cartesian_distance(double x1, double y1, double x2, double
 	double xdif = x1 - x2;
 	double ydif = y1 - y2;
 	double dist_squared = xdif * xdif + ydif * ydif;
-	return sqrt(dist_squared);
+	return std::sqrt(dist_squared);
 }
 
 double utilities::get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2)
@@ -82,7 +83,7 @@ double utilities::get_cartesian_distance(double x1, double y1, double z1, double
 	double ydif = y1 - y2;
 	double zdif = z1 - z2;
 	double dist_squared = xdif * xdif + ydif * ydif + zdif * zdif;
-	return sqrt(dist_squared);
+	return std::sqrt(dist_squared);
 }
 
 std::string utilities::to_string(double value)
@@ -97,74 +98,6 @@ std::string utilities::to_string(int value)
 	std::ostringstream os;
 	os << value;
 	return os.str();
-}
-
-char * utilities::to_string(double value, unsigned short precision, char * str, bool exact_precision)
-{
-	if (utilities::is_zero(value))
-	{
-		value = 0;
-	}
-	char reversed_int[REVERSED_INT_BUFFER];
-	
-	int char_count = 0, int_count = 0;
-	bool is_negative = false;
-	double integer_part, fractional_part;
-	fractional_part = std::abs(std::modf(value, &integer_part)); //Separate integer/fractional parts
-	if (value < 0)
-	{
-		str[char_count++] = '-';
-		integer_part *= -1;
-		is_negative = true;
-	}
-
-	if (integer_part == 0)
-	{
-		str[char_count++] = '0';
-	}
-	else
-	{
-		while (integer_part > 0) //Convert integer part, if any
-		{
-			reversed_int[int_count++] = '0' + (int)std::fmod(integer_part, 10);
-			integer_part = std::floor(integer_part / 10);
-		}
-	}
-	int start = is_negative ? 1 : 0;
-	int end = char_count - start;
-	for (int i = 0; i < int_count && i < REVERSED_INT_BUFFER; i++)
-	{
-		int reversed_int_index = int_count - i - 1;
-		if (reversed_int_index < 0 || reversed_int_index >= REVERSED_INT_BUFFER)
-		{
-			std::cerr << "Buffer overflow turning " << value << " into a string!";
-			break;
-		}
-		str[char_count++] = reversed_int[reversed_int_index];
-	}
-	if ( precision > 0)
-	{
-		str[char_count++] = '.'; //Decimal point
-
-		// We will look 1 past the precision to see if it is a 9.  if it is, we will round up.
-		//if (precision > 0) precision++;
-		while (fractional_part > 0 && precision-- > 0) //Convert fractional part, if any
-		{
-			fractional_part *= 10;
-			fractional_part = std::modf(fractional_part, &integer_part);
-			str[char_count++] = '0' + (int)integer_part;
-		}
-		// remove any unnecessary zeros
-		if (!exact_precision)
-		{
-			while (str[char_count-1] == '0') { char_count--; }
-			// Remove the period
-			if (str[char_count-1] == '.') char_count--;
-		}
-		
-	}
-	str[char_count] = 0; //String terminator
-	return str;
 }
 
 std::string utilities::ltrim(const std::string& s)
@@ -356,5 +289,13 @@ double utilities::hypot(double x, double y)
 	}
 	if (y == 0.0) return x;
 	y /= x;
-	return x * sqrt(1.0 + y * y);
+	return x * std::sqrt(1.0 + y * y);
+}
+
+std::string utilities::dtos(double x, unsigned char precision)
+{
+	static char buffer[FPCONV_BUFFER_LENGTH];
+	char* p = buffer;
+	buffer[fpconv_dtos(x, buffer, precision)] = '\0';
+	return buffer;
 }

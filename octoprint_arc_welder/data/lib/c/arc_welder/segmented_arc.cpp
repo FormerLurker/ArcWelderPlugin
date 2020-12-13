@@ -27,7 +27,8 @@
 #include "utilities.h"
 #include "segmented_shape.h"
 #include <iostream>
-#include <iomanip>
+//#include <iomanip>
+//#include <sstream>
 #include <stdio.h>
 #include <cmath>
 
@@ -213,7 +214,7 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
   double previous_shape_length = original_shape_length_;
   original_shape_length_ += pd;
   arc original_arc = current_arc_;
-  if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, get_xyz_precision(), allow_3d_arcs_))
+  if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, get_xyz_tolerance(), allow_3d_arcs_))
   {
     // See how many arcs will be interpolated
     bool abort_arc = false;
@@ -235,7 +236,10 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
     {
       abort_arc = true;
     }
-
+    if (!abort_arc && current_arc_.length < get_xyz_tolerance())
+    {
+      abort_arc = true;
+    }
     if (abort_arc)
     {
       // This arc has been cancelled either due to firmware correction,
@@ -271,31 +275,94 @@ std::string segmented_arc::get_shape_gcode_relative(double f)
 
 std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) const
 {
-  char buf[100];
   std::string gcode;
-
-
-  double i = current_arc_.get_i();
-  double j = current_arc_.get_j();
-  // Here is where the performance part kicks in (these are expensive calls) that makes things a bit ugly.
-  // there are a few cases we need to take into consideration before choosing our sprintf string
-  // create the XYZ portion
+  // Calculate gcode size
+  bool has_f = utilities::greater_than_or_equal(f, 1);
+  bool has_z = allow_3d_arcs_ && !utilities::is_equal(
+    current_arc_.start_point.z, current_arc_.end_point.z, get_xyz_tolerance()
+  );
+  gcode.reserve(96);
 
   if (current_arc_.angle_radians < 0)
   {
-    gcode = "G2";
+    gcode += "G2";
   }
   else
   {
-    gcode = "G3";
+    gcode += "G3";
 
   }
   // Add X, Y, I and J
   gcode += " X";
-  gcode += utilities::to_string(current_arc_.end_point.x, get_xyz_precision(), buf, false);
-
+  gcode += utilities::dtos(current_arc_.end_point.x, get_xyz_precision());
+  
   gcode += " Y";
-  gcode += utilities::to_string(current_arc_.end_point.y, get_xyz_precision(), buf, false);
+  gcode += utilities::dtos(current_arc_.end_point.y, get_xyz_precision());
+  
+  if (has_z)
+  {
+    gcode += " Z";
+    gcode += utilities::dtos(current_arc_.end_point.z, get_xyz_precision());
+  }
+
+  // Output I and J, but do NOT check for 0.  
+  // Simplify 3d has issues visualizing G2/G3 with 0 for I or J
+  // and until it is fixed, it is not worth the hassle.
+  double i = current_arc_.get_i();
+  gcode += " I";
+  gcode += utilities::dtos(i, get_xyz_precision());
+
+  double j = current_arc_.get_j();
+  gcode += " J";
+  gcode += utilities::dtos(j, get_xyz_precision());
+
+  // Add E if it appears
+  if (has_e)
+  {
+    gcode += " E";
+    gcode += utilities::dtos(e, get_e_precision());
+  }
+
+  // Add F if it appears
+  if (has_f)
+  {
+    gcode += " F";
+    gcode += utilities::dtos(f, get_xyz_precision());
+  }
+
+  return gcode;
+
+}
+
+/*
+* This is an older implementation using ostringstream.  It is substantially slower.
+* Keep this around in case there are problems with the custom dtos function
+std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) const
+{
+  static std::ostringstream gcode;
+  gcode.str("");
+  gcode << std::fixed;
+
+  if (current_arc_.angle_radians < 0)
+  {
+    gcode << "G2";
+  }
+  else
+  {
+    gcode << "G3";
+
+  }
+  gcode << std::setprecision(get_xyz_precision());
+  // Add X, Y, I and J
+  if (!utilities::is_zero(current_arc_.end_point.x, get_xyz_precision()))
+  {
+    gcode << " X" << current_arc_.end_point.x;
+  }
+
+  if (!utilities::is_zero(current_arc_.end_point.y, get_xyz_precision()))
+  {
+    gcode << " Y" << current_arc_.end_point.y;
+  }
 
   if (allow_3d_arcs_)
   {
@@ -305,37 +372,34 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
     if (!utilities::is_equal(z_initial, z_final, get_xyz_tolerance()))
     {
       // The z axis has changed within the precision of the gcode coordinates
-      gcode += " Z";
-      gcode += utilities::to_string(current_arc_.end_point.z, get_xyz_precision(), buf, false);
+      gcode << " Z" << current_arc_.end_point.z;
     }
   }
 
-  if (!utilities::is_zero(i, get_xyz_tolerance()))
-  {
-    gcode += " I";
-    gcode += utilities::to_string(i, get_xyz_precision(), buf, false);
-  }
-  if (!utilities::is_zero(j, get_xyz_tolerance()))
-  {
-    gcode += " J";
-    gcode += utilities::to_string(j, get_xyz_precision(), buf, false);
-  }
+  // Output I and J, but do NOT check for 0.
+  // Simplify 3d has issues visualizing G2/G3 with 0 for I or J
+  // and until it is fixed, it is not worth the hassle.
+  double i = current_arc_.get_i();
+  gcode << " I" << i;
+
+  double j = current_arc_.get_j();
+  gcode << " J" << j;
 
   // Add E if it appears
   if (has_e)
   {
-    gcode += " E";
-    gcode += utilities::to_string(e, get_e_precision(), buf, false);
+    gcode << std::setprecision(get_e_precision());
+    gcode << " E" << e;
   }
 
   // Add F if it appears
   if (utilities::greater_than_or_equal(f, 1))
   {
-    gcode += " F";
-    gcode += utilities::to_string(f, 0, buf, true);
+    gcode << std::setprecision(0);
+    gcode << " F" << f;
   }
 
-  return gcode;
+  return gcode.str();
 
 }
-
+*/

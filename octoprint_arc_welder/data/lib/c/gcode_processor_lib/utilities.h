@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 #include <set>
-#define REVERSED_INT_BUFFER 20
+#define FPCONV_BUFFER_LENGTH 25
 // Had to increase the zero tolerance because prusa slicer doesn't always 
 // retract enough while wiping.
 #define ZERO_TOLERANCE 0.000005
@@ -43,7 +43,6 @@ public:
 	static double get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2);
 	static std::string to_string(double value);
 	static std::string to_string(int value);
-	static char* to_string(double value, unsigned short precision, char* str, bool exact_precision);
 	static std::string ltrim(const std::string& s);
 	static std::string rtrim(const std::string& s);
 	static std::string trim(const std::string& s);
@@ -62,6 +61,22 @@ public:
 	// Man I can't wait till I can drop python 2.7 support so I can stop doing everything myself.  s
 	// td::hypot doesn't work for msvc for python 2.7....
 	static double hypot(double x, double y);
+	static std::string dtos(double x, unsigned char precision);
+
+	static double rand_range(double min, double max) {
+		double f = (double)std::rand() / RAND_MAX;
+		return min + f * (max - min);
+	}
+
+	static unsigned char rand_range(unsigned char min, unsigned char max) {
+		double f = (double)std::rand() / RAND_MAX;
+		return static_cast<unsigned char>(static_cast<double>(min) + f * (static_cast<double>(max) - static_cast<double>(min)));
+	}
+
+	static int rand_range(int min, int max) {
+		double f = (double)std::rand() / RAND_MAX;
+		return static_cast<int>(static_cast<double>(min) + f * (static_cast<double>(max) - static_cast<double>(min)));
+	}
 
 	
 protected:

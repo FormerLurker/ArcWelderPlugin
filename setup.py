@@ -234,6 +234,7 @@ plugin_ext_sources = [
     "octoprint_arc_welder/data/lib/c/gcode_processor_lib/position.cpp",
     "octoprint_arc_welder/data/lib/c/gcode_processor_lib/utilities.cpp",
     "octoprint_arc_welder/data/lib/c/gcode_processor_lib/logger.cpp",
+    "octoprint_arc_welder/data/lib/c/gcode_processor_lib/fpconv.cpp",
     "octoprint_arc_welder/data/lib/c/arc_welder/arc_welder.cpp",
     "octoprint_arc_welder/data/lib/c/arc_welder/segmented_arc.cpp",
     "octoprint_arc_welder/data/lib/c/arc_welder/segmented_shape.cpp",

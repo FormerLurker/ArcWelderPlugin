@@ -33,6 +33,7 @@
 // The minimum theta value allowed between any two arc in order for an arc to be
 // created.  This prevents sign calculation issues for very small values of theta
 #define DEFAULT_XYZ_PRECISION 3
+#define DEFAULT_XYZ_TOLERANCE 0.001
 #define DEFAULT_E_PRECISION 5
 #define ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT 0.05  // one percent
 struct point
@@ -109,7 +110,7 @@ struct circle {
 
 	static bool try_create_circle(const point &p1, const point &p2, const point &p3, const double max_radius, circle& new_circle);
 	
-	static bool try_create_circle(const array_list<point>& points, const double max_radius, const double resolutino_mm, const int xyz_precision, bool allow_3d_arcs, bool check_middle_only, circle& new_circle);
+	static bool try_create_circle(const array_list<point>& points, const double max_radius, const double resolutino_mm, const double xyz_tolerance, bool allow_3d_arcs, bool check_middle_only, circle& new_circle);
 
 	double get_radians(const point& p1, const point& p2) const;
 
@@ -117,7 +118,7 @@ struct circle {
 
 	point get_closest_point(const point& p) const;
 
-	bool is_over_deviation(const array_list<point>& points, const double resolution_mm, const int xyz_precision, const bool allow_3d_arcs);
+	bool is_over_deviation(const array_list<point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs);
 };
 
 #define DEFAULT_RESOLUTION_MM 0.05
@@ -177,7 +178,7 @@ struct arc : circle
 		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
 		int min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
-		int xyz_precision = DEFAULT_XYZ_PRECISION,
+		double xyz_tolerance = DEFAULT_XYZ_TOLERANCE,
 		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS);
 };
 double distance_from_segment(segment s, point p);

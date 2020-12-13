@@ -25,9 +25,6 @@
 
 #pragma once
 #include "segmented_shape.h"
-#include <iomanip>
-#include <sstream>
-
 #define GCODE_CHAR_BUFFER_SIZE 1000
 
 class segmented_arc :
@@ -63,9 +60,6 @@ public:
 private:
 	bool try_add_point_internal_(point p, double pd);
 	std::string get_shape_gcode_(bool has_e, double e, double f) const;
-	std::string get_g1(double x, double y, double z, double e, double f, bool has_z);
-	std::string interpolate_arc(double f, bool is_relative, double start_e = 0);
-	//circle arc_circle_;
 	arc current_arc_;
 	double max_radius_mm_;
 	int min_arc_segments_;

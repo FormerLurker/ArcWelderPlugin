@@ -61,7 +61,7 @@ public:
 		count_++;
 		items_[front_index_] = object;
 	}
-	T pop_front()
+	T& pop_front()
 	{
 		if (count_ == 0)
 		{
@@ -74,7 +74,7 @@ public:
 		return items_[prev_start];
 	}
 
-	T get(int index)
+	T& get(int index)
 	{
 		return items_[(front_index_ + index + max_size_) % max_size_];
 	}

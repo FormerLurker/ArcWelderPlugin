@@ -37,6 +37,8 @@
 #include "unwritten_command.h"
 #include "logger.h"
 #include <cmath>
+#include <iomanip>
+#include <sstream>
 
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS

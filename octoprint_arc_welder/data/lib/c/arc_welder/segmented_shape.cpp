@@ -94,7 +94,9 @@ bool segment::get_closest_perpendicular_point(const point& p1, const point& p2, 
 {
   // [(Cx - Ax)(Bx - Ax) + (Cy - Ay)(By - Ay)] / [(Bx - Ax) ^ 2 + (By - Ay) ^ 2]
   double num = (c.x - p1.x) * (p2.x - p1.x) + (c.y - p1.y) * (p2.y - p1.y);
-  double denom = (std::pow((p2.x - p1.x), 2) + std::pow((p2.y - p1.y), 2));
+  double x_dif = p2.x - p1.x;
+  double y_dif = p2.y - p1.y;
+  double denom = (x_dif * x_dif) + (y_dif * y_dif);
   double t = num / denom;
 
   // We're considering this a failure if t == 0 or t==1 within our tolerance.  In that case we hit the endpoint, which is OK.
@@ -198,7 +200,7 @@ bool circle::try_create_circle(const point& p1, const point& p2, const point& p3
   return true;
 }
 
-bool circle::try_create_circle(const array_list<point>& points, const double max_radius, const double resolution_mm, const int xyz_precision, bool allow_3d_arcs, bool check_middle_only, circle& new_circle)
+bool circle::try_create_circle(const array_list<point>& points, const double max_radius, const double resolution_mm, const double xyz_tolerance, bool allow_3d_arcs, bool check_middle_only, circle& new_circle)
 {
   int middle_index = points.count() / 2;
   int check_index;
@@ -210,7 +212,7 @@ bool circle::try_create_circle(const array_list<point>& points, const double max
     // Check the index
     if (circle::try_create_circle(points[0], points[check_index], points[points.count() - 1], max_radius, new_circle))
     {
-      if (!new_circle.is_over_deviation(points, resolution_mm, xyz_precision, allow_3d_arcs))
+      if (!new_circle.is_over_deviation(points, resolution_mm, xyz_tolerance, allow_3d_arcs))
       {
         return true;
       }
@@ -269,7 +271,7 @@ point circle::get_closest_point(const point& p) const
   return point(px, py, pz, 0);
 }
 
-bool circle::is_over_deviation(const array_list<point>& points, const double resolution_mm, const int xyz_precision, const bool allow_3d_arcs)
+bool circle::is_over_deviation(const array_list<point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs)
 {
   // We need to ensure that the Z steps are constand per linear travel unit
   double z_step_per_distance = 0;
@@ -289,7 +291,7 @@ bool circle::is_over_deviation(const array_list<point>& points, const double res
       if (z_step_per_distance == 0) {
         z_step_per_distance = current_z_stepper_distance;
       }
-      if (!utilities::is_equal(z_step_per_distance, current_z_stepper_distance, std::pow(10.0, -1.0 * xyz_precision)))
+      if (!utilities::is_equal(z_step_per_distance, current_z_stepper_distance, xyz_tolerance))
       {
         // The z step is uneven, can't create arc				
         return true;
@@ -471,11 +473,11 @@ bool arc::try_create_arc(
   double path_tolerance_percent,
   int min_arc_segments,
   double mm_per_arc_segment,
-  int xyz_precision,
+  double xyz_tolerance,
   bool allow_3d_arcs)
 {
   circle test_circle;
-  if (circle::try_create_circle(points, max_radius_mm, resolution_mm, xyz_precision, allow_3d_arcs, false, test_circle))
+  if (circle::try_create_circle(points, max_radius_mm, resolution_mm, xyz_tolerance, allow_3d_arcs, false, test_circle))
   {
     // We could save a bit of processing power and do our firmware compensation here, but we won't be able to track statistics for this easily.
     // moved check to segmented_arc.cpp

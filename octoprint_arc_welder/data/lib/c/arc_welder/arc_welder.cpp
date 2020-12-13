@@ -203,8 +203,8 @@ arc_welder_results results;
 		<< ", g90_91_influences_extruder: " << (p_source_position_->get_g90_91_influences_extruder() ? "True" : "False")
 		<< ", allow_3d_arcs: " << (allow_3d_arcs_ ? "True" : "False")
 		<< ", allow_dynamic_precision: " << (allow_dynamic_precision_ ? "True" : "False")
-		<< ", default_xyz_precision: " << std::setprecision(0) << (current_arc_.get_xyz_precision())
-		<< ", default_e_precision: " << std::setprecision(0) << (current_arc_.get_e_precision());
+		<< ", default_xyz_precision: " << std::setprecision(0) << static_cast<double>(current_arc_.get_xyz_precision())
+		<< ", default_e_precision: " << std::setprecision(0) << static_cast<double>(current_arc_.get_e_precision());
 	p_logger_->log(logger_type_, INFO, stream.str());
 
 
