@@ -307,15 +307,19 @@ class ArcWelderPlugin(
         with ArcWelderPlugin.admin_permission.require(http_exception=403):
             if not self._enabled:
                 return jsonify({"success": False, "message": "Arc Welder is Disabled."})
-
-            request_values = request.get_json()
-            path = request_values["path"]
-            origin = request_values["origin"]
-            # I think this is the easiest way to get the name.
-            path_part, name = self._file_manager.split_path(FileDestinations.LOCAL, path)
-            # add the file and metadata to the processor queue
-            success = self.add_file_to_preprocessor_queue(name, path, origin, True)
+            try:
+                request_values = request.get_json()
+                path = request_values["path"]
+                origin = request_values["origin"]
+                # I think this is the easiest way to get the name.
+                path_part, name = self._file_manager.split_path(FileDestinations.LOCAL, path)
+                # add the file and metadata to the processor queue
+                success = self.add_file_to_preprocessor_queue(name, path, origin, True)
+            except Exception as e:
+                logger.exception("Could not process file manually.")
+                raise e
             return jsonify({"success": success})
+
 
     @octoprint.plugin.BlueprintPlugin.route("/restoreDefaultSettings", methods=["POST"])
     @restricted_access
