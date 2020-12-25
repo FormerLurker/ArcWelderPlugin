@@ -32,7 +32,7 @@ const bool utilities::GUID_DASHES[] = { 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0
 
 bool utilities::is_zero(double x, double tolerance)
 {
-	return std::abs(x) < tolerance;
+	return std::fabs(x) < tolerance;
 }
 
 int utilities::round_up_to_int(double x, double tolerance)
@@ -42,7 +42,7 @@ int utilities::round_up_to_int(double x, double tolerance)
 
 bool utilities::is_equal(double x, double y, double tolerance)
 {
-	double abs_difference = std::abs(x - y);
+	double abs_difference = std::fabs(x - y);
 	return abs_difference < tolerance;
 }
 

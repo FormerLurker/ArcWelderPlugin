@@ -216,10 +216,16 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
   arc original_arc = current_arc_;
   if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, get_xyz_tolerance(), allow_3d_arcs_))
   {
-    // See how many arcs will be interpolated
     bool abort_arc = false;
-    if (min_arc_segments_ > 0 && mm_per_arc_segment_ > 0)
+    if (points_.count() > 3 && original_arc.direction != current_arc_.direction)
     {
+      // The direction of the arc cannot change once it has been created.  Abort!
+      abort_arc = true;
+    }
+    else if (min_arc_segments_ > 0 && mm_per_arc_segment_ > 0)
+    {
+      // Apply firmware compensation
+      // See how many arcs will be interpolated
       double circumference = 2.0 * PI_DOUBLE * current_arc_.radius;
       int num_segments = (int)std::floor(circumference / min_arc_segments_);
       if (num_segments < min_arc_segments_) {
@@ -231,15 +237,20 @@ bool segmented_arc::try_add_point_internal_(point p, double pd)
         }
       }
     }
-    // check for I=0 and J=0
-    if (!abort_arc && utilities::is_zero(current_arc_.get_i(), get_xyz_tolerance()) && utilities::is_zero(current_arc_.get_j(), get_xyz_tolerance()))
+    if (!abort_arc)
     {
-      abort_arc = true;
+      if (utilities::is_zero(current_arc_.get_i(), get_xyz_tolerance()) && utilities::is_zero(current_arc_.get_j(), get_xyz_tolerance()))
+      {
+        // I and J are both 0, which is invalid!  Abort!
+        abort_arc = true;
+      }
+      else if (current_arc_.length < get_xyz_tolerance())
+      {
+        // the arc length is below our tolerance, abort!
+        abort_arc = true;
+      }
     }
-    if (!abort_arc && current_arc_.length < get_xyz_tolerance())
-    {
-      abort_arc = true;
-    }
+    
     if (abort_arc)
     {
       // This arc has been cancelled either due to firmware correction,

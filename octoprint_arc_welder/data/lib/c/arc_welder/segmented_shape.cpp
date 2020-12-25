@@ -299,7 +299,7 @@ bool circle::is_over_deviation(const array_list<point>& points, const double res
 
     }
 
-    if (std::abs(distance - radius) > resolution_mm)
+    if (std::fabs(distance - radius) > resolution_mm)
     {
       return true;
     }
@@ -312,7 +312,7 @@ bool circle::is_over_deviation(const array_list<point>& points, const double res
     if (segment::get_closest_perpendicular_point(points[index], points[index + 1], center, point_to_test))
     {
       double distance = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, center.x, center.y);
-      if (std::abs(distance - radius) > resolution_mm)
+      if (std::fabs(distance - radius) > resolution_mm)
       {
         return true;
       }
@@ -321,6 +321,8 @@ bool circle::is_over_deviation(const array_list<point>& points, const double res
   }
   return false;
 }
+
+
 #pragma endregion Circle Functions
 
 #pragma region Arc Functions
@@ -414,7 +416,7 @@ bool arc::try_create_arc(
     // see if an arc moving in the opposite direction had the correct length.
 
     // Find the rest of the angle across the circle
-    double test_radians = std::abs(angle_radians - 2 * PI_DOUBLE);
+    double test_radians = std::fabs(angle_radians - 2 * PI_DOUBLE);
     // Calculate the length of that arc
     double test_arc_length = c.radius * test_radians;
     if (allow_3d_arcs)
@@ -448,7 +450,7 @@ bool arc::try_create_arc(
   if (direction == 2) {
     angle_radians *= -1.0;
   }
-
+  target_arc.direction = direction;
   target_arc.center.x = c.center.x;
   target_arc.center.y = c.center.y;
   target_arc.center.z = c.center.z;

@@ -1264,7 +1264,7 @@ class ArcWelderPlugin(
             "processor_args": {
                 "source_path": source_path_on_disk,
                 "resolution_mm": resolution_mm,
-                "path_tolerance_percent": path_tolerance_percent,
+                "path_tolerance_percent": path_tolerance_percent / 100.0,  # Convert to decimal percent
                 "max_radius_mm": max_radius_mm,
                 "min_arc_segments": min_arc_segments,
                 "mm_per_arc_segment": mm_per_arc_segment,
@@ -1331,11 +1331,9 @@ class ArcWelderPlugin(
                 )
 
                 self._file_manager.set_additional_metadata(
-                    FileDestinations.LOCAL, source_path, "arc_welder", True, overwrite=True, merge=False
+                    FileDestinations.LOCAL, source_path, "arc_welder", True, overwrite=False, merge=False
                 )
-                self._file_manager.set_additional_metadata(
-                    FileDestinations.LOCAL, source_path, "arc_welder_statistics", False, overwrite=True, merge=False
-                )
+
                 # this file was welded, it would be a waste to weld again
                 return
             if "settings" in gcode_search_results:

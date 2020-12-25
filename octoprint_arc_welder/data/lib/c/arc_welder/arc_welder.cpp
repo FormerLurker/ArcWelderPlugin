@@ -449,7 +449,9 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 			!p_cur_pos->is_relative &&
 			(
 				!waiting_for_arc_ ||
-				(previous_extruder.is_extruding && extruder_current.is_extruding) ||
+				extruder_current.is_extruding ||
+				//(previous_extruder.is_extruding && extruder_current.is_extruding) || // Test to see if 
+				// we can get more arcs.
 				(previous_extruder.is_retracting && extruder_current.is_retracting)
 			) &&
 			p_cur_pos->is_extruder_relative == p_pre_pos->is_extruder_relative &&

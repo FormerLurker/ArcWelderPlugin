@@ -144,6 +144,7 @@ struct arc : circle
 		polar_start_theta = 0;
 		polar_end_theta = 0;
 		max_deviation = 0;
+		direction = 0;
 	}
 	
 	bool is_arc;
@@ -154,21 +155,9 @@ struct arc : circle
 	double max_deviation;
 	point start_point;
 	point end_point;
-
+	unsigned char direction;
 	double get_i() const;
 	double get_j() const;
-	// Statis functions
-	static bool try_create_arc(
-		const circle& c, 
-		const point& start_point, 
-		const point& mid_point, 
-		const point& end_point, 
-		arc& target_arc, 
-		double approximate_length,
-		double resolution = DEFAULT_RESOLUTION_MM, 
-		double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
-		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS);
-
 	static bool try_create_arc(
 		const array_list<point>& points, 
 		arc& target_arc, 
@@ -180,6 +169,19 @@ struct arc : circle
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
 		double xyz_tolerance = DEFAULT_XYZ_TOLERANCE,
 		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS);
+
+	private:
+		static bool try_create_arc(
+			const circle& c,
+			const point& start_point,
+			const point& mid_point,
+			const point& end_point,
+			arc& target_arc,
+			double approximate_length,
+			double resolution = DEFAULT_RESOLUTION_MM,
+			double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
+			bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS);
+	
 };
 double distance_from_segment(segment s, point p);
 
