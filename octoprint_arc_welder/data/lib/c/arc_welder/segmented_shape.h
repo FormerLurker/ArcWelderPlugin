@@ -36,17 +36,25 @@
 #define DEFAULT_XYZ_TOLERANCE 0.001
 #define DEFAULT_E_PRECISION 5
 #define ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT 0.05  // one percent
+
 struct point
 {
 public:
-	point() :x(0), y(0), z(0), e_relative(0){}
-	point(double x, double y, double z, double e_relative) 
-	  : x(x), y(y), z(z), e_relative(e_relative){}
+	point() : x(0), y(0), z(0) {};
+	point(double x, double y, double z) : x(x), y(y), z(z) {};
 	double x;
 	double y;
 	double z;
-	double e_relative;
 	static point get_midpoint(point p1, point p2);
+};
+
+struct printer_point : point
+{
+public:
+	printer_point() :point(0, 0, 0), e_relative(0), distance(0) {}
+	printer_point(double x, double y, double z, double e_relative, double distance) :point(x,y,z), e_relative(e_relative), distance(distance) {}
+	double e_relative;
+	double distance;
 };
 
 struct segment
@@ -110,21 +118,22 @@ struct circle {
 
 	static bool try_create_circle(const point &p1, const point &p2, const point &p3, const double max_radius, circle& new_circle);
 	
-	static bool try_create_circle(const array_list<point>& points, const double max_radius, const double resolutino_mm, const double xyz_tolerance, bool allow_3d_arcs, bool check_middle_only, circle& new_circle);
-
-	double get_radians(const point& p1, const point& p2) const;
+	static bool try_create_circle(const array_list<printer_point>& points, const double max_radius, const double resolutino_mm, const double xyz_tolerance, bool allow_3d_arcs, bool check_middle_only, circle& new_circle);
 
 	double get_polar_radians(const point& p1) const;
 
 	point get_closest_point(const point& p) const;
 
-	bool is_over_deviation(const array_list<point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs);
+	bool is_over_deviation(const array_list<printer_point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs);
+	
+	bool get_deviation_sum_squared(const array_list<printer_point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs, double& sum_deviation);
 };
 
 #define DEFAULT_RESOLUTION_MM 0.05
 #define DEFAULT_ALLOW_3D_ARCS false
 #define DEFAULT_MIN_ARC_SEGMENTS 0
 #define DEFAULT_MM_PER_ARC_SEGMENT 0
+enum DirectionEnum { UNKNOWN = 0, COUNTERCLOCKWISE = 1, CLOCKWISE = 2};
 struct arc : circle
 {
 	arc() {
@@ -144,7 +153,7 @@ struct arc : circle
 		polar_start_theta = 0;
 		polar_end_theta = 0;
 		max_deviation = 0;
-		direction = 0;
+		direction = DirectionEnum::UNKNOWN;
 	}
 	
 	bool is_arc;
@@ -155,11 +164,11 @@ struct arc : circle
 	double max_deviation;
 	point start_point;
 	point end_point;
-	unsigned char direction;
+	DirectionEnum direction;
 	double get_i() const;
 	double get_j() const;
 	static bool try_create_arc(
-		const array_list<point>& points, 
+		const array_list<printer_point>& points, 
 		arc& target_arc, 
 		double approximate_length, 
 		double max_radius = DEFAULT_MAX_RADIUS_MM,
@@ -169,7 +178,8 @@ struct arc : circle
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
 		double xyz_tolerance = DEFAULT_XYZ_TOLERANCE,
 		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS);
-
+	static bool are_points_within_slice(const arc& test_arc, const array_list<printer_point>& points);
+	static bool ray_intersects_segment(const point rayOrigin, const point rayDirection, const printer_point point1, const printer_point point2);
 	private:
 		static bool try_create_arc(
 			const circle& c,
@@ -181,7 +191,6 @@ struct arc : circle
 			double resolution = DEFAULT_RESOLUTION_MM,
 			double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
 			bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS);
-	
 };
 double distance_from_segment(segment s, point p);
 
@@ -206,7 +215,7 @@ public:
 	int get_max_segments();
 	double get_resolution_mm();
 	double get_path_tolerance_percent();
-	double get_shape_length();
+	virtual double get_shape_length();
 	double get_shape_e_relative();
 	void set_resolution_mm(double resolution_mm);
 	void reset_precision();
@@ -215,9 +224,9 @@ public:
 	virtual bool is_shape() const;
 	// public virtual functions
 	virtual void clear();
-	virtual point pop_front();
-	virtual point pop_back();
-	virtual bool try_add_point(point p, double e_relative);
+	virtual printer_point pop_front();
+	virtual printer_point pop_back();
+	virtual bool try_add_point(printer_point p, double e_relative);
 	virtual std::string get_shape_gcode_absolute(double e_abs_start);
 	virtual std::string get_shape_gcode_relative();
 	bool is_extruding();
@@ -225,7 +234,7 @@ public:
 	unsigned char get_e_precision() const;
 	double get_xyz_tolerance() const;
 protected:
-	array_list<point> points_;
+	array_list<printer_point> points_;
 	void set_is_shape(bool value);
 	double original_shape_length_;	
 	double e_relative_;

@@ -45,20 +45,21 @@ public:
 		unsigned char default_e_precision = DEFAULT_E_PRECISION
 	);
 	virtual ~segmented_arc();
-	virtual bool try_add_point(point p, double e_relative);
+	virtual bool try_add_point(printer_point p);
+	virtual double get_shape_length();
 	std::string get_shape_gcode_absolute(double e, double f);
 	std::string get_shape_gcode_relative(double f);
 	
 	virtual bool is_shape() const;
-	point pop_front(double e_relative);
-	point pop_back(double e_relative);
+	printer_point pop_front(double e_relative);
+	printer_point pop_back(double e_relative);
 	double get_max_radius() const;
 	int get_min_arc_segments() const;
 	double get_mm_per_arc_segment() const;
 	int get_num_firmware_compensations() const;
 
 private:
-	bool try_add_point_internal_(point p, double pd);
+	bool try_add_point_internal_(printer_point p);
 	std::string get_shape_gcode_(bool has_e, double e, double f) const;
 	arc current_arc_;
 	double max_radius_mm_;

@@ -386,7 +386,6 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 	position* p_pre_pos = p_source_position_->get_previous_position_ptr();
 	extruder extruder_current = p_cur_pos->get_current_extruder();
 	extruder previous_extruder = p_pre_pos->get_current_extruder();
-	point p(p_cur_pos->get_gcode_x(), p_cur_pos->get_gcode_y(), p_cur_pos->get_gcode_z(), extruder_current.e_relative);
 	//std::cout << lines_processed_ << " - " << cmd.gcode << ", CurrentEAbsolute: " << cur_extruder.e <<", ExtrusionLength: " << cur_extruder.extrusion_length << ", Retraction Length: " << cur_extruder.retraction_length << ", IsExtruding: " << cur_extruder.is_extruding << ", IsRetracting: " << cur_extruder.is_retracting << ".\n";
 
 	int lines_written = 0;
@@ -394,12 +393,11 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 	
 	bool arc_added = false;
 	bool clear_shapes = false;
-	
+	double movement_length_mm = 0;
+	bool has_e_changed = extruder_current.is_extruding || extruder_current.is_retracting;
 	// Update the source file statistics
-	if (p_cur_pos->has_xy_position_changed && (extruder_current.is_extruding || extruder_current.is_retracting) && !is_reprocess)
+	if (p_cur_pos->has_xy_position_changed && (has_e_changed))
 	{
-		double movement_length_mm;
-		
 		if (allow_3d_arcs_) {
 			movement_length_mm = utilities::get_cartesian_distance(p_pre_pos->x, p_pre_pos->y, p_pre_pos->z, p_cur_pos->x, p_cur_pos->y, p_cur_pos->z);
 		}
@@ -409,7 +407,8 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 		
 		if (movement_length_mm > 0)
 		{
-			segment_statistics_.update(movement_length_mm, true);
+			if (!is_reprocess)
+				segment_statistics_.update(movement_length_mm, true);
 		}
 	}
 
@@ -459,7 +458,8 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 			(!waiting_for_arc_ || p_pre_pos->feature_type_tag == p_cur_pos->feature_type_tag)
 			)
 	) {
-		
+
+		printer_point p(p_cur_pos->get_gcode_x(), p_cur_pos->get_gcode_y(), p_cur_pos->get_gcode_z(), extruder_current.e_relative, movement_length_mm);
 		if (!waiting_for_arc_)
 		{
 			previous_is_extruder_relative_ = p_pre_pos->is_extruder_relative;
@@ -469,15 +469,16 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 			}
 			write_unwritten_gcodes_to_file();
 			// add the previous point as the starting point for the current arc
-			point previous_p(p_pre_pos->get_gcode_x(), p_pre_pos->get_gcode_y(), p_pre_pos->get_gcode_z(), previous_extruder.e_relative);
+			printer_point previous_p(p_pre_pos->get_gcode_x(), p_pre_pos->get_gcode_y(), p_pre_pos->get_gcode_z(), previous_extruder.e_relative, 0);
 			// Don't add any extrusion, or you will over extrude!
 			//std::cout << "Trying to add first point (" << p.x << "," << p.y << "," << p.z << ")...";
-			current_arc_.try_add_point(previous_p, 0);
+			
+			current_arc_.try_add_point(previous_p);
 		}
 		
 		double e_relative = extruder_current.e_relative;
 		int num_points = current_arc_.get_num_segments();
-		arc_added = current_arc_.try_add_point(p, e_relative);
+		arc_added = current_arc_.try_add_point(p);
 		if (arc_added)
 		{
 			if (!waiting_for_arc_)
@@ -696,29 +697,11 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 		}
 
 	}
-
-
+	
 	if (waiting_for_arc_ || !arc_added)
 	{
 		position* cur_pos = p_source_position_->get_current_position_ptr();
-		extruder& cur_extruder = cur_pos->get_current_extruder();
-
-		double length = 0;
-		if (p_cur_pos->has_xy_position_changed && (cur_extruder.is_extruding || cur_extruder.is_retracting))
-		{
-			position* prev_pos = p_source_position_->get_previous_position_ptr();
-			length = 0;
-			if (allow_3d_arcs_)
-			{
-				length = utilities::get_cartesian_distance(cur_pos->x, cur_pos->y, cur_pos->z, prev_pos->x, prev_pos->y, prev_pos->z);
-			}
-			else {
-				length = utilities::get_cartesian_distance(cur_pos->x, cur_pos->y, prev_pos->x, prev_pos->y);
-			}
-			
-		}
-		
-		unwritten_commands_.push_back(unwritten_command(cur_pos, length));
+		unwritten_commands_.push_back(unwritten_command(cur_pos, movement_length_mm));
 		
 	}
 	if (!waiting_for_arc_)

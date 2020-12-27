@@ -29,12 +29,12 @@
 #include <cmath>
 #include <iostream>
 #pragma region Operators for Vector and Point
+
 point operator +(point lhs, const vector rhs) {
   point p(
     lhs.x + rhs.x,
     lhs.y + rhs.y,
-    lhs.z + rhs.z,
-    lhs.e_relative + rhs.e_relative
+    lhs.z + rhs.z
   );
   return p;
 }
@@ -43,11 +43,9 @@ point operator -(point lhs, const vector rhs) {
   return point(
     lhs.x - rhs.x,
     lhs.y - rhs.y,
-    lhs.z - rhs.z,
-    lhs.e_relative - rhs.e_relative
+    lhs.z - rhs.z
   );
-}
-
+} 
 vector operator -(point& lhs, point& rhs) {
   return vector(
     lhs.x - rhs.x,
@@ -80,7 +78,7 @@ point point::get_midpoint(point p1, point p2)
   double y = (p1.y + p2.y) / 2.0;
   double z = (p1.z + p2.z) / 2.0;
 
-  return point(x, y, z, 0);
+  return point(x, y, z);
 }
 #pragma endregion Point Functions
 
@@ -176,8 +174,6 @@ bool circle::try_create_circle(const point& p1, const point& p2, const point& p3
   {
     return false;
   }
-
-
   double b = (x1 * x1 + y1 * y1) * (y3 - y2)
     + (x2 * x2 + y2 * y2) * (y1 - y3)
     + (x3 * x3 + y3 * y3) * (y2 - y1);
@@ -192,6 +188,7 @@ bool circle::try_create_circle(const point& p1, const point& p2, const point& p3
   double radius = utilities::get_cartesian_distance(x, y, x1, y1);
   if (radius > max_radius)
     return false;
+
   new_circle.center.x = x;
   new_circle.center.y = y;
   new_circle.center.z = p1.z;
@@ -199,8 +196,8 @@ bool circle::try_create_circle(const point& p1, const point& p2, const point& p3
 
   return true;
 }
-
-bool circle::try_create_circle(const array_list<point>& points, const double max_radius, const double resolution_mm, const double xyz_tolerance, bool allow_3d_arcs, bool check_middle_only, circle& new_circle)
+/*
+bool circle::try_create_circle(const array_list<printer_point>& points, const double max_radius, const double resolution_mm, const double xyz_tolerance, bool allow_3d_arcs, bool check_middle_only, circle& new_circle)
 {
   int middle_index = points.count() / 2;
   int check_index;
@@ -245,12 +242,53 @@ bool circle::try_create_circle(const array_list<point>& points, const double max
   }
   return false;
 }
-
-double circle::get_radians(const point& p1, const point& p2) const
+*/
+bool circle::try_create_circle(const array_list<printer_point>& points, const double max_radius, const double resolution_mm, const double xyz_tolerance, bool allow_3d_arcs, bool check_middle_only, circle& new_circle)
 {
-  double distance_sq = std::pow(utilities::get_cartesian_distance(p1.x, p1.y, p2.x, p2.y), 2.0);
-  double two_r_sq = 2.0 * radius * radius;
-  return acos((two_r_sq - distance_sq) / two_r_sq);
+  int count = points.count();
+  
+  int middle_index = count / 2;
+  // The middle point will almost always produce the best arcs.
+  if (circle::try_create_circle(points[0], points[middle_index], points[count - 1], max_radius, new_circle) && !new_circle.is_over_deviation(points, resolution_mm, xyz_tolerance, allow_3d_arcs))
+  {
+    return true;
+  }
+  
+  if (check_middle_only || count == 3)
+  {
+    // If we are only checking the middle, or if we only have 3 points return
+    return false;
+  }
+  
+  // Find the circle with the least deviation, if one exists.
+  // Note, this could possibly take a LONG time in the worst case, but it's a pretty unlikely.
+  // However, if the midpoint check doesn't pass, it's worth it to spend a bit more time 
+  // finding the best fit for the circle (least squares deviation) 
+  circle test_circle;
+  double least_deviation;
+  bool found_circle=false;
+  for (int index = 1; index < count - 1; index++)
+  {
+    
+    if (index == middle_index)
+    {
+      // We already checked this one, and it failed, continue.
+      continue;
+    }
+    
+    double current_deviation;
+    if (circle::try_create_circle(points[0], points[index], points[count - 1], max_radius, test_circle) && test_circle.get_deviation_sum_squared(points, resolution_mm, xyz_tolerance, allow_3d_arcs, current_deviation))
+    {
+      
+      if (!found_circle || current_deviation < least_deviation)
+      {
+        found_circle = true;
+        least_deviation = current_deviation;
+        new_circle = test_circle;
+      }
+    }
+  }
+  return found_circle;
 }
 
 double circle::get_polar_radians(const point& p1) const
@@ -261,50 +299,86 @@ double circle::get_polar_radians(const point& p1) const
   return polar_radians;
 }
 
-point circle::get_closest_point(const point& p) const
-{
-  vector v = p - center;
-  double mag = v.get_magnitude();
-  double px = center.x + v.x / mag * radius;
-  double py = center.y + v.y / mag * radius;
-  double pz = center.z + v.z / mag * radius;
-  return point(px, py, pz, 0);
-}
-
-bool circle::is_over_deviation(const array_list<point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs)
+bool circle::get_deviation_sum_squared(const array_list<printer_point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs, double &total_deviation)
 {
   // We need to ensure that the Z steps are constand per linear travel unit
   double z_step_per_distance = 0;
+  total_deviation = 0;
   // Skip the first and last points since they will fit perfectly.
-  // UNLESS allow z changes is set to true, then we need to do some different stuff
-  int final_index = points.count() - 1 + (allow_3d_arcs ? 1 : 0);
   for (int index = 1; index < points.count() - 1; index++)
   {
     // Make sure the length from the center of our circle to the test point is 
     // at or below our max distance.
-    double distance = distance = utilities::get_cartesian_distance(points[index].x, points[index].y, center.x, center.y);
+    double distance_from_center = utilities::get_cartesian_distance(points[index].x, points[index].y, center.x, center.y);
     if (allow_3d_arcs) {
       double z1 = points[index - 1].z;
       double z2 = points[index].z;
 
-      double current_z_stepper_distance = (z2 - z1) / distance;
-      if (z_step_per_distance == 0) {
+      double current_z_stepper_distance = (z2 - z1) / distance_from_center;
+      if (index == 1) {
         z_step_per_distance = current_z_stepper_distance;
       }
-      if (!utilities::is_equal(z_step_per_distance, current_z_stepper_distance, xyz_tolerance))
+      else if (!utilities::is_equal(z_step_per_distance, current_z_stepper_distance, xyz_tolerance))
+      {
+        // The z step is uneven, can't create arc				
+        return false;
+      }
+    }
+    double deviation = std::fabs(distance_from_center - radius);
+    total_deviation += deviation * deviation;
+    if (deviation > resolution_mm)
+    {
+      // Too much deviation
+      return false;
+    }
+  }
+  // Check the point perpendicular from the segment to the circle's center, if any such point exists
+  for (int index = 0; index < points.count() - 1; index++)
+  {
+    point point_to_test;
+    if (segment::get_closest_perpendicular_point(points[index], points[index + 1], center, point_to_test))
+    {
+      double distance = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, center.x, center.y);
+      double deviation = std::fabs(distance - radius);
+      total_deviation += deviation * deviation;
+      if (deviation > resolution_mm)
+      {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool circle::is_over_deviation(const array_list<printer_point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs)
+{
+  // We need to ensure that the Z steps are constand per linear travel unit
+  double z_step_per_distance = 0;
+  // Skip the first and last points since they will fit perfectly.
+  for (int index = 1; index < points.count() - 1; index++)
+  {
+    // Make sure the length from the center of our circle to the test point is 
+    // at or below our max distance.
+    double distance_from_center = utilities::get_cartesian_distance(points[index].x, points[index].y, center.x, center.y);
+    if (allow_3d_arcs) {
+      double z1 = points[index - 1].z;
+      double z2 = points[index].z;
+
+      double current_z_stepper_distance = (z2 - z1) / distance_from_center;
+      if (index == 1) {
+        z_step_per_distance = current_z_stepper_distance;
+      }
+      else if (!utilities::is_equal(z_step_per_distance, current_z_stepper_distance, xyz_tolerance))
       {
         // The z step is uneven, can't create arc				
         return true;
       }
-
     }
-
-    if (std::fabs(distance - radius) > resolution_mm)
+    if (std::fabs(distance_from_center - radius) > resolution_mm)
     {
       return true;
     }
   }
-
   // Check the point perpendicular from the segment to the circle's center, if any such point exists
   for (int index = 0; index < points.count() - 1; index++)
   {
@@ -317,16 +391,12 @@ bool circle::is_over_deviation(const array_list<point>& points, const double res
         return true;
       }
     }
-
   }
   return false;
 }
-
-
 #pragma endregion Circle Functions
 
 #pragma region Arc Functions
-
 double arc::get_i() const
 {
   return center.x - start_point.x;
@@ -354,12 +424,12 @@ bool arc::try_create_arc(
 
   // variable to hold radians
   double angle_radians = 0;
-  int direction = 0;  // 1 = counter clockwise, 2 = clockwise, 3 = unknown.
+  DirectionEnum direction = DirectionEnum::UNKNOWN;  // 1 = counter clockwise, 2 = clockwise, 3 = unknown.
   // Determine the direction of the arc
   if (polar_end_theta > polar_start_theta)
   {
     if (polar_start_theta < polar_mid_theta && polar_mid_theta < polar_end_theta) {
-      direction = 1;
+      direction = DirectionEnum::COUNTERCLOCKWISE;
       angle_radians = polar_end_theta - polar_start_theta;
     }
     else if (
@@ -367,7 +437,7 @@ bool arc::try_create_arc(
       (polar_end_theta < polar_mid_theta && polar_mid_theta < (2.0 * PI_DOUBLE))
       )
     {
-      direction = 2;
+      direction = DirectionEnum::CLOCKWISE;
       angle_radians = polar_start_theta + ((2.0 * PI_DOUBLE) - polar_end_theta);
     }
   }
@@ -378,12 +448,12 @@ bool arc::try_create_arc(
       (0.0 < polar_mid_theta && polar_mid_theta < polar_end_theta)
       )
     {
-      direction = 1;
+      direction = DirectionEnum::COUNTERCLOCKWISE;
       angle_radians = polar_end_theta + ((2.0 * PI_DOUBLE) - polar_start_theta);
     }
     else if (polar_end_theta < polar_mid_theta && polar_mid_theta < polar_start_theta)
     {
-      direction = 2;
+      direction = DirectionEnum::CLOCKWISE;
       angle_radians = polar_start_theta - polar_end_theta;
     }
   }
@@ -434,7 +504,7 @@ bool arc::try_create_arc(
     }
     // So, let's set the new length and flip the direction (but not the angle)!
     arc_length = test_arc_length;
-    direction = direction == 1 ? 2 : 1;
+    direction = direction == DirectionEnum::COUNTERCLOCKWISE ? DirectionEnum::CLOCKWISE : DirectionEnum::COUNTERCLOCKWISE;
   }
 
   if (allow_3d_arcs)
@@ -465,9 +535,9 @@ bool arc::try_create_arc(
   return true;
 
 }
-
+/*
 bool arc::try_create_arc(
-  const array_list<point>& points,
+  const array_list<printer_point>& points,
   arc& target_arc,
   double approximate_length,
   double max_radius_mm,
@@ -486,6 +556,144 @@ bool arc::try_create_arc(
     int mid_point_index = ((points.count() - 2) / 2) + 1;
     return arc::try_create_arc(test_circle, points[0], points[mid_point_index], points[points.count() - 1], target_arc, approximate_length, resolution_mm, path_tolerance_percent, allow_3d_arcs);
   }
+  return false;
+}
+*/
+bool arc::try_create_arc(
+  const array_list<printer_point>& points,
+  arc& target_arc,
+  double approximate_length,
+  double max_radius_mm,
+  double resolution_mm,
+  double path_tolerance_percent,
+  int min_arc_segments,
+  double mm_per_arc_segment,
+  double xyz_tolerance,
+  bool allow_3d_arcs)
+{
+  circle test_circle;
+  if (!circle::try_create_circle(points, max_radius_mm, resolution_mm, xyz_tolerance, allow_3d_arcs, false, test_circle))
+  {
+    return false;
+  }
+
+  // We could save a bit of processing power and do our firmware compensation here, but we won't be able to track statistics for this easily.
+  // moved check to segmented_arc.cpp
+  int mid_point_index = ((points.count() - 2) / 2) + 1;
+  arc test_arc;
+  if (!arc::try_create_arc(test_circle, points[0], points[mid_point_index], points[points.count() - 1], test_arc, approximate_length, resolution_mm, path_tolerance_percent, allow_3d_arcs))
+  {
+    return false;
+  }
+
+  if (arc::are_points_within_slice(test_arc, points))
+  {
+    target_arc = test_arc;
+    return true;
+  }
+  return false;
+}
+
+bool arc::are_points_within_slice(const arc& test_arc, const array_list<printer_point>& points)
+{
+  
+  // Loop through the points and see if they fit inside of the angles
+  double previous_polar = test_arc.polar_start_theta;
+  bool crossed_zero = false;
+
+  point start_norm((test_arc.start_point.x - test_arc.center.x) / test_arc.radius, (test_arc.start_point.y - test_arc.center.y) / test_arc.radius, 0.0);
+  point end_norm((test_arc.end_point.x - test_arc.center.x) / test_arc.radius, (test_arc.end_point.y - test_arc.center.y) / test_arc.radius, 0.0);
+  
+  for (int index = 1; index < points.count(); index++)
+  {
+    double polar_test;
+    if (index < points.count() - 1)
+    {
+      polar_test = test_arc.get_polar_radians(points[index]);
+    }
+    else
+    {
+      polar_test = test_arc.polar_end_theta;
+    }
+
+    // First ensure the test point is within the arc
+    if (test_arc.direction == DirectionEnum::COUNTERCLOCKWISE)
+    {
+      // Only check to see if we are within the arc if this isn't the endpoint
+      if (index < points.count() - 1)
+      {
+        // First test to see if this point lies within the arc
+        if (test_arc.polar_start_theta < test_arc.polar_end_theta && !(test_arc.polar_start_theta < polar_test && polar_test < test_arc.polar_end_theta))
+        {
+          return false;
+        }
+        else if (test_arc.polar_start_theta > test_arc.polar_end_theta && !(polar_test > test_arc.polar_start_theta || polar_test < test_arc.polar_end_theta))
+        {
+          return false;
+        }
+      }
+      // Now make sure the angles are increasing
+      if (previous_polar > polar_test)
+      {
+        // Allow the angle to cross zero once
+        if (crossed_zero)
+        {
+          return false;
+        }
+        crossed_zero = true;
+      }
+    }
+    else 
+    {
+      if (index < points.count() - 1)
+      {
+        if (test_arc.polar_start_theta > test_arc.polar_end_theta && !(test_arc.polar_start_theta > polar_test && polar_test > test_arc.polar_end_theta))
+        {
+          return false;
+        }
+        else if (test_arc.polar_start_theta < test_arc.polar_end_theta && !(polar_test < test_arc.polar_start_theta || polar_test > test_arc.polar_end_theta))
+        {
+          return false;
+        }
+      }
+
+      // Now make sure the angles are decreasing
+      if (previous_polar < polar_test)
+      {
+        // Allow the angle to cross zero once
+        if (crossed_zero)
+        {
+          return false;
+        }
+        crossed_zero = true;
+      }
+    }
+
+    // Now see if the segment intersects either of the vector from the center of the circle to the endpoints of the arc
+    if ((index != 1 && ray_intersects_segment(test_arc.center, start_norm, points[index-1], points[index])) || (index != points.count()-1 && ray_intersects_segment(test_arc.center, end_norm, points[index-1], points[index])))
+      return false;
+    previous_polar = polar_test;
+  }
+  return true;
+}
+
+// return the distance of ray origin to intersection point
+bool arc::ray_intersects_segment(const point rayOrigin, const point rayDirection, const printer_point point1, const printer_point point2)
+{
+  vector v1 = rayOrigin - point1;
+  vector v2 = point2 - point1;
+  vector v3 = vector(-rayDirection.y, rayDirection.x, 0);
+
+  float dot = dot(v2, v3);
+  if (std::fabs(dot) < 0.000001)
+    return false;
+
+  float t1 = vector::cross_product_magnitude(v2, v1) / dot;
+  float t2 = dot(v1,v3) / dot;
+
+  if (t1 >= 0.0 && (t2 >= 0.0 && t2 <= 1.0))
+    return true;
+
   return false;
 }
 
@@ -643,16 +851,16 @@ void segmented_shape::set_resolution_mm(double resolution_mm)
   resolution_mm_ = resolution_mm;
 
 }
-point segmented_shape::pop_front()
+printer_point segmented_shape::pop_front()
 {
   return points_.pop_front();
 }
-point segmented_shape::pop_back()
+printer_point segmented_shape::pop_back()
 {
   return points_.pop_back();
 }
 
-bool segmented_shape::try_add_point(point p, double e_relative)
+bool segmented_shape::try_add_point(printer_point p, double e_relative)
 {
   throw std::exception();
 }
