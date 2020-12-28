@@ -63,7 +63,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define absv(n) ((n) < 0 ? -(n) : (n))
 #define minv(a, b) ((a) < (b) ? (a) : (b))
 
-static uint64_t tens[] = {
+static unsigned long long tens[] = {
     10000000000000000000U, 1000000000000000000U, 100000000000000000U,
     10000000000000000U, 1000000000000000U, 100000000000000U,
     10000000000000U, 1000000000000U, 100000000000U,
@@ -73,11 +73,11 @@ static uint64_t tens[] = {
     10U, 1U
 };
 
-static /*inline */uint64_t get_dbits(double d)
+static /*inline */unsigned long long get_dbits(double d)
 {
   union {
     double   dbl;
-    uint64_t i;
+    unsigned long long i;
   } dbl_bits = { d };
 
   return dbl_bits.i;
@@ -85,7 +85,7 @@ static /*inline */uint64_t get_dbits(double d)
 
 static Fp build_fp(double d)
 {
-  uint64_t bits = get_dbits(d);
+  unsigned long long bits = get_dbits(d);
 
   Fp fp;
   fp.frac = bits & fracmask;
@@ -143,14 +143,14 @@ static void get_normalized_boundaries(Fp* fp, Fp* lower, Fp* upper)
 
 static Fp multiply(Fp* a, Fp* b)
 {
-  const uint64_t lomask = 0x00000000FFFFFFFF;
+  const unsigned long long lomask = 0x00000000FFFFFFFF;
 
-  uint64_t ah_bl = (a->frac >> 32) * (b->frac & lomask);
-  uint64_t al_bh = (a->frac & lomask) * (b->frac >> 32);
-  uint64_t al_bl = (a->frac & lomask) * (b->frac & lomask);
-  uint64_t ah_bh = (a->frac >> 32) * (b->frac >> 32);
+  unsigned long long ah_bl = (a->frac >> 32) * (b->frac & lomask);
+  unsigned long long al_bh = (a->frac & lomask) * (b->frac >> 32);
+  unsigned long long al_bl = (a->frac & lomask) * (b->frac & lomask);
+  unsigned long long ah_bh = (a->frac >> 32) * (b->frac >> 32);
 
-  uint64_t tmp = (ah_bl & lomask) + (al_bh & lomask) + (al_bl >> 32);
+  unsigned long long tmp = (ah_bl & lomask) + (al_bh & lomask) + (al_bl >> 32);
   /* round up */
   tmp += 1U << 31;
 
@@ -162,7 +162,7 @@ static Fp multiply(Fp* a, Fp* b)
   return fp;
 }
 
-static void round_digit(char* digits, int ndigits, uint64_t delta, uint64_t rem, uint64_t kappa, uint64_t frac)
+static void round_digit(char* digits, int ndigits, unsigned long long delta, unsigned long long rem, unsigned long long kappa, unsigned long long frac)
 {
   while (rem < frac && delta - rem >= kappa &&
     (rem + kappa < frac || frac - rem > rem + kappa - frac)) {
@@ -174,22 +174,22 @@ static void round_digit(char* digits, int ndigits, uint64_t delta, uint64_t rem,
 
 static int generate_digits(Fp* fp, Fp* upper, Fp* lower, char* digits, int* K)
 {
-  uint64_t wfrac = upper->frac - fp->frac;
-  uint64_t delta = upper->frac - lower->frac;
+  unsigned long long wfrac = upper->frac - fp->frac;
+  unsigned long long delta = upper->frac - lower->frac;
 
   Fp one;
   one.frac = 1ULL << -upper->exp;
   one.exp = upper->exp;
 
-  uint64_t part1 = upper->frac >> -one.exp;
-  uint64_t part2 = upper->frac & (one.frac - 1);
+  unsigned long long part1 = upper->frac >> -one.exp;
+  unsigned long long part2 = upper->frac & (one.frac - 1);
 
   int idx = 0, kappa = 10;
-  uint64_t* divp;
+  unsigned long long* divp;
   /* 1000000000 */
   for (divp = tens + 10; kappa > 0; divp++) {
 
-    uint64_t div = *divp;
+    unsigned long long div = *divp;
     unsigned digit = part1 / div;
 
     if (digit || idx) {
@@ -199,7 +199,7 @@ static int generate_digits(Fp* fp, Fp* upper, Fp* lower, char* digits, int* K)
     part1 -= digit * div;
     kappa--;
 
-    uint64_t tmp = (part1 << -one.exp) + part2;
+    unsigned long long tmp = (part1 << -one.exp) + part2;
     if (tmp <= delta) {
       *K += kappa;
       round_digit(digits, idx, delta, tmp, div << -one.exp, wfrac);
@@ -209,7 +209,7 @@ static int generate_digits(Fp* fp, Fp* upper, Fp* lower, char* digits, int* K)
   }
 
   /* 10 */
-  uint64_t* unit = tens + 18;
+  unsigned long long* unit = tens + 18;
 
   while (true) {
     part2 *= 10;
@@ -456,7 +456,7 @@ static int filter_special(double fp, char* dest)
     return 1;
   }
 
-  uint64_t bits = get_dbits(fp);
+  unsigned long long bits = get_dbits(fp);
 
   bool nan = (bits & expmask) == expmask;
 

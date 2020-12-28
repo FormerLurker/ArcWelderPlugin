@@ -52,7 +52,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #ifndef FPCONV_H
 #define FPCONV_H
-typedef unsigned long long uint64_t;
 /* Fast and accurate double to string conversion based on Florian Loitsch's
  * Grisu-algorithm[1].
  *
@@ -95,7 +94,7 @@ int fpconv_dtos(double fp, char dest[24], unsigned char precision);
 
 
 typedef struct Fp {
-  uint64_t frac;
+  unsigned long long frac;
   int exp;
 } Fp;
 
