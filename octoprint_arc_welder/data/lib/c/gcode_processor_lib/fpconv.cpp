@@ -51,9 +51,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <stdbool.h>
 #include <string.h>
-
 #include "fpconv.h"
 
 #define fracmask  0x000FFFFFFFFFFFFFU

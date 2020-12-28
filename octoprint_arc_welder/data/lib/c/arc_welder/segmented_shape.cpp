@@ -684,12 +684,12 @@ bool arc::ray_intersects_segment(const point rayOrigin, const point rayDirection
   vector v2 = point2 - point1;
   vector v3 = vector(-rayDirection.y, rayDirection.x, 0);
 
-  float dot = dot(v2, v3);
+  double dot = dot(v2, v3);
   if (std::fabs(dot) < 0.000001)
     return false;
 
-  float t1 = vector::cross_product_magnitude(v2, v1) / dot;
-  float t2 = dot(v1,v3) / dot;
+  double t1 = vector::cross_product_magnitude(v2, v1) / dot;
+  double t2 = dot(v1,v3) / dot;
 
   if (t1 >= 0.0 && (t2 >= 0.0 && t2 <= 1.0))
     return true;

@@ -52,8 +52,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #ifndef FPCONV_H
 #define FPCONV_H
-
-#include <stdint.h>
+typedef unsigned long long uint64_t;
 /* Fast and accurate double to string conversion based on Florian Loitsch's
  * Grisu-algorithm[1].
  *
@@ -172,3 +171,4 @@ static Fp find_cachedpow10(int exp, int* k)
     return powers_ten[idx];
   }
 }
+
