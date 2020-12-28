@@ -148,10 +148,10 @@ class ArcWelderPlugin(
             default_xyz_precision=3,
             default_e_precision=5,
             resolution_mm=0.05,
-            path_tolerance_percent=5.0,
+            path_tolerance_percent=5.0,  # 5%
             max_radius_mm=1000*1000,  # 1KM, pretty big :)
             firmware_compensation_enabled=False,
-            min_arc_segments=12,  # 0 to disable
+            min_arc_segments=14,  # 0 to disable
             mm_per_arc_segment=1.0,  # 0 to disable
             overwrite_source_file=False,
             target_prefix="",
