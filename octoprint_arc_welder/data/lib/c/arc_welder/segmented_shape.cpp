@@ -243,13 +243,29 @@ bool circle::try_create_circle(const array_list<printer_point>& points, const do
   return false;
 }
 */
-bool circle::try_create_circle(const array_list<printer_point>& points, const double max_radius, const double resolution_mm, const double xyz_tolerance, bool allow_3d_arcs, bool check_middle_only, circle& new_circle)
+bool circle::try_create_circle(const array_list<printer_point>& points, const int point_count, const double max_radius, const double resolution_mm, const double xyz_tolerance, bool allow_3d_arcs, bool check_middle_only, circle& new_circle)
 {
-  int count = points.count();
+  
+  int count;
+  
+  if (point_count > 0)
+  {
+    count = point_count;
+  }
+  else
+  {
+    count = points.count();
+  }
+
+  if (count < 3)
+  {
+    return false;
+  }
+  
   
   int middle_index = count / 2;
   // The middle point will almost always produce the best arcs.
-  if (circle::try_create_circle(points[0], points[middle_index], points[count - 1], max_radius, new_circle) && !new_circle.is_over_deviation(points, resolution_mm, xyz_tolerance, allow_3d_arcs))
+  if (circle::try_create_circle(points[0], points[middle_index], points[count - 1], max_radius, new_circle) && !new_circle.is_over_deviation(points, point_count, resolution_mm, xyz_tolerance, allow_3d_arcs))
   {
     return true;
   }
@@ -277,7 +293,7 @@ bool circle::try_create_circle(const array_list<printer_point>& points, const do
     }
     
     double current_deviation;
-    if (circle::try_create_circle(points[0], points[index], points[count - 1], max_radius, test_circle) && test_circle.get_deviation_sum_squared(points, resolution_mm, xyz_tolerance, allow_3d_arcs, current_deviation))
+    if (circle::try_create_circle(points[0], points[index], points[count - 1], max_radius, test_circle) && test_circle.get_deviation_sum_squared(points, point_count, resolution_mm, xyz_tolerance, allow_3d_arcs, current_deviation))
     {
       
       if (!found_circle || current_deviation < least_deviation)
@@ -299,13 +315,13 @@ double circle::get_polar_radians(const point& p1) const
   return polar_radians;
 }
 
-bool circle::get_deviation_sum_squared(const array_list<printer_point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs, double &total_deviation)
+bool circle::get_deviation_sum_squared(const array_list<printer_point>& points, const int point_count, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs, double &total_deviation)
 {
   // We need to ensure that the Z steps are constand per linear travel unit
   double z_step_per_distance = 0;
   total_deviation = 0;
   // Skip the first and last points since they will fit perfectly.
-  for (int index = 1; index < points.count() - 1; index++)
+  for (int index = 1; index < point_count - 1; index++)
   {
     // Make sure the length from the center of our circle to the test point is 
     // at or below our max distance.
@@ -333,7 +349,7 @@ bool circle::get_deviation_sum_squared(const array_list<printer_point>& points, 
     }
   }
   // Check the point perpendicular from the segment to the circle's center, if any such point exists
-  for (int index = 0; index < points.count() - 1; index++)
+  for (int index = 0; index < point_count - 1; index++)
   {
     point point_to_test;
     if (segment::get_closest_perpendicular_point(points[index], points[index + 1], center, point_to_test))
@@ -350,12 +366,12 @@ bool circle::get_deviation_sum_squared(const array_list<printer_point>& points, 
   return true;
 }
 
-bool circle::is_over_deviation(const array_list<printer_point>& points, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs)
+bool circle::is_over_deviation(const array_list<printer_point>& points, const int point_count, const double resolution_mm, const double xyz_tolerance, const bool allow_3d_arcs)
 {
   // We need to ensure that the Z steps are constand per linear travel unit
   double z_step_per_distance = 0;
   // Skip the first and last points since they will fit perfectly.
-  for (int index = 1; index < points.count() - 1; index++)
+  for (int index = 1; index < point_count - 1; index++)
   {
     // Make sure the length from the center of our circle to the test point is 
     // at or below our max distance.
@@ -380,7 +396,7 @@ bool circle::is_over_deviation(const array_list<printer_point>& points, const do
     }
   }
   // Check the point perpendicular from the segment to the circle's center, if any such point exists
-  for (int index = 0; index < points.count() - 1; index++)
+  for (int index = 0; index < point_count - 1; index++)
   {
     point point_to_test;
     if (segment::get_closest_perpendicular_point(points[index], points[index + 1], center, point_to_test))
@@ -528,6 +544,7 @@ bool arc::try_create_arc(
   target_arc.start_point = start_point;
   target_arc.end_point = end_point;
   target_arc.length = arc_length;
+  target_arc.original_shape_length = approximate_length;
   target_arc.angle_radians = angle_radians;
   target_arc.polar_start_theta = polar_start_theta;
   target_arc.polar_end_theta = polar_end_theta;
@@ -559,10 +576,12 @@ bool arc::try_create_arc(
   return false;
 }
 */
+
 bool arc::try_create_arc(
   const array_list<printer_point>& points,
   arc& target_arc,
   double approximate_length,
+  double e_relative,
   double max_radius_mm,
   double resolution_mm,
   double path_tolerance_percent,
@@ -572,7 +591,7 @@ bool arc::try_create_arc(
   bool allow_3d_arcs)
 {
   circle test_circle;
-  if (!circle::try_create_circle(points, max_radius_mm, resolution_mm, xyz_tolerance, allow_3d_arcs, false, test_circle))
+  if (!circle::try_create_circle(points, points.count(), max_radius_mm, resolution_mm, xyz_tolerance, allow_3d_arcs, false, test_circle))
   {
     return false;
   }
@@ -580,34 +599,136 @@ bool arc::try_create_arc(
   // We could save a bit of processing power and do our firmware compensation here, but we won't be able to track statistics for this easily.
   // moved check to segmented_arc.cpp
   int mid_point_index = ((points.count() - 2) / 2) + 1;
-  arc test_arc;
+  /* we are going to try testing at the very end of arc generation since exceptions are rare
+  * This could dramatically speed up the algorithm
+  
   if (!arc::try_create_arc(test_circle, points[0], points[mid_point_index], points[points.count() - 1], test_arc, approximate_length, resolution_mm, path_tolerance_percent, allow_3d_arcs))
   {
     return false;
   }
-
+  
   if (arc::are_points_within_slice(test_arc, points))
   {
     target_arc = test_arc;
     return true;
   }
   return false;
+  */
+  // This is the new code that will be used as an alternative to testing all arc points
+  if (arc::try_create_arc(test_circle, points[0], points[mid_point_index], points[points.count() - 1], target_arc, approximate_length, resolution_mm, path_tolerance_percent, allow_3d_arcs))
+  {
+    target_arc.offset_e = points[points.count() - 1].offset_e;
+    target_arc.e_relative = e_relative;
+    return true;
+  }
+  return false;
 }
 
-bool arc::are_points_within_slice(const arc& test_arc, const array_list<printer_point>& points)
+/// <summary>
+/// Searches for the first arc within the given points, trying to add as many points to the arc
+/// as possible before an error is detected.  This is an expensive function (order N^2), so it should
+/// only be called as a last resort.
+/// </summary>
+/// <param name="points"></param>
+/// <param name="target_arc"></param>
+/// <param name="num_points"></param>
+/// <param name="approximate_length"></param>
+/// <param name="max_radius_mm"></param>
+/// <param name="resolution_mm"></param>
+/// <param name="path_tolerance_percent"></param>
+/// <param name="min_arc_segments"></param>
+/// <param name="mm_per_arc_segment"></param>
+/// <param name="xyz_tolerance"></param>
+/// <param name="allow_3d_arcs"></param>
+/// <returns></returns>
+bool arc::try_create_first_arc(
+  const array_list<printer_point>& points,
+  arc& target_arc,
+  int& num_points,
+  double max_radius_mm,
+  double resolution_mm,
+  double path_tolerance_percent,
+  int min_arc_segments,
+  double mm_per_arc_segment,
+  double xyz_tolerance,
+  bool allow_3d_arcs)
+{
+  // we have to loop through each point, starting with the first 3 (3 points are required for an arc)
+  // and see how many points we can add before running into an error
+  int max_index_found = -1;
+  
+  circle test_circle;
+
+  if (points.count() < 3)
+  {
+    return false;
+  }
+  // We need to manually tabulate the approximate length.  Start with the distance between point 1 and point 2 (held at index 1)
+  // Note:  The distanbe between point 2 and 3 (index = 2) will be added in the loop
+  double approximate_length = points[1].distance;
+  // We also need to manually tabulate e_relative
+  double e_relative = points[1].e_relative;
+
+  for (int index=2; index < points.count(); index++)
+  {
+    if (!circle::try_create_circle(points, index+1, max_radius_mm, resolution_mm, xyz_tolerance, allow_3d_arcs, false, test_circle))
+    {
+      break;
+    }
+    // Add the length between the previous point and the current point to the total.    
+    approximate_length += points[index].distance;
+    e_relative += points[index].e_relative;
+    int mid_point_index = ((index - 1) / 2) + 1;
+    arc test_arc;
+    if (!arc::try_create_arc(test_circle, points[0], points[mid_point_index], points[index], test_arc, approximate_length, resolution_mm, path_tolerance_percent, allow_3d_arcs))
+    {
+      break;
+    }
+    if (arc::are_points_within_slice(test_arc, points, index + 1))
+    {
+      max_index_found = index;
+      target_arc = test_arc;
+    }
+    else
+    {
+      break;
+    }
+  }
+  if (max_index_found > -1)
+  {
+    target_arc.offset_e = points[max_index_found].offset_e;
+    target_arc.e_relative = e_relative;
+    num_points = max_index_found + 1;
+    return true;
+  }
+  return false;
+}
+
+bool arc::are_points_within_slice(const arc& test_arc, const array_list<printer_point>& points, const int point_count)
 {
   
   // Loop through the points and see if they fit inside of the angles
   double previous_polar = test_arc.polar_start_theta;
+  bool will_cross_zero = false;
   bool crossed_zero = false;
 
   point start_norm((test_arc.start_point.x - test_arc.center.x) / test_arc.radius, (test_arc.start_point.y - test_arc.center.y) / test_arc.radius, 0.0);
   point end_norm((test_arc.end_point.x - test_arc.center.x) / test_arc.radius, (test_arc.end_point.y - test_arc.center.y) / test_arc.radius, 0.0);
-  
-  for (int index = 1; index < points.count(); index++)
+
+  if (test_arc.direction == DirectionEnum::COUNTERCLOCKWISE)
+  {
+    will_cross_zero = test_arc.polar_start_theta > test_arc.polar_end_theta;
+  }
+  else
+  {
+    will_cross_zero = test_arc.polar_start_theta < test_arc.polar_end_theta;
+  }
+
+  // Need to see if point 1 to point 2 cross zero
+  for (int index = 1; index < point_count; index++)
   {
     double polar_test;
-    if (index < points.count() - 1)
+    if (index < point_count - 1)
     {
       polar_test = test_arc.get_polar_radians(points[index]);
     }
@@ -620,14 +741,16 @@ bool arc::are_points_within_slice(const arc& test_arc, const array_list<printer_
     if (test_arc.direction == DirectionEnum::COUNTERCLOCKWISE)
     {
       // Only check to see if we are within the arc if this isn't the endpoint
-      if (index < points.count() - 1)
+      if (index < point_count - 1)
       {
-        // First test to see if this point lies within the arc
-        if (test_arc.polar_start_theta < test_arc.polar_end_theta && !(test_arc.polar_start_theta < polar_test && polar_test < test_arc.polar_end_theta))
+        if (will_cross_zero)
         {
-          return false;
+          if (!(polar_test > test_arc.polar_start_theta || polar_test < test_arc.polar_end_theta))
+          {
+            return false;
+          }
         }
-        else if (test_arc.polar_start_theta > test_arc.polar_end_theta && !(polar_test > test_arc.polar_start_theta || polar_test < test_arc.polar_end_theta))
+        else if (!(test_arc.polar_start_theta < polar_test && polar_test < test_arc.polar_end_theta))
         {
           return false;
         }
@@ -635,31 +758,42 @@ bool arc::are_points_within_slice(const arc& test_arc, const array_list<printer_
       // Now make sure the angles are increasing
       if (previous_polar > polar_test)
       {
+        if (!will_cross_zero)
+        {
+          return false;
+        }
+
         // Allow the angle to cross zero once
         if (crossed_zero)
         {
           return false;
         }
-        crossed_zero = true;
+        will_cross_zero = false;
       }
     }
     else 
     {
-      if (index < points.count() - 1)
+      if (index < point_count - 1)
       {
-        if (test_arc.polar_start_theta > test_arc.polar_end_theta && !(test_arc.polar_start_theta > polar_test && polar_test > test_arc.polar_end_theta))
+        if (will_cross_zero)
         {
-          return false;
+          if (!(polar_test < test_arc.polar_start_theta || polar_test > test_arc.polar_end_theta))
+          {
+            return false;
+          }
         }
-        else if (test_arc.polar_start_theta < test_arc.polar_end_theta && !(polar_test < test_arc.polar_start_theta || polar_test > test_arc.polar_end_theta))
+        else if (!(test_arc.polar_start_theta > polar_test && polar_test > test_arc.polar_end_theta))
         {
           return false;
         }
       }
-
       // Now make sure the angles are decreasing
       if (previous_polar < polar_test)
       {
+        if (!will_cross_zero)
+        {
+          return false;
+        }
         // Allow the angle to cross zero once
         if (crossed_zero)
         {
@@ -670,10 +804,16 @@ bool arc::are_points_within_slice(const arc& test_arc, const array_list<printer_
     }
 
     // Now see if the segment intersects either of the vector from the center of the circle to the endpoints of the arc
-    if ((index != 1 && ray_intersects_segment(test_arc.center, start_norm, points[index-1], points[index])) || (index != points.count()-1 && ray_intersects_segment(test_arc.center, end_norm, points[index-1], points[index])))
+    if ((index != 1 && ray_intersects_segment(test_arc.center, start_norm, points[index-1], points[index])) || (index != point_count -1 && ray_intersects_segment(test_arc.center, end_norm, points[index-1], points[index])))
       return false;
     previous_polar = polar_test;
   }
+  
+  if (will_cross_zero != crossed_zero)
+  {
+    return false;
+  }
+  
   return true;
 }
 
@@ -714,7 +854,6 @@ segmented_shape::segmented_shape(int min_segments, int max_segments, double reso
   else min_segments_ = min_segments;
 
   original_shape_length_ = 0;
-  is_extruding_ = true;
 }
 
 segmented_shape::~segmented_shape()
@@ -769,11 +908,6 @@ void segmented_shape::update_e_precision(unsigned char precision)
     e_precision_ = precision;
   }
 
-}
-
-bool segmented_shape::is_extruding()
-{
-  return is_extruding_;
 }
 
 segmented_shape& segmented_shape::operator=(const segmented_shape& obj)

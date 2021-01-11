@@ -47,8 +47,12 @@ public:
 	virtual ~segmented_arc();
 	virtual bool try_add_point(printer_point p);
 	virtual double get_shape_length();
-	std::string get_shape_gcode_absolute(double e, double f);
-	std::string get_shape_gcode_relative(double f);
+
+	bool get_next_arc(arc &arc, int& num_points, bool test_current_arc);
+
+	static std::string get_shape_gcode(const arc& arc, bool is_relative, double f, unsigned char xyz_precision, unsigned char e_precision, double xyz_tolerance);
+	//std::string get_shape_gcode_absolute(double e, double f);
+	//std::string get_shape_gcode_relative(double f);
 	
 	virtual bool is_shape() const;
 	printer_point pop_front(double e_relative);
@@ -60,7 +64,7 @@ public:
 
 private:
 	bool try_add_point_internal_(printer_point p);
-	std::string get_shape_gcode_(bool has_e, double e, double f) const;
+	//std::string get_shape_gcode_(bool has_e, double e, double f) const;
 	arc current_arc_;
 	double max_radius_mm_;
 	int min_arc_segments_;

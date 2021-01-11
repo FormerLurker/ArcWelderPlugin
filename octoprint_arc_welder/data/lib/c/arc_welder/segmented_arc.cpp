@@ -201,7 +201,8 @@ bool segmented_arc::try_add_point_internal_(printer_point p)
   double previous_shape_length = original_shape_length_;
   original_shape_length_ += p.distance;
   arc original_arc = current_arc_;
-  if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, get_xyz_tolerance(), allow_3d_arcs_))
+  
+  if (arc::try_create_arc(points_, current_arc_, original_shape_length_, e_relative_ + p.e_relative, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, get_xyz_tolerance(), allow_3d_arcs_))
   {
     bool abort_arc = false;
     if (min_arc_segments_ > 0 && mm_per_arc_segment_ > 0)
@@ -254,29 +255,78 @@ bool segmented_arc::try_add_point_internal_(printer_point p)
   return false;
 }
 
-std::string segmented_arc::get_shape_gcode_absolute(double e, double f)
+
+bool segmented_arc::get_next_arc(arc& arc, int& num_points, bool test_current_arc)
 {
-  bool has_e = e_relative_ != 0;
-  return get_shape_gcode_(has_e, e, f);
+  num_points = 0;
+  if (points_.count() < 3)
+  {
+    points_.pop_front();
+    return false;
+  }
+  // Note:  We have the stored total e_relative value for the entire arc, and we have to continue to 
+  // update it as we return arcs and pop points.
+
+  // Test for the most common case, which is a valid arc.  This will speed things up a ton for very large circles.
+  if (test_current_arc && arc::are_points_within_slice(current_arc_, points_, points_.count()))
+  {
+    arc = current_arc_;
+    arc.e_relative = e_relative_;
+    arc.offset_e = points_[points_.count() - 1].offset_e;
+    num_points = points_.count();
+    points_.clear();
+    e_relative_ = 0;
+    original_shape_length_ = 0;
+    is_shape_ = false;
+    return true;
+  }
+
+  // Now the difficult part.  Because the arc did not pass testing, we need to get the next arc that can be created, and update all of the appropriate
+  // internals.
+
+  if (arc::try_create_first_arc(points_, arc, num_points, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, get_xyz_tolerance(), allow_3d_arcs_))
+  {
+    // We need to adjust e_relative based on the arc points we were able to add.
+    e_relative_ = e_relative_ - arc.e_relative;
+    original_shape_length_ -= arc.original_shape_length;
+    
+    // Remove the points we've added to the arc
+    for (int index = 0; index < num_points-1; index++)
+    {
+      points_.pop_front();
+    }
+
+    return true;
+  }
+  
+  e_relative_ -= points_[0].e_relative;
+  points_.pop_front();
+  
+  // It didn't work :(
+  return false;
+
 }
 
-std::string segmented_arc::get_shape_gcode_relative(double f)
+std::string segmented_arc::get_shape_gcode(const arc& arc, bool is_relative, double f, unsigned char xyz_precision, unsigned char e_precision, double xyz_tolerance)
 {
-  bool has_e = e_relative_ != 0;
-  return get_shape_gcode_(has_e, e_relative_, f);
-}
-
-std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) const
-{
+  bool has_e = arc.e_relative != 0;
+  double e;
+  if (is_relative)
+  {
+    // If we're in relative mode, use the e_relative value of the arc
+    e = arc.e_relative;    
+  }
+  else
+  {
+    e = arc.offset_e;
+  }
   std::string gcode;
   // Calculate gcode size
   bool has_f = utilities::greater_than_or_equal(f, 1);
-  bool has_z = allow_3d_arcs_ && !utilities::is_equal(
-    current_arc_.start_point.z, current_arc_.end_point.z, get_xyz_tolerance()
-  );
+  bool has_z = !utilities::is_equal(arc.start_point.z, arc.end_point.z, xyz_tolerance );
   gcode.reserve(96);
 
-  if (current_arc_.angle_radians < 0)
+  if (arc.angle_radians < 0)
   {
     gcode += "G2";
   }
@@ -287,33 +337,33 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
   }
   // Add X, Y, I and J
   gcode += " X";
-  gcode += utilities::dtos(current_arc_.end_point.x, get_xyz_precision());
-  
+  gcode += utilities::dtos(arc.end_point.x, xyz_precision);
+
   gcode += " Y";
-  gcode += utilities::dtos(current_arc_.end_point.y, get_xyz_precision());
-  
+  gcode += utilities::dtos(arc.end_point.y, xyz_precision);
+
   if (has_z)
   {
     gcode += " Z";
-    gcode += utilities::dtos(current_arc_.end_point.z, get_xyz_precision());
+    gcode += utilities::dtos(arc.end_point.z, xyz_precision);
   }
 
   // Output I and J, but do NOT check for 0.  
   // Simplify 3d has issues visualizing G2/G3 with 0 for I or J
   // and until it is fixed, it is not worth the hassle.
-  double i = current_arc_.get_i();
+  double i = arc.get_i();
   gcode += " I";
-  gcode += utilities::dtos(i, get_xyz_precision());
+  gcode += utilities::dtos(i, xyz_precision);
 
-  double j = current_arc_.get_j();
+  double j = arc.get_j();
   gcode += " J";
-  gcode += utilities::dtos(j, get_xyz_precision());
+  gcode += utilities::dtos(j, xyz_precision);
 
   // Add E if it appears
   if (has_e)
   {
     gcode += " E";
-    gcode += utilities::dtos(e, get_e_precision());
+    gcode += utilities::dtos(e, e_precision);
   }
 
   // Add F if it appears
@@ -324,7 +374,6 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
   }
 
   return gcode;
-
 }
 
 /*
