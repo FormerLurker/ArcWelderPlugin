@@ -30,6 +30,7 @@ parsed_command_parameter::parsed_command_parameter()
 	unsigned_long_value = 0;
 	double_value = 0;
 	double_precision = 0;
+	string_value;
 	string_value = "";
 }
 

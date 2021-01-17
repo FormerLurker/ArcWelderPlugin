@@ -447,10 +447,11 @@ private:
 	static gcode_position_args get_args_(bool g90_g91_influences_extruder, int buffer_size);
 	progress_callback progress_callback_;
 	int process_gcode(parsed_command cmd, bool is_end, bool is_reprocess);
+	void write_arc_gcodes(bool is_extruder_relative, double current_feedrate);
 	int write_gcode_to_file(std::string gcode);
-	void write_arc_gcodes(bool is_extruder_relative, double previous_feedrate);
-	std::string get_comment_for_arc(int num_points);
-	int write_unwritten_gcodes_to_file(int num_commands);
+	std::string get_arc_gcode_relative(double f, const std::string comment);
+	std::string get_arc_gcode_absolute(double e, double f, const std::string comment);
+	std::string get_comment_for_arc();
 	int write_unwritten_gcodes_to_file();
 	std::string create_g92_e(double absolute_e);
 	std::string source_path_;
@@ -477,6 +478,7 @@ private:
 	// We don't care about the printer settings, except for g91 influences extruder.
 	gcode_position* p_source_position_;
 	double previous_feedrate_;
+	bool previous_is_extruder_relative_;
 	gcode_parser parser_;
 	bool verbose_output_;
 	int logger_type_;

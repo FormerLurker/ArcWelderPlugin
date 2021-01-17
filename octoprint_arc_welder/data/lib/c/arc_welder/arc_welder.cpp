@@ -92,6 +92,7 @@ arc_welder::arc_welder(
 	arcs_created_ = 0;
 	waiting_for_arc_ = false;
 	previous_feedrate_ = -1;
+	previous_is_extruder_relative_ = false;
 	gcode_position_args_.set_num_extruders(8);
 	for (int index = 0; index < 8; index++)
 	{
@@ -236,6 +237,7 @@ arc_welder_results results;
 	p_logger_->log(logger_type_, DEBUG, "Source file opened successfully.");
 
 	p_logger_->log(logger_type_, DEBUG, "Opening the target file for writing.");
+
 	output_file_.open(target_path_.c_str(), std::ifstream::out);
 	if (!output_file_.is_open())
 	{
@@ -245,6 +247,7 @@ arc_welder_results results;
 		gcodeFile.close();
 		return results;
 	}
+	
 	p_logger_->log(logger_type_, DEBUG, "Target file opened successfully.");
 	std::string line;
 	int lines_with_no_commands = 0;
@@ -304,7 +307,7 @@ arc_welder_results results;
 
 	if (current_arc_.is_shape() && waiting_for_arc_)
 	{
-		p_logger_->log(logger_type_, DEBUG, "Processing the final command.");
+		p_logger_->log(logger_type_, DEBUG, "The target file opened successfully.");
 		process_gcode(cmd, true, false);
 	}
 	p_logger_->log(logger_type_, DEBUG, "Writing all unwritten gcodes to the target file.");
@@ -373,6 +376,12 @@ arc_welder_progress arc_welder::get_progress_(long source_file_position, double 
 
 int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess)
 {
+	/* use to catch gcode for debugging since I can't set conditions equal to strings
+	if (cmd.gcode == "G1 X118.762 Y104.054 E0.0163")
+	{
+		std::cout << "Found it!";
+	}
+	*/
 	// Update the position for the source gcode file
 	p_source_position_->update(cmd, lines_processed_, gcodes_processed_, -1);
 	position* p_cur_pos = p_source_position_->get_current_position_ptr();
@@ -452,16 +461,17 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 			)
 	) {
 
-		printer_point p(p_cur_pos->get_gcode_x(), p_cur_pos->get_gcode_y(), p_cur_pos->get_gcode_z(), extruder_current.e_relative, extruder_current.get_offset_e(), movement_length_mm);
+		printer_point p(p_cur_pos->get_gcode_x(), p_cur_pos->get_gcode_y(), p_cur_pos->get_gcode_z(), extruder_current.e_relative, movement_length_mm);
 		if (!waiting_for_arc_)
 		{
+			previous_is_extruder_relative_ = p_pre_pos->is_extruder_relative;
 			if (debug_logging_enabled_)
 			{
 				p_logger_->log(logger_type_, DEBUG, "Starting new arc from Gcode:" + cmd.gcode);
 			}
 			write_unwritten_gcodes_to_file();
 			// add the previous point as the starting point for the current arc
-			printer_point previous_p(p_pre_pos->get_gcode_x(), p_pre_pos->get_gcode_y(), p_pre_pos->get_gcode_z(), previous_extruder.e_relative, previous_extruder.get_offset_e(), 0);
+			printer_point previous_p(p_pre_pos->get_gcode_x(), p_pre_pos->get_gcode_y(), p_pre_pos->get_gcode_z(), previous_extruder.e_relative, 0);
 			// Don't add any extrusion, or you will over extrude!
 			//std::cout << "Trying to add first point (" << p.x << "," << p.y << "," << p.z << ")...";
 			
@@ -587,15 +597,17 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 		}
 		else if (waiting_for_arc_)
 		{
+
 			if (current_arc_.is_shape())
 			{
+				// update our statistics
+				points_compressed_ += current_arc_.get_num_segments()-1;
+				arcs_created_++; // increment the number of generated arcs
 				write_arc_gcodes(p_pre_pos->is_extruder_relative, p_pre_pos->f);
-				// IMPORTANT NOTE: p_cur_pos and p_pre_pos will NOT be usable beyond this point.
-				p_pre_pos = NULL;
 				p_cur_pos = NULL;
+				p_pre_pos = NULL;
+				
 
-				// Now clear the arc and flag the processor as not waiting for an arc
-				waiting_for_arc_ = current_arc_.get_num_segments() > 0;
 				// Reprocess this line
 				if (!is_end)
 				{
@@ -609,8 +621,6 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 					}
 					return 0;
 				}
-
-				
 					
 			}
 			else
@@ -620,6 +630,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 					p_logger_->log(logger_type_, DEBUG, "The current arc is not a valid arc, resetting.");
 				}
 				current_arc_.clear();
+				waiting_for_arc_ = false;
 			}
 		}
 		else if (debug_logging_enabled_)
@@ -642,112 +653,67 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 	return lines_written;
 }
 
-void arc_welder::write_arc_gcodes(bool is_extruder_relative, double previous_feedrate)
+void arc_welder::write_arc_gcodes(bool is_extruder_relative, double current_feedrate)
 {
-	bool test_current_arc = true;
-	// Loop through each generated arc
-	int num_points;
-	arc current_arc;
 
-	// Undo the current command, since it can't be included in any arcs
+	std::string comment = get_comment_for_arc();
+	// remove the same number of unwritten gcodes as there are arc segments, minus 1 for the start point
+	// Which isn't a movement
+	// note, skip the first point, it is the starting point
+	for (int index = 0; index < current_arc_.get_num_segments() - 1; index++)
+	{
+		unwritten_commands_.pop_back();
+	}
+	
+	// Undo the current command, since it isn't included in the arc
 	p_source_position_->undo_update();
 	
-	// Write any unwritten commands that aren't included in the arc
-	int commands_to_write = unwritten_commands_.count() - current_arc_.get_num_segments() + 1;
-	if (commands_to_write > 0)
-	{
-		write_unwritten_gcodes_to_file(commands_to_write);
-	}
-
 	// Set the current feedrate if it is different, else set to 0 to indicate that no feedrate should be included
-	if (previous_feedrate_ > 0 && previous_feedrate_ == previous_feedrate) {
-		previous_feedrate = 0;
+	if (previous_feedrate_ > 0 && previous_feedrate_ == current_feedrate) {
+		current_feedrate = 0;
 	}
 
-	// Loop until we don't have enough points to create an arc
-	while (current_arc_.get_num_segments() > 2)
+	// Craete the arc gcode
+	std::string gcode;
+	if (previous_is_extruder_relative_) {
+		gcode = get_arc_gcode_relative(current_feedrate, comment);
+	}
+
+	else {
+		gcode = get_arc_gcode_absolute(p_source_position_->get_current_position_ptr()->get_current_extruder().get_offset_e(), current_feedrate, comment);
+	}
+
+
+	if (debug_logging_enabled_)
 	{
-		// try to create an arc from the current points
-		bool arc_created = current_arc_.get_next_arc(current_arc, num_points, test_current_arc);
-		test_current_arc = false;
-
-		if (!arc_created)
-		{
-			// There weren't any arcs, so we have to write the first unwritten command and remove the first point from the current arc collection
-			write_unwritten_gcodes_to_file(1);
-			// The unwritten command will have had the new feedrate if any is supplied, set to 0 (do not add F)
-			previous_feedrate = 0;
-			continue;
-		}
-		// update our statistics
-		points_compressed_ += num_points - 1;
-		arcs_created_++; // increment the number of generated arcs
-
-		//std::cout << "Arc shape found.\n";
-		// Get the comment now, before we remove the previous comments
-		// This is now tricky, since we can only look through num_points comments
-		std::string comment = get_comment_for_arc(num_points);
-		// remove the same number of unwritten gcodes as there are arc segments, minus 1 for the start point
-		// Which isn't a movement
-		// note, skip the first point, it is the starting point
-		for (int index = 0; index < num_points - 1; index++)
-		{
-			unwritten_commands_.pop_front();
-		}
-		
-		// Craete the arc gcode
-		
-		std::string gcode(current_arc_.get_shape_gcode(current_arc,is_extruder_relative, previous_feedrate, current_arc_.get_xyz_precision(),current_arc_.get_e_precision(), current_arc_.get_xyz_tolerance() ));
-
-		if (comment.length() > 0)
-		{
-			gcode += ";" + comment;
-		}
-		segment_statistics_.update(current_arc.original_shape_length, false);
-		// Write gcode to file
-		write_gcode_to_file(gcode);
-
-		// We won't need to add F since any remaining points are guaranteed to have the same feedrate.
-		previous_feedrate = 0;
-		
-
-		if (debug_logging_enabled_)
-		{
-			char buffer[20];
-			std::string message = "Arc created with ";
-			sprintf(buffer, "%d", num_points);
-			message += buffer;
-			message += " segments: ";
-			message += gcode;
-			p_logger_->log(logger_type_, DEBUG, message);
-		}
-
-		/*
-		// Get and alter the current position so we can add it to the unwritten commands list
-		parsed_command arc_command = parser_.parse_gcode(gcode.c_str());
-		double arc_extrusion_length = current_arc_.get_shape_length();
-
-		unwritten_commands_.push_back(
-			unwritten_command(arc_command, is_extruder_relative, arc_extrusion_length)
-		);
-		*/
+		char buffer[20];
+		std::string message = "Arc created with ";
+		sprintf(buffer, "%d", current_arc_.get_num_segments());
+		message += buffer;
+		message += " segments: ";
+		message += gcode;
+		p_logger_->log(logger_type_, DEBUG, message);
 	}
-	
-	// write all unwritten commands (if we don't do this we'll mess up absolute e by adding an offset to the arc)
-	// including the most recent arc command BEFORE updating the absolute e offset
-	//write_unwritten_gcodes_to_file();
 
-	
-	//current_arc_.clear();
+	// Write everything that hasn't yet been written	
+	write_unwritten_gcodes_to_file();
 
+	// Update the current extrusion statistics for the current arc gcode
+	segment_statistics_.update(current_arc_.get_shape_length() , false);
+	// now write the current arc to the file 
+	write_gcode_to_file(gcode);
+
+	// Now clear the arc and flag the processor as not waiting for an arc
+	waiting_for_arc_ = false;
+	current_arc_.clear();
 }
 
-std::string arc_welder::get_comment_for_arc(int num_points)
+std::string arc_welder::get_comment_for_arc()
 {
 	// build a comment string from the commands making up the arc
 				// We need to start with the first command entered.
-	int comment_index = unwritten_commands_.count() - (num_points - 1);
-	std::string comment("");
+	int comment_index = unwritten_commands_.count() - (current_arc_.get_num_segments() - 1);
+	std::string comment;
 	for (; comment_index < unwritten_commands_.count(); comment_index++)
 	{
 		std::string old_comment = unwritten_commands_[comment_index].command.comment;
@@ -779,14 +745,10 @@ int arc_welder::write_gcode_to_file(std::string gcode)
 
 int arc_welder::write_unwritten_gcodes_to_file()
 {
-	return write_unwritten_gcodes_to_file(unwritten_commands_.count());
-}
-
-int arc_welder::write_unwritten_gcodes_to_file(int num_commands)
-{
+	int size = unwritten_commands_.count();
 	std::string lines_to_write;
 	
-	for (int index = 0; index < num_commands; index++)
+	for (int index = 0; index < size; index++)
 	{
 		// The the current unwritten position and remove it from the list
 		unwritten_command p = unwritten_commands_.pop_front();
@@ -798,9 +760,38 @@ int arc_welder::write_unwritten_gcodes_to_file(int num_commands)
 	}
 	
 	output_file_ << lines_to_write;
-	return num_commands;
+	return size;
 }
 
+std::string arc_welder::get_arc_gcode_relative(double f, const std::string comment)
+{
+	// Write gcode to file
+	std::string gcode;
+
+	gcode = current_arc_.get_shape_gcode_relative(f);
+	
+	if (comment.length() > 0)
+	{
+		gcode += ";" + comment;
+	}
+	return gcode;
+	
+}
+
+std::string arc_welder::get_arc_gcode_absolute(double e, double f, const std::string comment)
+{
+	// Write gcode to file
+	std::string gcode;
+
+	gcode = current_arc_.get_shape_gcode_absolute(e, f);
+
+	if (comment.length() > 0)
+	{
+		gcode += ";" + comment;
+	}
+	return gcode;
+
+}
 
 void arc_welder::add_arcwelder_comment_to_target()
 {
