@@ -127,7 +127,7 @@ compiler_opts = {
         "define_macros": [],
     },
     UnixCCompiler.compiler_type: {
-        "extra_compile_args": ["-O3", "-std=c++11", "-Wno-unknown-pragmas", '-v'],
+        "extra_compile_args": ["-O3", "-std=c++11", "-Wno-unknown-pragmas", '-v', "-march=native", "-mtune=native", "-DNDEBUG" ],
         "extra_link_args": [],
         "define_macros": [],
     },
