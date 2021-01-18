@@ -716,7 +716,7 @@ std::string arc_welder::get_comment_for_arc()
 	std::string comment;
 	for (; comment_index < unwritten_commands_.count(); comment_index++)
 	{
-		std::string old_comment = unwritten_commands_[comment_index].command.comment;
+		std::string old_comment = unwritten_commands_[comment_index].comment;
 		if (old_comment != comment && old_comment.length() > 0)
 		{
 			if (comment.length() > 0)
@@ -756,7 +756,7 @@ int arc_welder::write_unwritten_gcodes_to_file()
 		{
 			segment_statistics_.update(p.extrusion_length, false);
 		}
-		lines_to_write.append(p.command.to_string()).append("\n");
+		lines_to_write.append(p.to_string()).append("\n");
 	}
 	
 	output_file_ << lines_to_write;

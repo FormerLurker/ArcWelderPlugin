@@ -303,36 +303,43 @@ bool circle::is_over_deviation(const array_list<printer_point>& points, const do
 {
   // We need to ensure that the Z steps are constand per linear travel unit
   double z_step_per_distance = 0;
+  // shared point to test
+  point point_to_test;
+  point current_point;
+  point next_point;
+  int max_index = points.count() - 1;
   // Skip the first and last points since they will fit perfectly.
-  for (int index = 1; index < points.count() - 1; index++)
+  for (int index = 0; index < max_index; index++)
   {
-    // Make sure the length from the center of our circle to the test point is 
-    // at or below our max distance.
-    double distance_from_center = utilities::get_cartesian_distance(points[index].x, points[index].y, center.x, center.y);
-    if (allow_3d_arcs) {
-      double z1 = points[index - 1].z;
-      double z2 = points[index].z;
+    current_point = points[index];
+    if (index != 0)
+    {
+      // Make sure the length from the center of our circle to the test point is 
+      // at or below our max distance.
+      double distance_from_center = utilities::get_cartesian_distance(current_point.x, current_point.y, center.x, center.y);
+      if (allow_3d_arcs) {
+        double z1 = points[index - 1].z;
+        double z2 = current_point.z;
 
-      double current_z_stepper_distance = (z2 - z1) / distance_from_center;
-      if (index == 1) {
-        z_step_per_distance = current_z_stepper_distance;
+        double current_z_stepper_distance = (z2 - z1) / distance_from_center;
+        if (index == 1) {
+          z_step_per_distance = current_z_stepper_distance;
+        }
+        else if (!utilities::is_equal(z_step_per_distance, current_z_stepper_distance, xyz_tolerance))
+        {
+          // The z step is uneven, can't create arc				
+          return true;
+        }
       }
-      else if (!utilities::is_equal(z_step_per_distance, current_z_stepper_distance, xyz_tolerance))
+      if (std::fabs(distance_from_center - radius) > resolution_mm)
       {
-        // The z step is uneven, can't create arc				
         return true;
       }
     }
-    if (std::fabs(distance_from_center - radius) > resolution_mm)
-    {
-      return true;
-    }
-  }
-  // Check the point perpendicular from the segment to the circle's center, if any such point exists
-  for (int index = 0; index < points.count() - 1; index++)
-  {
-    point point_to_test;
-    if (segment::get_closest_perpendicular_point(points[index], points[index + 1], center, point_to_test))
+    
+    next_point = points[index+1];
+    // Check the point perpendicular from the segment to the circle's center, if any such point exists
+    if (segment::get_closest_perpendicular_point(current_point, next_point, center, point_to_test))
     {
       double distance = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, center.x, center.y);
       if (std::fabs(distance - radius) > resolution_mm)

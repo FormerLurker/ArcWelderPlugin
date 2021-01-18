@@ -35,7 +35,8 @@ struct unwritten_command
 	}
 	unwritten_command(parsed_command &cmd, bool is_relative, double command_length) {
 		is_extruder_relative = is_relative;
-		command = cmd;
+		gcode = cmd.gcode;
+		comment = cmd.comment;
 		extrusion_length = command_length;
 	}
 	unwritten_command(position* p, double command_length) {
@@ -43,25 +44,24 @@ struct unwritten_command
 		e_relative = p->get_current_extruder().e_relative;
 		offset_e = p->get_current_extruder().get_offset_e();
 		is_extruder_relative = p->is_extruder_relative;
-		command = p->command;
+		gcode = p->command.gcode;
+		comment = p->command.comment;
 		extrusion_length = command_length;
 	}
 	bool is_extruder_relative;
 	double e_relative;
 	double offset_e;
 	double extrusion_length;
-	parsed_command command;
+	std::string gcode;
+	std::string comment;
 
-	std::string to_string(bool rewrite, std::string additional_comment)
+	std::string to_string()
 	{
-		command.comment.append(additional_comment);
-
-		if (rewrite)
+		if (comment.size() > 0)
 		{
-			return command.rewrite_gcode_string();
+			return gcode + ";" + comment;
 		}
-
-		return command.to_string();
+		return gcode;
 	}
 };
 
