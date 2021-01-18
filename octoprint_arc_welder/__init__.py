@@ -1301,6 +1301,11 @@ class ArcWelderPlugin(
         # Now we know we should process!
         # Extract only the supported metadata from the added file
         metadata = self._file_manager.get_metadata(source_target, source_path)
+
+        # got a report that this delivers NULL sometimes.
+        if metadata is None:
+            metadata = {}
+
         if "arc_welder" in metadata:
             # This has been welded, exit
             logger.debug("Cannot process '%s', it has already been welded.", source_name)
