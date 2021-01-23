@@ -968,7 +968,8 @@ class FirmwareChecker:
 
     @staticmethod
     def _check_for_bad_parameter_response(response_text):
-        return "G2/G3 BAD PARAMETER" in response_text.strip().upper()
+        responses = ["G2/G3 BAD PARAMETER", "G2/G3 NEITHER I NOR J GIVEN"]
+        return any(c in response_text.strip().upper() for c in responses)
 
     @staticmethod
     def _check_m115_response(response_text):
