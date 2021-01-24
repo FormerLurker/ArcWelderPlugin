@@ -1381,21 +1381,7 @@ $(function () {
                 retryLimit: 3,
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
                     var message = "Could not retrieve preprocessing tasks.  Status: " + textStatus + ".  Error: " + errorThrown;
-                    var options = {
-                        title: 'Arc Welder: Error Loading Preprocessing Tasks',
-                        text: message,
-                        type: 'error',
-                        hide: false,
-                        addclass: "arc-welder",
-                        desktop: {
-                            desktop: true
-                        }
-                    };
-                    PNotifyExtensions.displayPopupForKey(
-                        options,
-                        ArcWelder.PopupKey("load-preprocessing-tasks-error"),
-                        ArcWelder.PopupKey(["load-preprocessing-tasks-error"])
-                    );
+                    console.error(message);
                     return false;
                 }
             });
@@ -1425,21 +1411,7 @@ $(function () {
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
                     var message = "Could not retrieve firmware data.  Status: " + textStatus + ".  Error: " + errorThrown;
-                    var options = {
-                        title: 'Arc Welder: Error Loading Firmware Data',
-                        text: message,
-                        type: 'error',
-                        hide: false,
-                        addclass: "arc-welder",
-                        desktop: {
-                            desktop: true
-                        }
-                    };
-                    PNotifyExtensions.displayPopupForKey(
-                        options,
-                        ArcWelder.PopupKey("cancel-popup-error"),
-                        ArcWelder.PopupKey(["cancel-popup-error"])
-                    );
+                    console.error(message);
                     return false;
                 }
             });
