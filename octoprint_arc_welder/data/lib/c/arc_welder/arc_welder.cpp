@@ -797,11 +797,34 @@ void arc_welder::add_arcwelder_comment_to_target()
 {
 	p_logger_->log(logger_type_, DEBUG, "Adding ArcWelder comment to the target file.");
 	std::stringstream stream;
-	stream << std::fixed << std::setprecision(2);
+	stream << std::fixed;
 	stream <<	"; Postprocessed by [ArcWelder](https://github.com/FormerLurker/ArcWelderLib)\n";
 	stream << "; Copyright(C) 2020 - Brad Hochgesang\n";
-	stream << "; arc_welder_resolution_mm = " << resolution_mm_ << "\n";
-	stream << "; arc_welder_g90_influences_extruder = " << (gcode_position_args_.g90_influences_extruder ? "True" : "False") << "\n\n";
+	stream << "; resolution=" << std::setprecision(2) << resolution_mm_ << "mm\n";
+	stream << "; path_tolerance=" << std::setprecision(0) << (current_arc_.get_path_tolerance_percent() * 100.0) << "%\n";
+	stream << "; max_radius=" << std::setprecision(2) << (current_arc_.get_max_radius()) << "mm\n";
+	if (gcode_position_args_.g90_influences_extruder)
+	{
+		stream << "; g90_influences_extruder=True\n";
+	}
+	if (current_arc_.get_mm_per_arc_segment() > 0 && current_arc_.get_min_arc_segments() > 0)
+	{							 																																									
+		stream << "; firmware_compensation=True\n";
+		stream << "; mm_per_arc_segment="<< std::setprecision(2) << current_arc_.get_mm_per_arc_segment() << "mm\n";
+		stream << "; min_arc_segments=" << std::setprecision(0) << current_arc_.get_min_arc_segments() << "\n";
+	}
+	if (allow_3d_arcs_)
+	{
+		stream << "; allow_3d_arcs=True\n";
+
+	}
+	if (allow_dynamic_precision_)
+	{
+		stream << "; allow_dynamic_precision=True\n";
+	}
+	stream << "; default_xyz_precision=" << std::setprecision(0) << static_cast<int>(current_arc_.get_xyz_precision()) << "\n";
+	stream << "; default_e_precision=" << std::setprecision(0) << static_cast<int>(current_arc_.get_e_precision()) << "\n\n";
+
 	
 	output_file_ << stream.str();
 }

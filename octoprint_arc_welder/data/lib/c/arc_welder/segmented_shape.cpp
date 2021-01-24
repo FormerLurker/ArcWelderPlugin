@@ -305,13 +305,11 @@ bool circle::is_over_deviation(const array_list<printer_point>& points, const do
   double z_step_per_distance = 0;
   // shared point to test
   point point_to_test;
-  point current_point;
-  point next_point;
   int max_index = points.count() - 1;
   // Skip the first and last points since they will fit perfectly.
   for (int index = 0; index < max_index; index++)
   {
-    current_point = points[index];
+    point current_point(points[index]);
     if (index != 0)
     {
       // Make sure the length from the center of our circle to the test point is 
@@ -337,9 +335,8 @@ bool circle::is_over_deviation(const array_list<printer_point>& points, const do
       }
     }
     
-    next_point = points[index+1];
     // Check the point perpendicular from the segment to the circle's center, if any such point exists
-    if (segment::get_closest_perpendicular_point(current_point, next_point, center, point_to_test))
+    if (segment::get_closest_perpendicular_point(current_point, points[index + 1], center, point_to_test))
     {
       double distance = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, center.x, center.y);
       if (std::fabs(distance - radius) > resolution_mm)
