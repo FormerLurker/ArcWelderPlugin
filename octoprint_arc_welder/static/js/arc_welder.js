@@ -736,21 +736,7 @@ $(function () {
                 },
                 error: function (XMLHttpRequest, textStatus, errorThrown) {
                     var message = "Could not retrieve firmware data.  Status: " + textStatus + ".  Error: " + errorThrown;
-                    var options = {
-                        title: 'Arc Welder: Error Loading Firmware Data',
-                        text: message,
-                        type: 'error',
-                        hide: false,
-                        addclass: "arc-welder",
-                        desktop: {
-                            desktop: true
-                        }
-                    };
-                    PNotifyExtensions.displayPopupForKey(
-                        options,
-                        ArcWelder.PopupKey("get-firmware-info-error"),
-                        ArcWelder.PopupKey(["get-firmware-info-error"])
-                    );
+                    console.error(message);
                     return false;
                 }
             });
