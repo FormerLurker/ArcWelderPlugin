@@ -228,7 +228,7 @@ I recommend running the GCode through an analyzer that supports arcs (Simplify3D
 
 If the code looks good, please try printing *Arc Welder* GCode again to see if it fails in the same spot.  If it does, please report the issue!  See the *Reporting Issues* section below for info.
 
-**6.  I'm having trouble installing the *ArcWelder* plugin.
+**6.  I'm having trouble installing the *ArcWelder* plugin.**
 
 I will update this as solutions to installation problems present themselves, so check back or create an issue if your specific problem has no solution.or
 
