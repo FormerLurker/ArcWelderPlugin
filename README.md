@@ -228,6 +228,14 @@ I recommend running the GCode through an analyzer that supports arcs (Simplify3D
 
 If the code looks good, please try printing *Arc Welder* GCode again to see if it fails in the same spot.  If it does, please report the issue!  See the *Reporting Issues* section below for info.
 
+**6.  I'm having trouble installing the *ArcWelder* plugin.
+
+I will update this as solutions to installation problems present themselves, so check back or create an issue if your specific problem has no solution.or
+
+First, if you are trying to install to a linux machine (this will not be necessary when running OctoPi), you may not have a c++ compiler installed, or your compiler might not meet the minimum requirements.  If you see an error like this, you will need to install a compiler:  ```686-linux-gnu-gcc: error trying to exec 'cc1plus': execvp: No such file or directory```
+
+Try connecting to a terminal and running the following command:  ```sudo apt-get install g++```
+
 ## Reporting Issues
 
 If you have a problem using *Arc Welder*, please first check the open and closed issues.  If you find an existing issue that is close to your own, please read through it and see if there are any suggested fixes.  If your issue is unique, consider creating a new issue.  However, please don't use the Github issues as general technical support.  They are for reporting potential bugs in the software.  When in doubt, go ahead and [create an issue here](https://github.com/formerlurker/arcwelderplugin/issues).  I do want to help no matter what your problem is, but I spend so much time time dealing with issues and I'd rather be improving the software if at all possible.  Bug reports improve software, tech support does not.  Thanks in advance!
