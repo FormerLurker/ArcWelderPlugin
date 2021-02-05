@@ -478,7 +478,6 @@ private:
 	// We don't care about the printer settings, except for g91 influences extruder.
 	gcode_position* p_source_position_;
 	double previous_feedrate_;
-	bool previous_is_extruder_relative_;
 	gcode_parser parser_;
 	bool verbose_output_;
 	int logger_type_;

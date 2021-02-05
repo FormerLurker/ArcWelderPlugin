@@ -80,6 +80,12 @@ point point::get_midpoint(point p1, point p2)
 
   return point(x, y, z);
 }
+
+bool point::is_near_collinear(const point& p1, const point& p2, const point& p3, double tolerance)
+{
+  return fabs((p1.y - p2.y) * (p1.x - p3.x) - (p1.y - p3.y) * (p1.x - p2.x)) <= 1e-9;
+}
+
 #pragma endregion Point Functions
 
 #pragma region Segment Functions
@@ -133,34 +139,24 @@ double vector::cross_product_magnitude(vector v1, vector v2)
 // Users of this code must verify correctness for their application.
 // dot product (3D) which allows vector operations in arguments
 #define dot(u,v)   ((u).x * (v).x + (u).y * (v).y + (u).z * (v).z)
+#define dotxy(u,v)   ((u).x * (v).x + (u).y * (v).y)
 #define norm(v)     sqrt(dot(v,v))     // norm = length of  vector
 #define d(u,v)      norm(u-v)          // distance = norm of difference
-
-double distance_from_segment(segment s, point p)
-{
-  vector v = s.p2 - s.p1;
-  vector w = p - s.p1;
-
-  double c1 = dot(w, v);
-  if (c1 <= 0)
-    return d(p, s.p1);
-
-  double c2 = dot(v, v);
-  if (c2 <= c1)
-    return d(p, s.p2);
-
-  double b = c1 / c2;
-  point pb = s.p1 + (v * b);
-  return d(p, pb);
-}
 
 #pragma endregion Distance Calculation Source
 
 
 #pragma region Circle Functions
 
+
 bool circle::try_create_circle(const point& p1, const point& p2, const point& p3, const double max_radius, circle& new_circle)
 {
+  if (point::is_near_collinear(p1,p2,p3, 0.001))
+  {
+    return false;
+  }
+
+
   double x1 = p1.x;
   double y1 = p1.y;
   double x2 = p2.x;

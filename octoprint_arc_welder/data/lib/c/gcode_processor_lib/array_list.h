@@ -135,7 +135,7 @@ public:
 		{
 			throw std::exception();
 		}
-		int pos = get_index_position(count_);
+		int pos = get_index_position(count_-1);
 		count_--;
 		return items_[pos];
 	}

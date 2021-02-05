@@ -46,6 +46,7 @@ public:
 	double y;
 	double z;
 	static point get_midpoint(point p1, point p2);
+	static bool is_near_collinear(const point& p1, const point& p2, const point& p3, double percent_tolerance);
 };
 
 struct printer_point : point
@@ -192,7 +193,6 @@ struct arc : circle
 			double path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
 			bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS);
 };
-double distance_from_segment(segment s, point p);
 
 #define DEFAULT_MIN_SEGMENTS 3
 #define DEFAULT_MAX_SEGMENTS 50
