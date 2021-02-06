@@ -309,10 +309,17 @@ class ArcWelderPlugin(
                 return jsonify({"success": False, "message": "Arc Welder is Disabled."})
             try:
                 request_values = request.get_json()
-                path = request_values["path"]
+                path = urllibparse.unquote(request_values["path"])
                 origin = request_values["origin"]
                 # I think this is the easiest way to get the name.
-                path_part, name = self._file_manager.split_path(FileDestinations.LOCAL, path)
+
+                metadata = self._file_manager.get_metadata(FileDestinations.LOCAL, path)
+                if metadata is not None and "display" in metadata:
+                    name = metadata["display"]
+                else:
+                    # probably don't need this, but better safe than sorry
+                    path_part, name = self._file_manager.split_path(FileDestinations.LOCAL, path)
+
                 # add the file and metadata to the processor queue
                 success = self.add_file_to_preprocessor_queue(name, path, origin, True)
             except Exception as e:
@@ -482,6 +489,8 @@ class ArcWelderPlugin(
         return dict(
             js=[
                 "js/showdown.min.js",
+
+                #"js/showdown.js",
                 "js/pnotify_extensions.js",
                 "js/markdown_help.js",
                 "js/arc_welder.js",
@@ -726,8 +735,10 @@ class ArcWelderPlugin(
         #    return True
         return False
 
-    def get_output_file_name_and_path(self, storage_path, gcode_comment_settings):
+    def get_output_file_name_and_path(self, display_name, storage_path, gcode_comment_settings):
+
         path, name = self._file_manager.split_path(FileDestinations.LOCAL, storage_path)
+
         # see what the plugin settings say about overwriting the target
         overwrite_source_file = self._overwrite_source_file
         if not overwrite_source_file:
@@ -741,13 +752,18 @@ class ArcWelderPlugin(
             else:
                 # generate a new file name
                 file_name = utilities.remove_extension_from_filename(name)
+                new_display_name = utilities.remove_extension_from_filename(display_name)
                 file_extension = utilities.get_extension_from_filename(name)
+                display_extension = utilities.get_extension_from_filename(display_name)
                 new_name = "{0}{1}{2}.{3}".format(target_prefix, file_name, target_postfix, file_extension)
+                new_display_name = "{0}{1}{2}.{3}".format(target_prefix, new_display_name, target_postfix, display_extension)
         if overwrite_source_file:
             new_name = name
+            new_display_name = display_name
 
         new_path = self._file_manager.join_path(FileDestinations.LOCAL, path, new_name)
-        return new_name, new_path
+
+        return new_name, new_path, new_display_name
 
     def save_preprocessed_file(self, task, results, additional_metadata):
         # get the file name and path
@@ -757,6 +773,7 @@ class ArcWelderPlugin(
         source_path = octoprint_args["source_path"]
         target_path = octoprint_args["target_path"]
         target_name = octoprint_args["target_name"]
+        target_display_name = octoprint_args["target_display_name"]
 
         if self._get_is_printing(target_path):
             raise TargetFileSaveError("The source file will be overwritten, but it is currently printing, cannot overwrite.")
@@ -773,12 +790,13 @@ class ArcWelderPlugin(
                     "Unable to overwrite the target file, it is currently in use.  Writing to new file."
                 )
                 # get a collision free filename and save it like that
-                target_directory, target_name = self._get_collision_free_filepath(target_path)
+                target_directory, target_name, target_display_name = self._get_collision_free_filepath(target_path, target_display_name)
                 target_path = self._file_manager.join_path(FileDestinations.LOCAL, target_directory, target_name)
                 logger.info("Saving target to new collision free path at %s", target_name)
                 task["octoprint_args"]["cant_overwrite"] = True
                 task["octoprint_args"]["target_path"] = target_path
                 task["octoprint_args"]["target_name"] = target_name
+                task["octoprint_args"]["target_display_name"] = target_display_name
         else:
             logger.info("Arc compression complete, creating a new gcode file: %s", target_name)
 
@@ -791,7 +809,7 @@ class ArcWelderPlugin(
             target_path,
             new_file_object,
             allow_overwrite=True,
-            display=target_name,
+            display=target_display_name,
         )
         self._file_manager.set_additional_metadata(
             FileDestinations.LOCAL, target_path, "arc_welder", True, overwrite=True, merge=False
@@ -802,6 +820,8 @@ class ArcWelderPlugin(
         # add source and target name
         metadata["source_name"] = source_name
         metadata["target_name"] = target_name
+        metadata["target_display_name"] = target_display_name
+
         self._file_manager.set_additional_metadata(
             FileDestinations.LOCAL,
             target_path,
@@ -885,12 +905,16 @@ class ArcWelderPlugin(
                     )
                     raise e
 
-    def _get_collision_free_filepath(self, path):
+    def _get_collision_free_filepath(self, path, display_name):
         directory, filename = self._file_manager.split_path(FileDestinations.LOCAL, path)
         extension = utilities.get_extension_from_filename(filename)
         filename_no_extension = utilities.remove_extension_from_filename(filename)
 
+        display_extension = utilities.get_extension_from_filename(display_name)
+        display_name_no_extension = utilities.remove_extension_from_filename(display_name)
+
         original_filename = filename_no_extension
+        original_display_name = display_name_no_extension
         file_number = 0
         # Check to see if the file exists, if it does add a number to the end and continue
         while self._file_manager.file_exists(
@@ -903,8 +927,9 @@ class ArcWelderPlugin(
         ):
             file_number += 1
             filename_no_extension = "{0}_{1}".format(original_filename, file_number)
+            display_name_no_extension = "{0}_{1}".format(original_display_name, file_number)
 
-        return directory, "{0}.{1}".format(filename_no_extension, extension)
+        return directory, "{0}.{1}".format(filename_no_extension, extension), "{0}.{1}".format(display_name_no_extension, extension)
 
     def copy_thumbnail(self, thumbnail_src, thumbnail_path, gcode_filename):
         # get the plugin implementation
@@ -1248,13 +1273,14 @@ class ArcWelderPlugin(
             default_e_precision = 6
 
         # determine the target file name and path
-        target_name, target_path = self.get_output_file_name_and_path(source_path, gcode_comment_settings)
+        target_name, target_path, target_display_name = self.get_output_file_name_and_path(source_name, source_path, gcode_comment_settings)
         return {
             "octoprint_args": {
                 "source_name": source_name,
                 "source_path": source_path,
                 "target_name": target_name,
                 "target_path": target_path,
+                "target_display_name": target_display_name,
                 "additional_metadata": additional_metadata,
                 "is_manual_request": is_manual_request,
                 "print_after_processing": print_after_processing,

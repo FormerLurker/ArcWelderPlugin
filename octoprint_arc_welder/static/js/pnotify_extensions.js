@@ -42,14 +42,18 @@ $(function () {
             self.subtitle = subtitle;
             self.close = function () {
                 if (self.loader != null)
+                {
                     self.loader.remove();
+                };
             };
 
             self.update = function (percent_complete, progress_text) {
                 self.notice.find(".remove_button").remove();
 
                 if (self.$progress == null)
+                {
                     return null;
+                };
                 if (percent_complete < 0)
                     percent_complete = 0;
                 if (percent_complete > 100)
@@ -86,7 +90,7 @@ $(function () {
             self.loader = new PNotify({
                 title: title,
                 /*text: '<div class="progress-sub-title"></div><div class="progress progress-striped active" style="margin:0"><div class="arc-welder progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',*/
-                text: '<div class="progress-bar-container" style="margin:0"><div class="progress-bar-info text-center"><span class="progress-bar-text"></span></div><div class="progress-bar" style="margin:0" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',
+                text: '<div class="progress-bar-container" style="margin:0"><div class="progress-bar-info text-center"><span class="progress-bar-text"></span></div><div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0"></div></div><div class="progress-text" style="width:100%;"></div></div>',
                 addclass: "arc-welder",
                 icon: 'fa fa-cog fa-spin',
                 width: self.popup_width.toString() + "px",

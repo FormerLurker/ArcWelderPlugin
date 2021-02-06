@@ -842,6 +842,7 @@ $(function () {
         self.statistics_compression_percent = ko.observable().extend({arc_welder_numeric: 1});
         self.statistics_source_name = ko.observable();
         self.statistics_target_name = ko.observable();
+        self.statistics_target_display_name = ko.observable();
         self.statistics_guid = ko.observable();
 
         /* Progress Observables */
@@ -1191,6 +1192,7 @@ $(function () {
                 self.statistics_compression_percent(statistics.compression_percent);
                 self.statistics_source_name(statistics.source_name || statistics.source_filename);
                 self.statistics_target_name(statistics.target_name || statistics.target_filename);
+                self.statistics_target_display_name(statistics.target_display_name || self.statistics_target_name());
                 self.statistics_guid(statistics.guid);
             }
             if (is_welded)
@@ -1667,7 +1669,7 @@ $(function () {
             // disable the element
             $(event.target).addClass("disabled");
             // Request that the file be processed
-            var data = { "path": encodeURI(file_data.path), "origin": file_data.origin};
+            var data = { "path": encodeURI(file_data.path), "origin": file_data.origin, "name": encodeURI(file_data.name)};
             $.ajax({
                 url: ArcWelder.APIURL("process"),
                 type: "POST",
