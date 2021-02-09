@@ -8,7 +8,13 @@ Converts G0/G1 commands to G2/G3 commands.  This can greatly compress some GCode
 
 ##### Python Development Package for Linux
 
-Python is already installed if you are running Octoprint, but if you are running on Linux, the python-dev package is required.  If you are running OctoPi and Python 2.7, this will already be installed.  At the time this was written, the dev package of Python 3 is not included in OctoPi.
+Python is already installed if you are running OctoPrint, but if you are running on Linux, the python-dev package is required.
+
+* If you are running OctoPi earlier than 0.17 and Python 2.7, this will already be installed.
+* If you are running OctoPi 0.18+ and Python 3.7, this will already be installed.
+* If you upgraded OctoPi 0.17 to Python 3 using the [upgrade script](https://octoprint.org/blog/2020/09/10/upgrade-to-py3/) this will already be installed.
+
+The only time you will need to install it is if you have installed OctoPrint manually.
 
 Before installing the dev package, run this command from a terminal to update your system:
 
