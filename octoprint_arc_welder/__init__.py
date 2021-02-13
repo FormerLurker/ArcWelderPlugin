@@ -195,7 +195,7 @@ class ArcWelderPlugin(
         # If we don't have a current version, look at the current settings file for the most recent version.
         if current is None:
             current_version = -1
-        if current < 2:
+        elif current < 2:
             logger.info("Migrating settings to version 2.")
             # change 'both' to 'always'
             if self._settings.get(["feature_settings", "file_processing"]) in ["both", "auto-only"]:
