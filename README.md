@@ -197,7 +197,7 @@ Verify that you have enough memory to enable this feature if it is disabled.  Yo
 
 If you are running Python 3, confirm that you have the dev package installed.  Please see the installation instructions above for details.
 
-If you are still having problems, please (create an issue)[https://github.com/FormerLurker/ArcWelderPlugin/issues/new] and be sure to include the plugin_pluginmanager_console.log file, which you can find by opening the Octoprint Settings (wrench/spanner icon), clicking on the **Logging** menu, then finding and downloading the proper log file.  Please upload the log file to (gist.github.com)[https://gist.github.com] and place a link within the issue.  Also include the OctoPrint version, the version of python you are running, and the OS version. If you are using OctoPi, please include that version as well.
+If you are still having problems, please [create an issue](https://github.com/FormerLurker/ArcWelderPlugin/issues/new) and be sure to include the plugin_pluginmanager_console.log file, which you can find by opening the Octoprint Settings (wrench/spanner icon), clicking on the **Logging** menu, then finding and downloading the proper log file.  Please upload the log file to [gist.github.com](https://gist.github.com) and place a link within the issue.  Also include the OctoPrint version, the version of python you are running, and the OS version. If you are using OctoPi, please include that version as well.
 
 **4.  I see no improvement in my prints.**
 
