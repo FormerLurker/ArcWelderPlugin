@@ -41,6 +41,10 @@ public:
 	
 	static double get_cartesian_distance(double x1, double y1, double x2, double y2);
 	static double get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2);
+	/*  Todo:  Implement for gcode comment processor
+	static bool case_insensitive_compare_char(char& c1, char& c2);
+	static bool case_insensitive_compare(std::string& str1, std::string& str2);
+	*/
 	static std::string to_string(double value);
 	static std::string to_string(int value);
 	static std::string ltrim(const std::string& s);
@@ -49,6 +53,7 @@ public:
 	static std::istream& safe_get_line(std::istream& is, std::string& t);
 	static std::string center(std::string input, int width);
 	static double get_percent_change(int v1, int v2);
+	static double get_percent_change(double v1, double v2);
 	static std::string get_percent_change_string(int v1, int v2, int precision);
 
 	static int get_num_digits(int x);

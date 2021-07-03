@@ -354,6 +354,7 @@ struct arc_welder_progress {
 		lines_processed = 0;
 		points_compressed = 0;
 		arcs_created = 0;
+		arcs_aborted_by_flow_rate = 0;
 		num_firmware_compensations = 0;
 		source_file_size = 0;
 		source_file_position = 0;
@@ -368,6 +369,7 @@ struct arc_welder_progress {
 	int lines_processed;
 	int points_compressed;
 	int arcs_created;
+	int arcs_aborted_by_flow_rate;
 	int num_firmware_compensations;
 	double compression_ratio;
 	double compression_percent;
@@ -385,6 +387,7 @@ struct arc_welder_progress {
 		stream << ", current_file_line: " << lines_processed;
 		stream << ", points_compressed: " << points_compressed;
 		stream << ", arcs_created: " << arcs_created;
+		stream << ", arcs_aborted_by_flowrate: " << arcs_aborted_by_flow_rate;
 		stream << ", num_firmware_compensations: " << num_firmware_compensations;
 		stream << ", compression_ratio: " << compression_ratio;
 		stream << ", size_reduction: " << compression_percent << "% ";
@@ -412,9 +415,12 @@ struct arc_welder_results {
 	std::string message;
 	arc_welder_progress progress;
 };
-#define DEFAULT_GCODE_BUFFER_SIZE 1000
+#define DEFAULT_GCODE_BUFFER_SIZE 10
 #define DEFAULT_G90_G91_INFLUENCES_EXTRUDER false
 #define DEFAULT_ALLOW_DYNAMIC_PRECISION false
+#define DEFAULT_ALLOW_TRAVEL_ARCS false
+#define DEFAULT_EXTRUSION_RATE_VARIANCE_PERCENT 0.05
+#define DEFAULT_CONVERT_TRAVEL_MOVES false
 class arc_welder
 {
 public:
@@ -427,13 +433,15 @@ public:
 		double max_radius,
 		int min_arc_segments,
 		double mm_per_arc_segment,
-		bool g90_g91_influences_extruder = DEFAULT_G90_G91_INFLUENCES_EXTRUDER,
-		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS,
-		bool allow_dynamic_precision = DEFAULT_ALLOW_DYNAMIC_PRECISION,
-		unsigned char default_xyz_precision = DEFAULT_XYZ_PRECISION,
-		unsigned char default_e_precision = DEFAULT_E_PRECISION,
-		int buffer_size = DEFAULT_GCODE_BUFFER_SIZE,
-		progress_callback callback = NULL);
+		bool g90_g91_influences_extruder,
+		bool allow_3d_arcs,
+		bool allow_travel_arcs,
+		bool allow_dynamic_precision,
+		unsigned char default_xyz_precision,
+		unsigned char default_e_precision,
+		double extrusion_rate_variance_percent,
+		int buffer_size,
+		progress_callback callback);
 	void set_logger_type(int logger_type);
 	virtual ~arc_welder();
 	arc_welder_results process();
@@ -460,12 +468,14 @@ private:
 	gcode_position_args gcode_position_args_;
 	bool allow_dynamic_precision_;
 	bool allow_3d_arcs_;
+	bool allow_travel_arcs_;
 	long file_size_;
 	int lines_processed_;
 	int gcodes_processed_;
 	int last_gcode_line_written_;
 	int points_compressed_;
 	int arcs_created_;
+	int arcs_aborted_by_flow_rate_;
 	source_target_segment_statistics segment_statistics_;
 	long get_file_size(const std::string& file_path);
 	double get_time_elapsed(double start_clock, double end_clock);
@@ -478,6 +488,8 @@ private:
 	// We don't care about the printer settings, except for g91 influences extruder.
 	gcode_position* p_source_position_;
 	double previous_feedrate_;
+	double previous_extrusion_rate_;
+	double extrusion_rate_variance_percent_;
 	gcode_parser parser_;
 	bool verbose_output_;
 	int logger_type_;

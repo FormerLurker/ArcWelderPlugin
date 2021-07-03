@@ -447,6 +447,14 @@
                 </div>
                 <div class="row-fluid">
                     <div class="span4 text-right">
+                        <strong>Allow Travel Arcs:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.allow_travel_arcs() ? 'True' : 'False'"></span>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
                         <strong>Resolution:</strong>
                     </div>
                     <div class="span8">
@@ -460,6 +468,14 @@
                     </div>
                     <div class="span8">
                         <span data-bind="text: plugin_settings.path_tolerance_percent"></span>%
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Extrusion Rate Variance:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.extrusion_rate_variance_percent"></span>%
                     </div>
                 </div>
                 <div class="row-fluid">

@@ -47,6 +47,7 @@ public:
 	double z;
 	static point get_midpoint(point p1, point p2);
 	static bool is_near_collinear(const point& p1, const point& p2, const point& p3, double percent_tolerance);
+	static double cartesian_distance(const point& p1, const point& p2);
 };
 
 struct printer_point : point
@@ -99,7 +100,7 @@ struct vector : point
 	
 };
 
-#define DEFAULT_MAX_RADIUS_MM 1000000.0 // 1km
+#define DEFAULT_MAX_RADIUS_MM 10000.0 // 10m
 struct circle {
 	circle() {
 		center.x = 0;

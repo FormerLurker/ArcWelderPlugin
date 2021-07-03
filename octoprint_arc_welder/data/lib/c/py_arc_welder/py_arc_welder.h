@@ -46,9 +46,11 @@ public:
 		double mm_per_arc_segment,
 		bool g90_g91_influences_extruder,
 		bool allow_3d_arcs,
+		bool allow_travel_arcs,
 		bool allow_dynamic_precision,
 		unsigned char default_xyz_precision,
 		unsigned char default_e_precision,
+		double extrusion_rate_variance_percent,
 		int buffer_size, 
 		PyObject* py_progress_callback
 		): arc_welder(
@@ -62,10 +64,13 @@ public:
 			mm_per_arc_segment,
 			g90_g91_influences_extruder,
 			allow_3d_arcs,
+			allow_travel_arcs,
 			allow_dynamic_precision,
 			default_xyz_precision,
 			default_e_precision,
-			buffer_size
+			extrusion_rate_variance_percent,
+			buffer_size,
+			NULL
   ){
 		guid_ = guid;
 		py_progress_callback_ = py_progress_callback;

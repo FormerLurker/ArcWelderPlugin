@@ -79,7 +79,7 @@
 
                             </div>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_resolution_mm"><strong>Path Tolerance</strong></label>
+                                <label class="control-label" for="arc_welder_path_percent_tolerance"><strong>Path Tolerance</strong></label>
                                 <div class="controls">
                                     <div class="input-append">
                                         <input class="input-small" required="true" type="number" min="0.1" max="5"
@@ -91,6 +91,7 @@
                                        data-help-title="Path Tolerance Percent"></a>
                                 </div>
                             </div>
+
                             <div class="control-group">
                                 <label class="control-label" for="arc_welder_max_radius_mm"><strong>Maximum Arc
                                     Radius</strong></label>
@@ -105,20 +106,7 @@
                                        data-help-title="Max Arc Radius in MM"></a>
                                 </div>
                             </div>
-                            <div class="control-group">
-                                <label class="control-label" for="arc_welder_allow_3d_arcs"><strong>3D Arcs(vase mode)</strong></label>
-                                <div class="controls">
-                                    <label class="checkbox">
-                                        <input class="input-text" type="checkbox"
-                                           id="arc_welder_allow_3d_arcs"
-                                           data-bind="checked: plugin_settings().allow_3d_arcs">
-                                        Enabled
-                                        <a class="arc_welder_help" data-help-url="settings.allow_3d_arcs.md"
-                                       data-help-title="Allow 3D Arcs (for vase mode)"></a><br/>
-                                    </label>
-                                    <span class="label label-important">WARNING</span> This is an experimental feature not supported by all firmware.
-                                </div>
-                            </div>
+
                             <div class="control-group">
                                 <label class="control-label" for="arc_welder_allow_dynamic_precision"><strong>Dynamic Gcode Precision</strong></label>
                                 <div class="controls">
@@ -171,6 +159,48 @@
                                         value: plugin_settings().feature_settings.file_processing"></select>
                                     <a class="arc_welder_help" data-help-url="settings.file_processing.md"
                                        data-help-title="File Processing Options"></a>
+                                </div>
+                            </div>
+                        </fieldset>
+                        <fieldset>
+                            <legend>Experimental Preprocessor Settings</legend>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_extrusion_rate_variance_percent"><strong>Extrusion Rate Variance (experimental)</strong></label>
+                                <div class="controls">
+                                    <div class="input-append">
+                                        <input class="input-small" required="true" type="number" min="0" max="1000"
+                                               step="0.1" id="arc_welder_extrusion_rate_variance_percent"
+                                               data-bind="value: plugin_settings().extrusion_rate_variance_percent">
+                                        <span class="add-on">%</span>
+                                    </div>
+                                    <a class="arc_welder_help" data-help-url="settings.extrusion_rate_variance_percent.md"
+                                       data-help-title="Extrusion Rate Varience"></a>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_allow_3d_arcs"><strong>3D Arcs(vase mode)</strong></label>
+                                <div class="controls">
+                                    <label class="checkbox">
+                                        <input class="input-text" type="checkbox"
+                                           id="arc_welder_allow_3d_arcs"
+                                           data-bind="checked: plugin_settings().allow_3d_arcs">
+                                        Enabled
+                                        <a class="arc_welder_help" data-help-url="settings.allow_3d_arcs.md"
+                                       data-help-title="Allow 3D Arcs (for vase mode)"></a><br/>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_allow_travel_arcs"><strong>Travel Arcs (for laser engravers, CNC, etc.)</strong></label>
+                                <div class="controls">
+                                    <label class="checkbox">
+                                        <input class="input-text" type="checkbox"
+                                           id="arc_welder_allow_travel_arcs"
+                                           data-bind="checked: plugin_settings().allow_travel_arcs">
+                                        Enabled
+                                        <a class="arc_welder_help" data-help-url="settings.allow_travel_arcs.md"
+                                       data-help-title="Allow Travel Arcs"></a><br/>
+                                    </label>
                                 </div>
                             </div>
                         </fieldset>

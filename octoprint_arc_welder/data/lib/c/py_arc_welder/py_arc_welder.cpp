@@ -32,7 +32,7 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, 
 	if (pyMessage == NULL)
 		return NULL;
 	double total_count_reduction_percent = progress.segment_statistics.get_total_count_reduction_percent();
-	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:f}",
+	PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:f}",
 		"percent_complete",
 		progress.percent_complete,												//1
 		"seconds_elapsed",
@@ -47,28 +47,30 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, 
 		progress.points_compressed,												//6
 		"arcs_created",
 		progress.arcs_created,														//7
+		"arcs_aborted_by_flowrate",
+		progress.arcs_aborted_by_flow_rate,	  						//8
 		"num_firmware_compensations",
-		progress.num_firmware_compensations,							//8
+		progress.num_firmware_compensations,							//9
 		"source_file_position",
-		progress.source_file_position,										//9
+		progress.source_file_position,										//10
 		"source_file_size",
-		progress.source_file_size,												//10
+		progress.source_file_size,												//11
 		"target_file_size",
-		progress.target_file_size,												//11
+		progress.target_file_size,												//12
 		"compression_ratio",
-		progress.compression_ratio,												//12
+		progress.compression_ratio,												//13
 		"compression_percent",
-		progress.compression_percent,											//13
+		progress.compression_percent,											//14
 		"source_file_total_length",
-		progress.segment_statistics.total_length_source,	//14
+		progress.segment_statistics.total_length_source,	//15
 		"target_file_total_length",
-		progress.segment_statistics.total_length_target,	//15
+		progress.segment_statistics.total_length_target,	//16
 		"source_file_total_count",
-		progress.segment_statistics.total_count_source,		//16
+		progress.segment_statistics.total_count_source,		//17
 		"target_file_total_count",
-		progress.segment_statistics.total_count_target,   //17
+		progress.segment_statistics.total_count_target,   //18
 		"total_count_reduction_percent",
-		total_count_reduction_percent                     //18
+		total_count_reduction_percent                     //19
 		
 	);
 

@@ -356,6 +356,10 @@ position& position::operator=(const position& pos) {
 	return *this;
 }
 
+bool position::is_travel()
+{
+	return is_xyz_travel || is_xy_travel;
+}
 void position::set_num_extruders(int num_extruders_)
 {
 	if (num_extruders_ == num_extruders)

@@ -206,10 +206,12 @@ extern "C"
 			args.min_arc_segments, 
 			args.mm_per_arc_segment, 
 			args.g90_g91_influences_extruder, 
-			args.allow_3d_arcs, 
+			args.allow_3d_arcs,
+			args.allow_travel_arcs,
 			args.allow_dynamic_precision, 
 			args.default_xyz_precision, 
 			args.default_e_precision, 
+			args.extrusion_rate_variance_percent,
 			DEFAULT_GCODE_BUFFER_SIZE, 
 			py_progress_callback
 		);
@@ -342,11 +344,25 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 		args.default_e_precision = 6;
 	}
 
+	// Extract the extrusion_rate_variance
+	PyObject* py_extrusion_rate_variance_percent = PyDict_GetItemString(py_args, "extrusion_rate_variance_percent");
+	if (py_extrusion_rate_variance_percent == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve the extrusion_rate_variance_percent parameter from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.extrusion_rate_variance_percent = gcode_arc_converter::PyFloatOrInt_AsDouble(py_extrusion_rate_variance_percent);
+	if (args.extrusion_rate_variance_percent < 0)
+	{
+		args.extrusion_rate_variance_percent = DEFAULT_EXTRUSION_RATE_VARIANCE_PERCENT; // Set to the default if no resolution is provided, or if it is less than 0.
+	}
+
 	// Extract the path tolerance_percent
 	PyObject* py_path_tolerance_percent = PyDict_GetItemString(py_args, "path_tolerance_percent");
 	if (py_path_tolerance_percent == NULL)
 	{
-		std::string message = "ParseArgs - Unable to retrieve the py_path_tolerance_percent parameter from the args.";
+		std::string message = "ParseArgs - Unable to retrieve the path_tolerance_percent parameter from the args.";
 		p_py_logger->log_exception(GCODE_CONVERSION, message);
 		return false;
 	}
@@ -407,6 +423,16 @@ static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_
 		return false;
 	}
 	args.allow_3d_arcs = PyLong_AsLong(py_allow_3d_arcs) > 0;
+
+	// extract allow_travel_arcs
+	PyObject* py_allow_travel_arcs = PyDict_GetItemString(py_args, "allow_travel_arcs");
+	if (py_allow_travel_arcs == NULL)
+	{
+		std::string message = "ParseArgs - Unable to retrieve allow_travel_arcs from the args.";
+		p_py_logger->log_exception(GCODE_CONVERSION, message);
+		return false;
+	}
+	args.allow_travel_arcs = PyLong_AsLong(py_allow_travel_arcs) > 0;
 
 	// Extract G90/G91 influences extruder
 	// g90_influences_extruder

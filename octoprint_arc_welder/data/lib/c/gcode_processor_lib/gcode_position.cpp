@@ -206,10 +206,9 @@ void gcode_position_args::delete_y_firmware_offsets()
 	}
 }
 
-gcode_position::gcode_position()
+gcode_position::gcode_position() : positions_(50), initial_position_(1)
 {
 	position_buffer_size_ = 50;
-	positions_ = new position[position_buffer_size_];
 	autodetect_position_ = false;
 	home_x_ = 0;
 	home_y_ = 0;
@@ -247,23 +246,19 @@ gcode_position::gcode_position()
 	z_max_ = 0;
 	is_circular_bed_ = false;
 
-	cur_pos_ = -1;
-	num_pos_ = 0;
-	for(int index = 0; index < position_buffer_size_; index ++)
-	{
-		position initial_pos(num_extruders_);
-		initial_pos.set_xyz_axis_mode(xyz_axis_default_mode_);
-		initial_pos.set_e_axis_mode(e_axis_default_mode_);
-		initial_pos.set_units_default(units_default_);
-		add_position(initial_pos);
-	}
-	num_pos_ = 0;
+	
+	position initial_pos(num_extruders_);
+	initial_pos.set_xyz_axis_mode(xyz_axis_default_mode_);
+	initial_pos.set_e_axis_mode(e_axis_default_mode_);
+	initial_pos.set_units_default(units_default_);
+	
+	positions_.initialize(initial_pos);
+	initial_position_ = initial_pos;
 }
 
-gcode_position::gcode_position(gcode_position_args args)
+gcode_position::gcode_position(gcode_position_args args) : positions_(args.position_buffer_size)
 {
 	position_buffer_size_ = args.position_buffer_size;
-	positions_ = new position[args.position_buffer_size] ;
 	autodetect_position_ = args.autodetect_position;
 	home_x_ = args.home_x;
 	home_y_ = args.home_y;
@@ -330,9 +325,6 @@ gcode_position::gcode_position(gcode_position_args args)
 	z_max_ = args.z_max;
 
 	is_circular_bed_ = args.is_circular_bed;
-
-	cur_pos_ = -1;
-	num_pos_ = 0;
 	num_extruders_ = args.num_extruders;
 
 	// Configure the initial position
@@ -346,14 +338,10 @@ gcode_position::gcode_position(gcode_position_args args)
 		initial_pos.p_extruders[index].x_firmware_offset = args.x_firmware_offsets[index];
 		initial_pos.p_extruders[index].y_firmware_offset = args.y_firmware_offsets[index];
 	}
-
-	for (int index = 0; index < position_buffer_size_; index++)
-	{
-
-		add_position(initial_pos);
-	}
-	num_pos_ = 0;
+	positions_.initialize(initial_pos);
+	initial_position_ = initial_pos;	
 }
+
 
 gcode_position::gcode_position(const gcode_position &source)
 {
@@ -362,11 +350,7 @@ gcode_position::gcode_position(const gcode_position &source)
 
 gcode_position::~gcode_position()
 {
-	if (positions_ != NULL)
-	{
-		delete  [] positions_;
-		positions_ = NULL;
-	}
+	
 	delete_retraction_lengths_();
 	delete_z_lift_heights_();
 }
@@ -375,7 +359,6 @@ bool gcode_position::get_g90_91_influences_extruder()
 {
 	return g90_influences_extruder_;
 }
-
 
 void gcode_position::set_num_extruders(int num_extruders)
 {
@@ -413,32 +396,44 @@ void gcode_position::delete_z_lift_heights_()
 
 int gcode_position::get_num_positions()
 {
-	return num_pos_;
+	return positions_.count();
+}
+
+int gcode_position::get_max_positions()
+{
+	return positions_.get_max_size();
+}
+
+void gcode_position::grow_max_positions(int size)
+{
+	int current_size = positions_.get_max_size();
+	if (size < current_size)
+	{
+		return;
+	}
+	positions_.resize(size, initial_position_);
+	
 }
 
 void gcode_position::add_position(position& pos)
 {
-	cur_pos_ = (cur_pos_+1) % position_buffer_size_;
-	positions_[cur_pos_] = pos;
-	if (num_pos_ < position_buffer_size_)
-		num_pos_++;
+	positions_.push_front(pos);
 }
 
 void gcode_position::add_position(parsed_command& cmd)
 {
-	const int prev_pos = cur_pos_;
-	cur_pos_ = (cur_pos_+1) % position_buffer_size_;
-	positions_[cur_pos_] = positions_[prev_pos];
-	positions_[cur_pos_].reset_state();
-	positions_[cur_pos_].command = cmd;
-	positions_[cur_pos_].is_empty = false;
-	if (num_pos_ < position_buffer_size_)
-		num_pos_++;
+
+	position current_position = positions_[0];
+	current_position.reset_state();
+	current_position.command = cmd;
+	current_position.is_empty = false;
+	positions_.push_front(current_position);
+
 }
 
 position gcode_position::get_position(int index)
 {
-	return positions_[(cur_pos_ - index + position_buffer_size_) % position_buffer_size_];
+	return positions_[index];
 }
 
 position gcode_position::get_current_position()
@@ -453,7 +448,7 @@ position gcode_position::get_previous_position()
 
 position * gcode_position::get_position_ptr(int index)
 {
-	return &positions_[(cur_pos_ - index + position_buffer_size_) % position_buffer_size_]; 
+	return &positions_[index]; 
 }
 
 position * gcode_position::get_current_position_ptr()
@@ -697,11 +692,7 @@ void gcode_position::update(parsed_command& command, const long file_line_number
 
 void gcode_position::undo_update()
 {
-	if (num_pos_ != 0)
-	{
-		cur_pos_ = (cur_pos_ - 1 + position_buffer_size_) % position_buffer_size_;
-		num_pos_--;
-	}
+	positions_.pop_front();
 }
 
 position* gcode_position::undo_update(int num_updates)
@@ -715,21 +706,9 @@ position* gcode_position::undo_update(int num_updates)
 	// add the positions we will undo to the array
 	for (int index = 0; index < num_updates; index++)
 	{
-		p_undo_positions[index] = get_position(index);
-	}
-	
-	if (num_pos_ < num_updates)
-	{
-		num_pos_ = 0;
-		cur_pos_ = 0;
-	}
-	else
-	{
-		cur_pos_ = (cur_pos_ - num_updates + position_buffer_size_) % position_buffer_size_;
-		num_pos_ -= num_updates;
+		p_undo_positions[index] = positions_.pop_front();
 	}
 	return p_undo_positions;
-
 }
 
 // Private Members

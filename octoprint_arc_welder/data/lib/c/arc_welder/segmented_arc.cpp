@@ -127,11 +127,12 @@ bool segmented_arc::try_add_point(printer_point p)
 
   bool point_added = false;
   // if we don't have enough segnemts to check the shape, just add
-  if (points_.count() > get_max_segments() - 1)
+    
+  if (points_.count() == points_.get_max_size())
   {
     // Too many points, we can't add more
-    return false;
-  }
+    points_.resize(points_.get_max_size()*2);
+  } 
   if (points_.count() > 0)
   {
     printer_point p1 = points_[points_.count() - 1];
@@ -139,6 +140,21 @@ bool segmented_arc::try_add_point(printer_point p)
     {
       // Z axis changes aren't allowed
       return false;
+    }
+
+    // Need to separate travel moves from moves with extrusion
+    if (points_.count() > 2)
+    {
+      // We already have at least an initial point and a second point.  Make cure the current point and the previous are either both
+      // travel moves, or both extrusion
+      if (!(
+        (p1.e_relative != 0 && p.e_relative != 0) // Extrusions 
+        || (p1.e_relative == 0 && p.e_relative == 0) // Travel
+        )
+        )
+      {
+        return false;
+      }
     }
 
     if (utilities::is_zero(p.distance))
@@ -192,9 +208,6 @@ bool segmented_arc::try_add_point_internal_(printer_point p)
   // If we don't have enough points (at least min_segments) return false
   if (points_.count() < get_min_segments() - 1)
     return false;
-
-  // Create a test circle
-  circle target_circle;
 
   // the circle is new..  we have to test it now, which is expensive :(
   points_.push_back(p);

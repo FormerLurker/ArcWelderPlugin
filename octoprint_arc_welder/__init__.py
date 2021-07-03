@@ -144,12 +144,14 @@ class ArcWelderPlugin(
             use_octoprint_settings=True,
             g90_g91_influences_extruder=False,
             allow_3d_arcs=False,
+            allow_travel_arcs=True,
             allow_dynamic_precision=False,
             default_xyz_precision=3,
             default_e_precision=5,
             resolution_mm=0.05,
             path_tolerance_percent=5.0,  # 5%
-            max_radius_mm=1000*1000,  # 1KM, pretty big :)
+            max_radius_mm=10000,  # 10 Meters
+            extrusion_rate_variance_percent=5.0,
             firmware_compensation_enabled=False,
             min_arc_segments=14,  # 0 to disable
             mm_per_arc_segment=1.0,  # 0 to disable
@@ -194,7 +196,7 @@ class ArcWelderPlugin(
     def on_settings_migrate(self, target, current):
         # If we don't have a current version, look at the current settings file for the most recent version.
         if current is None:
-            current_version = -1
+            current = -1
         if current < 2:
             logger.info("Migrating settings to version 2.")
             # change 'both' to 'always'
@@ -584,6 +586,10 @@ class ArcWelderPlugin(
         return self._settings.get_boolean(["allow_3d_arcs"])
 
     @property
+    def _allow_travel_arcs(self):
+        return self._settings.get_boolean(["allow_travel_arcs"])
+
+    @property
     def _allow_dynamic_precision(self):
         return self._settings.get_boolean(['allow_dynamic_precision'])
 
@@ -612,6 +618,13 @@ class ArcWelderPlugin(
     @property
     def _path_tolerance_percent_decimal(self):
         return self._path_tolerance_percent / 100.0
+
+    @property
+    def _extrusion_rate_variance_percent(self):
+        extrusion_rate_variance_percent = self._settings.get_float(["extrusion_rate_variance_percent"])
+        if extrusion_rate_variance_percent is None or extrusion_rate_variance_percent < 0:
+            extrusion_rate_variance_percent = self.settings_default["extrusion_rate_variance_percent"]
+        return extrusion_rate_variance_percent
 
     @property
     def _max_radius_mm(self):
@@ -974,11 +987,13 @@ class ArcWelderPlugin(
             "\n\tsource_path: %s"
             "\n\tresolution_mm: %.3f"
             "\n\tpath_tolerance_percent: %.3f"
+            "\n\textrusion_rate_variance_percent: %.3f"
             "\n\tmax_radius_mm: %d"
             "\n\tmm_per_arc_segment: %.3f"
             "\n\tmin_arc_segments: %d"
             "\n\tg90_g91_influences_extruder: %r"
             "\n\tallow_3d_arcs: %r"
+            "\n\tallow_travel_arcs: %r"
             "\n\tallow_dynamic_precision: %r"
             "\n\tdefault_xyz_precision: %d"
             "\n\tdefault_e_precision: %d"
@@ -986,11 +1001,13 @@ class ArcWelderPlugin(
             processor_args["source_path"],
             processor_args["resolution_mm"],
             processor_args["path_tolerance_percent"],
+            processor_args["extrusion_rate_variance_percent"],
             processor_args["max_radius_mm"],
             processor_args["min_arc_segments"],
             processor_args["mm_per_arc_segment"],
             processor_args["g90_g91_influences_extruder"],
             processor_args["allow_3d_arcs"],
+            processor_args["allow_travel_arcs"],
             processor_args["allow_dynamic_precision"],
             processor_args["default_xyz_precision"],
             processor_args["default_e_precision"],
@@ -1227,6 +1244,13 @@ class ArcWelderPlugin(
             logger.warning(
                 "The path tolerance percent %0.2f percent is greater than the recommended max of 5%", resolution_mm
             )
+        extrusion_rate_variance_percent = gcode_comment_settings.get("extrusion_rate_variance_percent", self._extrusion_rate_variance_percent)
+        if extrusion_rate_variance_percent < 0:
+            logger.warning(
+                "The extrusion rate tolerance percent of %0.2f is less than 0, and has been set to the default.", extrusion_rate_variance_percent
+            )
+            extrusion_rate_variance_percent = self._extrusion_rate_variance_percent;
+
         max_radius_mm = gcode_comment_settings.get("max_radius_mm", self._max_radius_mm)
         if max_radius_mm > 1000000:
             logger.warning(
@@ -1249,6 +1273,10 @@ class ArcWelderPlugin(
 
         allow_3d_arcs = gcode_comment_settings.get(
             "allow_3d_arcs", self._allow_3d_arcs
+        )
+
+        allow_travel_arcs = gcode_comment_settings.get(
+            "allow_travel_arcs", self._allow_travel_arcs
         )
 
         g90_g91_influences_extruder = gcode_comment_settings.get(
@@ -1291,11 +1319,13 @@ class ArcWelderPlugin(
                 "source_path": source_path_on_disk,
                 "resolution_mm": resolution_mm,
                 "path_tolerance_percent": path_tolerance_percent / 100.0,  # Convert to decimal percent
+                "extrusion_rate_variance_percent": extrusion_rate_variance_percent / 100.0, # Convert to decimal percent
                 "max_radius_mm": max_radius_mm,
                 "min_arc_segments": min_arc_segments,
                 "mm_per_arc_segment": mm_per_arc_segment,
                 "g90_g91_influences_extruder": g90_g91_influences_extruder,
                 "allow_3d_arcs": allow_3d_arcs,
+                "allow_travel_arcs": allow_travel_arcs,
                 "allow_dynamic_precision": allow_dynamic_precision,
                 "default_xyz_precision": default_xyz_precision,
                 "default_e_precision": default_e_precision,

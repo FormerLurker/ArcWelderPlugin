@@ -24,6 +24,7 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <algorithm>
 #include "fpconv.h"
 
 const std::string utilities::WHITESPACE_ = " \n\r\t\f\v";
@@ -171,6 +172,15 @@ double utilities::get_percent_change(int v1, int v2)
 	return 0;
 }
 
+double utilities::get_percent_change(double v1, double v2)
+{
+	if (v1 != 0)
+	{
+		return ((v2 - v1) / v1);
+	}
+	return 0;
+}
+
 std::string utilities::get_percent_change_string(int v1, int v2, int precision)
 {
 	std::stringstream format_stream;
@@ -312,3 +322,22 @@ std::string utilities::dtos(double x, unsigned char precision)
 	*/
 	return buffer;
 }
+/*
+bool utilities::case_insensitive_compare_char(char& c1, char& c2)
+{
+	if (c1 == c2)
+		return true;
+	else if (std::toupper(c1) == std::toupper(c2))
+		return true;
+	return false;
+}
+
+/*
+ * Case Insensitive String Comparision
+ 
+bool utilities::case_insensitive_compare(std::string& str1, std::string& str2)
+{
+	return ((str1.size() == str2.size()) &&	std::equal(str1.begin(), str1.end(), str2.begin(), &utilities::case_insensitive_compare_char));
+}
+
+*/

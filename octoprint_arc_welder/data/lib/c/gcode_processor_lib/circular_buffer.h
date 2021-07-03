@@ -1,7 +1,9 @@
+#pragma once
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Gcode Processor Library
 //
 // Tools for parsing gcode and calculating printer state from parsed gcode commands.
+
 //
 // Copyright(C) 2020 - Brad Hochgesang
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -19,6 +21,7 @@
 // You can contact the author at the following email address: 
 // FormerLurker@pm.me
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
 #include <exception>
 template <typename T>
@@ -32,6 +35,7 @@ public:
 		count_ = 0;
 		items_ = new T[max_size_];
 	}
+
 	circular_buffer(int max_size)
 	{
 		max_size_ = max_size;
@@ -39,13 +43,24 @@ public:
 		count_ = 0;
 		items_ = new T[max_size];
 	}
+
 	virtual ~circular_buffer() {
 		delete[] items_;
 	}
+
+	void initialize(T object)
+	{
+		for (int index = 0; index < max_size_; index++)
+		{
+			push_back(object);
+		}
+		count_ = 0;
+		front_index_ = 0;
+	}
+
 	void resize(int max_size)
 	{
 		T* new_items = new T[max_size];
-		int count = count_;
 		for (int index = 0; index < count_; index++)
 		{
 			new_items[index] = items_[(front_index_ + index + max_size_) % max_size_];
@@ -55,12 +70,61 @@ public:
 		items_ = new_items;
 		max_size_ = max_size;
 	}
+
+	void resize(int max_size, T object)
+	{
+		T* new_items = new T[max_size];
+		for (int index = 0; index < count_; index++)
+		{
+			new_items[index] = items_[(front_index_ + index + max_size_) % max_size_];
+		}
+		// Initialize the rest of the entries
+		for (int index = count_; index < max_size; index++)
+		{
+			new_items[index] = object;
+		}
+		front_index_ = 0;
+		delete[] items_;
+		items_ = new_items;
+		max_size_ = max_size;
+	}
+
+	inline int get_index_position(int index) const
+	{
+		int index_position = index + front_index_ + max_size_;
+		while (index_position >= max_size_)
+		{
+			index_position = index_position - max_size_;
+		}
+		return index_position;
+	}
+
 	void push_front(T object)
 	{
-		front_index_ = (front_index_ - 1 + max_size_) % max_size_;
-		count_++;
+		//front_index_ = (front_index_ - 1 + max_size_) % max_size_;
+		front_index_ -= 1;
+		if (front_index_ < 0)
+		{
+			front_index_ = max_size_ - 1;
+		}
+		if (count_ != max_size_)
+		{
+			count_++;
+		}
 		items_[front_index_] = object;
 	}
+
+	void push_back(T object)
+	{
+		int pos = get_index_position(count_);
+		items_[pos] = object;
+		count_++;
+		if (count_ != max_size_)
+		{
+			count_++;
+		}
+	}
+
 	T& pop_front()
 	{
 		if (count_ == 0)
@@ -69,30 +133,55 @@ public:
 		}
 
 		int prev_start = front_index_;
-		front_index_ = (front_index_ + 1 + max_size_) % max_size_;
+
+		front_index_ += 1;
+		if (front_index_ >= max_size_)
+		{
+			front_index_ = 0;
+		}
 		count_--;
 		return items_[prev_start];
 	}
 
-	T& get(int index)
+	T& pop_back()
 	{
-		return items_[(front_index_ + index + max_size_) % max_size_];
+		if (count_ == 0)
+		{
+			throw std::exception();
+		}
+		int pos = get_index_position(count_ - 1);
+		count_--;
+		return items_[pos];
 	}
 
-	int  count()
+	T& operator[] (int index) const
+	{
+		//int opos = get_index_position(index);
+		return items_[get_index_position(index)];
+	}
+
+	T& get(int index) const
+	{
+		int opos = get_index_position(index);
+		return items_[opos];
+	}
+
+	int count() const
 	{
 		return count_;
-
 	}
-	int  get_max_size()
+
+	int get_max_size() const
 	{
 		return max_size_;
 	}
+
 	void clear()
 	{
 		count_ = 0;
 		front_index_ = 0;
 	}
+
 	void copy(const circular_buffer<T>& source)
 	{
 		if (max_size_ < source.max_size_)
@@ -106,7 +195,6 @@ public:
 		}
 		front_index_ = source.front_index_;
 		count_ = source.count_;
-
 	}
 
 protected:
