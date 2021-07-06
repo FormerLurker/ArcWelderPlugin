@@ -44,9 +44,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-
-#define DEFAULT_G90_G91_INFLUENCES_EXTREUDER false
-
 static const int segment_statistic_lengths_count = 12;
 const double segment_statistic_lengths[] = { 0.002f, 0.005f, 0.01f, 0.05f, 0.1f, 0.5f, 1.0f, 5.0f, 10.0f, 20.0f, 50.0f, 100.0f };
 
@@ -346,7 +343,7 @@ private:
 
 // Struct to hold the progress, statistics, and return values
 struct arc_welder_progress {
-	arc_welder_progress() : segment_statistics(segment_statistic_lengths, segment_statistic_lengths_count, NULL) {
+	arc_welder_progress() : segment_statistics(segment_statistic_lengths, segment_statistic_lengths_count, NULL), travel_statistics(segment_statistic_lengths, segment_statistic_lengths_count, NULL) {
 		percent_complete = 0.0;
 		seconds_elapsed = 0.0;
 		seconds_remaining = 0.0;
@@ -356,6 +353,7 @@ struct arc_welder_progress {
 		arcs_created = 0;
 		arcs_aborted_by_flow_rate = 0;
 		num_firmware_compensations = 0;
+		num_gcode_length_exceptions = 0;
 		source_file_size = 0;
 		source_file_position = 0;
 		target_file_size = 0;
@@ -371,12 +369,30 @@ struct arc_welder_progress {
 	int arcs_created;
 	int arcs_aborted_by_flow_rate;
 	int num_firmware_compensations;
+	int num_gcode_length_exceptions;
 	double compression_ratio;
 	double compression_percent;
 	long source_file_position;
 	long source_file_size;
 	long target_file_size;
 	source_target_segment_statistics segment_statistics;
+	source_target_segment_statistics travel_statistics;
+
+	std::string simple_progress_str() const {
+		std::stringstream stream;
+		if (percent_complete == 0) {
+			stream << " 00.0% complete - Estimating remaining time.";
+		}
+		else if (percent_complete == 100)
+		{
+			stream << "100.0% complete - " << seconds_elapsed << " seconds total.";
+		}
+		else {
+			stream << " " << std::fixed << std::setprecision(1) << std::setfill('0') << std::setw(4) << percent_complete << "% complete - Estimated " << std::setprecision(0) << std::setw(-1) << seconds_remaining << " of " << seconds_elapsed + seconds_remaining << " seconds remaing.";
+		}
+		
+		return stream.str();
+	}
 
 	std::string str() const {
 		std::stringstream stream;
@@ -389,19 +405,128 @@ struct arc_welder_progress {
 		stream << ", arcs_created: " << arcs_created;
 		stream << ", arcs_aborted_by_flowrate: " << arcs_aborted_by_flow_rate;
 		stream << ", num_firmware_compensations: " << num_firmware_compensations;
+		stream << ", num_gcode_length_exceptions: " << num_gcode_length_exceptions;
 		stream << ", compression_ratio: " << compression_ratio;
 		stream << ", size_reduction: " << compression_percent << "% ";
 		return stream.str();
 	}
 	std::string detail_str() const {
 		std::stringstream stream;
-		stream << "\n" << "Extrusion/Retraction Counts" << "\n" << segment_statistics.str() << "\n";
+		if (travel_statistics.total_count_source > 0)
+		{
+			stream << "Target File Travel Statistics:" << "\n" << travel_statistics.str() << "\n";
+		}
+		
+		stream << "\n" << "Target File Extrusion Statistics:" << "\n" << segment_statistics.str() << "\n";
+		
 		return stream.str();
 	}
 };
-
 // define the progress callback type 
 typedef bool(*progress_callback)(arc_welder_progress, logger* p_logger, int logger_type);
+// LOGGER_NAME
+#define ARC_WELDER_LOGGER_NAME "arc_welder.gcode_conversion"
+// Default argument values
+#define DEFAULT_G90_G91_INFLUENCES_EXTRUDER false
+#define DEFAULT_GCODE_BUFFER_SIZE 10
+#define DEFAULT_G90_G91_INFLUENCES_EXTRUDER false
+#define DEFAULT_ALLOW_DYNAMIC_PRECISION false
+#define DEFAULT_ALLOW_TRAVEL_ARCS false
+#define DEFAULT_EXTRUSION_RATE_VARIANCE_PERCENT 0.05
+#define DEFAULT_CONVERT_TRAVEL_MOVES false
+
+
+struct arc_welder_args
+{
+	arc_welder_args() : 
+		source_path(""),
+		target_path(""),
+		log(NULL),
+		resolution_mm(DEFAULT_RESOLUTION_MM),
+		path_tolerance_percent(ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT),
+		max_radius_mm(DEFAULT_MAX_RADIUS_MM),
+		min_arc_segments(DEFAULT_MIN_ARC_SEGMENTS),
+		mm_per_arc_segment(DEFAULT_MM_PER_ARC_SEGMENT),
+		g90_g91_influences_extruder(DEFAULT_G90_G91_INFLUENCES_EXTRUDER),
+		allow_3d_arcs(DEFAULT_ALLOW_3D_ARCS),
+		allow_travel_arcs(DEFAULT_ALLOW_TRAVEL_ARCS),
+		allow_dynamic_precision(DEFAULT_ALLOW_DYNAMIC_PRECISION),
+		default_xyz_precision(DEFAULT_XYZ_PRECISION),
+		default_e_precision(DEFAULT_E_PRECISION),
+		extrusion_rate_variance_percent(DEFAULT_EXTRUSION_RATE_VARIANCE_PERCENT),
+		max_gcode_length(DEFAULT_MAX_GCODE_LENGTH),
+		buffer_size(DEFAULT_GCODE_BUFFER_SIZE),
+		callback(NULL){};
+
+	arc_welder_args(std::string source, std::string target, logger* ptr_log) : arc_welder_args()
+	{
+		source_path = source;
+		target_path = target;
+		log = ptr_log;
+	}
+		std::string source_path;
+		std::string target_path;
+		logger* log;
+		double resolution_mm;
+		double path_tolerance_percent;
+		double max_radius_mm;
+		int min_arc_segments;
+		double mm_per_arc_segment;
+		bool g90_g91_influences_extruder;
+		bool allow_3d_arcs;
+		bool allow_travel_arcs;
+		bool allow_dynamic_precision;
+		unsigned char default_xyz_precision;
+		unsigned char default_e_precision;
+		double extrusion_rate_variance_percent;
+		int buffer_size;
+		int max_gcode_length;
+		
+		progress_callback callback;
+
+		std::string str() const {
+			std::string log_level_name = "NO_LOGGING";
+			if (log != NULL)
+			{
+				log_level_name = log->get_log_level_name(ARC_WELDER_LOGGER_NAME);
+			}
+			std::stringstream stream;
+			stream << "Arc Welder Arguments\n";
+			stream << std::fixed << std::setprecision(2);
+			stream << "\tSource File Path             : " << source_path << "\n";
+			if (source_path == target_path)
+			{
+				stream << "\tTarget File Path (overwrite) : " << target_path << "\n";
+			}
+			else
+			{
+				stream << "\tTarget File Path             : " << target_path << "\n";
+			}
+			stream << "\tResolution                   : " << resolution_mm << "mm (+-" << std::setprecision(5) << resolution_mm / 2.0 << "mm)\n";
+			stream << "\tPath Tolerance               : " << std::setprecision(3) << path_tolerance_percent * 100.0 << "%\n";
+			stream << "\tMaximum Arc Radius           : " << std::setprecision(0) << max_radius_mm << "mm\n";
+			stream << "\tMin Arc Segments             : " << std::setprecision(0) << min_arc_segments << "\n";
+			stream << "\tMM Per Arc Segment           : " << std::setprecision(3) << mm_per_arc_segment << "\n";
+			stream << "\tAllow 3D Arcs                : " << (allow_3d_arcs ? "True" : "False") << "\n";
+			stream << "\tAllow Travel Arcs            : " << (allow_travel_arcs ? "True" : "False") << "\n";
+			stream << "\tAllow Dynamic Precision      : " << (allow_dynamic_precision ? "True" : "False") << "\n";
+			stream << "\tDefault XYZ Precision        : " << std::setprecision(0) << static_cast<int>(default_xyz_precision) << "\n";
+			stream << "\tDefault E Precision          : " << std::setprecision(0) << static_cast<int>(default_e_precision) << "\n";
+			stream << "\tExtrusion Rate Variance %    : " << std::setprecision(3) << extrusion_rate_variance_percent * 100.0 << "%\n";
+			stream << "\tG90/G91 Influences Extruder  : " << (g90_g91_influences_extruder ? "True" : "False") << "\n";
+			if (max_gcode_length == 0)
+			{
+				stream << "\tMax Gcode Length             : Unlimited\n";
+			}
+			else {
+				stream << "\tMax Gcode Length             : " << std::setprecision(0) << max_gcode_length << " characters\n";
+			}
+			stream << "\tLog Level                    : " << log_level_name << "\n";
+			stream << "\tHide Progress Updates        : " << (callback == NULL ? "True" : "False");
+			return stream.str();
+		};
+		
+};
 
 struct arc_welder_results {
 	arc_welder_results() : progress()
@@ -415,12 +540,7 @@ struct arc_welder_results {
 	std::string message;
 	arc_welder_progress progress;
 };
-#define DEFAULT_GCODE_BUFFER_SIZE 10
-#define DEFAULT_G90_G91_INFLUENCES_EXTRUDER false
-#define DEFAULT_ALLOW_DYNAMIC_PRECISION false
-#define DEFAULT_ALLOW_TRAVEL_ARCS false
-#define DEFAULT_EXTRUSION_RATE_VARIANCE_PERCENT 0.05
-#define DEFAULT_CONVERT_TRAVEL_MOVES false
+
 class arc_welder
 {
 public:
@@ -440,8 +560,32 @@ public:
 		unsigned char default_xyz_precision,
 		unsigned char default_e_precision,
 		double extrusion_rate_variance_percent,
+		int max_gcode_length,
 		int buffer_size,
 		progress_callback callback);
+
+	arc_welder(arc_welder_args args) : arc_welder(
+		args.source_path,
+		args.target_path,
+		args.log,
+		args.resolution_mm,
+		args.path_tolerance_percent,
+		args.max_radius_mm,
+		args.min_arc_segments,
+		args.mm_per_arc_segment,
+		args.g90_g91_influences_extruder,
+		args.allow_3d_arcs,
+		args.allow_travel_arcs,
+		args.allow_dynamic_precision,
+		args.default_xyz_precision,
+		args.default_e_precision,
+		args.extrusion_rate_variance_percent,
+		args.max_gcode_length,
+		args.buffer_size,
+		args.callback
+	){};
+	
+	
 	void set_logger_type(int logger_type);
 	virtual ~arc_welder();
 	arc_welder_results process();
@@ -455,10 +599,9 @@ private:
 	static gcode_position_args get_args_(bool g90_g91_influences_extruder, int buffer_size);
 	progress_callback progress_callback_;
 	int process_gcode(parsed_command cmd, bool is_end, bool is_reprocess);
-	void write_arc_gcodes(bool is_extruder_relative, double current_feedrate);
+	void write_arc_gcodes(double current_feedrate);
 	int write_gcode_to_file(std::string gcode);
-	std::string get_arc_gcode_relative(double f, const std::string comment);
-	std::string get_arc_gcode_absolute(double e, double f, const std::string comment);
+	std::string get_arc_gcode(const std::string comment);
 	std::string get_comment_for_arc();
 	int write_unwritten_gcodes_to_file();
 	std::string create_g92_e(double absolute_e);
@@ -477,6 +620,7 @@ private:
 	int arcs_created_;
 	int arcs_aborted_by_flow_rate_;
 	source_target_segment_statistics segment_statistics_;
+	source_target_segment_statistics travel_statistics_;
 	long get_file_size(const std::string& file_path);
 	double get_time_elapsed(double start_clock, double end_clock);
 	double get_next_update_time() const;

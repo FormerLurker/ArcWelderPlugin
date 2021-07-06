@@ -149,6 +149,22 @@
                                 </div>
                             </div>
                             <div class="control-group">
+                                <label class="control-label" for="arc_welder_max_gcode_length">
+                                    <strong>Maximum Gcode Length</strong>
+                                </label>
+                                <div class="controls">
+                                    <div class="input-append">
+                                        <input id="arc_welder_max_gcode_length" class="input-small" required="true" type="number" min="0" max="255"
+                                               step="1"
+                                               data-bind="value: plugin_settings().max_gcode_length">
+                                        <span class="add-on">decimals</span>
+                                    </div>
+                                    <a class="arc_welder_help" data-help-url="settings.max_gcode_length.md"
+                                       data-help-title="Max Gcode Length"></a>
+                                </div>
+                                <p><span class="label label-important">Warning</span>0=Unlimited. Values below 55 are not recommended.</p>
+                            </div>
+                            <div class="control-group">
                                 <label class="control-label" for="arc_welder_file_processing">
                                     <strong>File Processing Type</strong>
                                 </label>

@@ -148,9 +148,10 @@ class ArcWelderPlugin(
             allow_dynamic_precision=False,
             default_xyz_precision=3,
             default_e_precision=5,
+            max_gcode_length=0,
             resolution_mm=0.05,
             path_tolerance_percent=5.0,  # 5%
-            max_radius_mm=10000,  # 10 Meters
+            max_radius_mm=9999,  # 9.999 Meters
             extrusion_rate_variance_percent=5.0,
             firmware_compensation_enabled=False,
             min_arc_segments=14,  # 0 to disable
@@ -602,6 +603,10 @@ class ArcWelderPlugin(
         return self._settings.get_float(["default_e_precision"])
 
     @property
+    def _max_gcode_length(self):
+        return self._settings.get_float(["max_gcode_length"])
+
+    @property
     def _resolution_mm(self):
         resolution_mm = self._settings.get_float(["resolution_mm"])
         if resolution_mm is None:
@@ -997,6 +1002,7 @@ class ArcWelderPlugin(
             "\n\tallow_dynamic_precision: %r"
             "\n\tdefault_xyz_precision: %d"
             "\n\tdefault_e_precision: %d"
+            "\n\tmax_gcode_length: %d"
             "\n\tlog_level: %d",
             processor_args["source_path"],
             processor_args["resolution_mm"],
@@ -1011,6 +1017,7 @@ class ArcWelderPlugin(
             processor_args["allow_dynamic_precision"],
             processor_args["default_xyz_precision"],
             processor_args["default_e_precision"],
+            processor_args["max_gcode_length"],
             processor_args["log_level"]
         )
 
@@ -1300,6 +1307,10 @@ class ArcWelderPlugin(
         elif default_e_precision > 6:
             default_e_precision = 6
 
+        max_gcode_length = gcode_comment_settings.get(
+            "max_gcode_length", self._max_gcode_length
+        )
+
         # determine the target file name and path
         target_name, target_path, target_display_name = self.get_output_file_name_and_path(source_name, source_path, gcode_comment_settings)
         return {
@@ -1329,6 +1340,7 @@ class ArcWelderPlugin(
                 "allow_dynamic_precision": allow_dynamic_precision,
                 "default_xyz_precision": default_xyz_precision,
                 "default_e_precision": default_e_precision,
+                "max_gcode_length": max_gcode_length,
                 "log_level": self._gcode_conversion_log_level
             }
         }

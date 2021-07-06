@@ -217,7 +217,7 @@ int utilities::get_num_digits(int x)
 							(x < 10000000 ? 7 :
 								(x < 100000000 ? 8 :
 									(x < 1000000000 ? 9 :
-										10)))))))));
+										(x < 10000000000 ? 10 : -1))))))))));
 }
 
 int utilities::get_num_digits(double x)

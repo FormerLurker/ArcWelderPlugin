@@ -55,7 +55,6 @@ public:
 	static double get_percent_change(int v1, int v2);
 	static double get_percent_change(double v1, double v2);
 	static std::string get_percent_change_string(int v1, int v2, int precision);
-
 	static int get_num_digits(int x);
 	static int get_num_digits(double x);
 

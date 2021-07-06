@@ -36,7 +36,7 @@
 #define DEFAULT_XYZ_TOLERANCE 0.001
 #define DEFAULT_E_PRECISION 5
 #define ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT 0.05  // one percent
-
+#define DEFAULT_MAX_GCODE_LENGTH 0 // the maximum gcode length ( < 1 = unlimited)
 struct point
 {
 public:
@@ -53,9 +53,13 @@ public:
 struct printer_point : point
 {
 public:
-	printer_point() :point(0, 0, 0), e_relative(0), distance(0) {}
-	printer_point(double x, double y, double z, double e_relative, double distance) :point(x,y,z), e_relative(e_relative), distance(distance) {}
+	printer_point() :point(0, 0, 0), e_relative(0), distance(0), is_extruder_relative(false), e_offset(0), f(0) {}
+	printer_point(double x, double y, double z, double e_offset, double e_relative, double f, double distance, bool is_extruder_relative)
+		: point(x,y,z), e_offset(e_offset), e_relative(e_relative), f(f), distance(distance), is_extruder_relative(is_extruder_relative) {}
+	bool is_extruder_relative;
+	double e_offset;
 	double e_relative;
+	double f;
 	double distance;
 };
 
@@ -164,8 +168,8 @@ struct arc : circle
 	double polar_start_theta;
 	double polar_end_theta;
 	double max_deviation;
-	point start_point;
-	point end_point;
+	printer_point start_point;
+	printer_point end_point;
 	DirectionEnum direction;
 	double get_i() const;
 	double get_j() const;
@@ -185,9 +189,9 @@ struct arc : circle
 	private:
 		static bool try_create_arc(
 			const circle& c,
-			const point& start_point,
-			const point& mid_point,
-			const point& end_point,
+			const printer_point& start_point,
+			const printer_point& mid_point,
+			const printer_point& end_point,
 			arc& target_arc,
 			double approximate_length,
 			double resolution = DEFAULT_RESOLUTION_MM,

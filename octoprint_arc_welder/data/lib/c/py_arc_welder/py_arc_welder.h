@@ -31,49 +31,32 @@
 #else
 #include <Python.h>
 #endif
+
+struct py_gcode_arc_args : arc_welder_args {
+	py_gcode_arc_args() : arc_welder_args() {
+		log_level = INFO;
+		py_progress_callback = NULL;
+		guid = "";
+
+	};
+	py_gcode_arc_args(std::string source_path, std::string target_path, logger* log, std::string progress_guid, PyObject* progress_callback) : arc_welder_args(source_path, target_path, log) {
+		guid = progress_guid;
+		py_progress_callback = progress_callback;
+	};
+
+	static bool parse_args(PyObject* py_args, py_logger* p_py_logger, py_gcode_arc_args& args, PyObject** py_progress_callback);
+	int log_level;
+	std::string guid;
+	PyObject* py_progress_callback;
+};
+
 class py_arc_welder : public arc_welder
 {
 public:
-	py_arc_welder(
-		std::string guid,
-		std::string source_path, 
-		std::string target_path, 
-		py_logger* logger, 
-		double resolution_mm, 
-		double path_tolerance_percent,
-		double max_radius,
-		int min_arc_segments,
-		double mm_per_arc_segment,
-		bool g90_g91_influences_extruder,
-		bool allow_3d_arcs,
-		bool allow_travel_arcs,
-		bool allow_dynamic_precision,
-		unsigned char default_xyz_precision,
-		unsigned char default_e_precision,
-		double extrusion_rate_variance_percent,
-		int buffer_size, 
-		PyObject* py_progress_callback
-		): arc_welder(
-			source_path, 
-			target_path, 
-			logger, 
-			resolution_mm, 
-			path_tolerance_percent,
-			max_radius,
-			min_arc_segments,
-			mm_per_arc_segment,
-			g90_g91_influences_extruder,
-			allow_3d_arcs,
-			allow_travel_arcs,
-			allow_dynamic_precision,
-			default_xyz_precision,
-			default_e_precision,
-			extrusion_rate_variance_percent,
-			buffer_size,
-			NULL
-  ){
-		guid_ = guid;
-		py_progress_callback_ = py_progress_callback;
+	py_arc_welder(py_gcode_arc_args args): arc_welder( (arc_welder_args)args)
+  {
+		guid_ = args.guid;
+		py_progress_callback_ = args.py_progress_callback;
 	}
 	virtual ~py_arc_welder() {
 		

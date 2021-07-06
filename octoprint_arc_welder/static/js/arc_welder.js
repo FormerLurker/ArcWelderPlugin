@@ -829,12 +829,20 @@ $(function () {
         self.statistics_source_file_total_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_target_file_total_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_segment_statistics_text = ko.observable();
+        self.statistics_total_travel_count_reduction_percent = ko.observable().extend({arc_welder_numeric: 1});
+        self.statistics_source_file_total_travel_length = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_target_file_total_travel_length = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_source_file_total_travel_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_target_file_total_travel_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_segment_travel_statistics_text = ko.observable();
         self.statistics_seconds_elapsed = ko.observable().extend({arc_welder_timer: {format:"long"}});
         self.statistics_gcodes_processed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_lines_processed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_points_compressed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_arcs_created = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_num_firmware_compensations = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_num_gcode_length_exceptions = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_arcs_aborted_by_flowrate = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_source_file_size = ko.observable().extend({arc_welder_file_size: 1});
         self.statistics_source_file_position = ko.observable();
         self.statistics_target_file_size = ko.observable().extend({arc_welder_file_size: 1});
@@ -851,6 +859,8 @@ $(function () {
         self.progress_seconds_remaining = ko.observable().extend({arc_welder_timer: {format:"estimate"}});
         self.progress_arcs_created = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.progress_num_firmware_compensations = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.progress_num_gcode_length_exceptions = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.progress_arcs_aborted_by_flowrate = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.progress_points_compressed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.progress_source_file_size = ko.observable().extend({arc_welder_file_size: 1});
         self.progress_target_file_size = ko.observable().extend({arc_welder_file_size: 1});
@@ -862,7 +872,9 @@ $(function () {
         self.progress_source_file_total_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
         self.progress_target_file_total_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
         self.progress_total_count_reduction_percent = ko.observable(0).extend({arc_welder_numeric: 1});
-
+        self.progress_source_file_total_travel_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
+        self.progress_target_file_total_travel_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
+        self.progress_total_travel_count_reduction_percent = ko.observable(0).extend({arc_welder_numeric: 1});
         /* Firmware Observables */
         self.firmware_info = new ArcWelder.FirmwareViewModel()
         self.is_processing = ko.observable(false);
@@ -1007,20 +1019,34 @@ $(function () {
             return default_precision;
         };
 
-
-        self.progress_firmware_compensation_percent = ko.pureComputed(function(){
-            var arcs_created = self.progress_arcs_created();
-            var num_firmware_compensations = self.progress_num_firmware_compensations();
-            var total = arcs_created + num_firmware_compensations;
-            return ArcWelder.getPercentChange(arcs_created, total);
-        }).extend({arc_welder_numeric: 1});
-
-        self.statistics_firmware_compensation_percent = ko.pureComputed(function(){
-            var arcs_created = self.statistics_arcs_created();
-            var num_firmware_compensations = self.statistics_num_firmware_compensations();
-            var total = arcs_created + num_firmware_compensations;
-            return ArcWelder.getPercentChange(arcs_created, total);
-        }).extend({arc_welder_numeric: 1});
+        self.max_gcode_length_string = ko.pureComputed(function(){
+            var max_gcode_length_string = "Unlimited";
+            var max_gcode_length = self.plugin_settings.max_gcode_length();
+            if (max_gcode_length && max_gcode_length > 0) {
+                max_gcode_length_string = max_gcode_length.toString();
+                if (max_gcode_length < 55)
+                {
+                    max_gcode_length_string += " (values below 55 are not recommended)"
+                }
+            }
+            return max_gcode_length_string;
+        });
+        self.max_radius_mm_string = ko.pureComputed(function(){
+            var max_radius_mm_string = "Default";
+            var max_radius_mm = self.plugin_settings.max_radius_mm();
+            if (max_radius_mm && max_radius_mm > 0) {
+                max_radius_mm_string = max_radius_mm.toString() + "mm";
+                if (max_radius_mm > 9999)
+                {
+                    max_radius_mm_string += " (values above 9999 are not recommended)"
+                }
+                else if (max_radius_mm < 999)
+                {
+                    max_radius_mm_string += " (values below 999 are not recommended)"
+                }
+            }
+            return max_radius_mm_string;
+        });
 
         self.file_processing_setting_name = ko.pureComputed(function(){
             return ArcWelder.getOptionNameForValue(
@@ -1179,12 +1205,20 @@ $(function () {
                 self.statistics_source_file_total_count(statistics.source_file_total_count);
                 self.statistics_target_file_total_count(statistics.target_file_total_count);
                 self.statistics_segment_statistics_text(statistics.segment_statistics_text);
+                self.statistics_total_travel_count_reduction_percent(statistics.total_travel_count_reduction_percent);
+                self.statistics_source_file_total_travel_length(statistics.source_file_total_travel_length);
+                self.statistics_target_file_total_travel_length(statistics.target_file_total_travel_length);
+                self.statistics_source_file_total_travel_count(statistics.source_file_total_travel_count);
+                self.statistics_target_file_total_travel_count(statistics.target_file_total_travel_count);
+                self.statistics_segment_travel_statistics_text(statistics.segment_travel_statistics_text);
                 self.statistics_seconds_elapsed(statistics.seconds_elapsed);
                 self.statistics_gcodes_processed(statistics.gcodes_processed);
                 self.statistics_lines_processed(statistics.lines_processed);
                 self.statistics_points_compressed(statistics.points_compressed);
                 self.statistics_arcs_created(statistics.arcs_created);
                 self.statistics_num_firmware_compensations(statistics.num_firmware_compensations);
+                self.statistics_num_gcode_length_exceptions(statistics.num_gcode_length_exceptions);
+                self.statistics_arcs_aborted_by_flowrate(statistics.arcs_aborted_by_flowrate);
                 self.statistics_source_file_size(statistics.source_file_size);
                 self.statistics_source_file_position(statistics.source_file_position);
                 self.statistics_target_file_size(statistics.target_file_size);
@@ -1349,6 +1383,8 @@ $(function () {
             self.progress_seconds_remaining(progress.seconds_remaining);
             self.progress_arcs_created(progress.arcs_created);
             self.progress_num_firmware_compensations(progress.num_firmware_compensations);
+            self.progress_num_gcode_length_exceptions(progress.num_gcode_length_exceptions);
+            self.progress_arcs_aborted_by_flowrate(progress.arcs_aborted_by_flowrate);
             self.progress_points_compressed(progress.points_compressed);
             self.progress_compression_ratio(progress.compression_ratio);
             self.progress_compression_percent(progress.compression_percent);
@@ -1359,6 +1395,9 @@ $(function () {
             self.progress_source_file_total_count(progress.source_file_total_count);
             self.progress_target_file_total_count(progress.target_file_total_count);
             self.progress_total_count_reduction_percent(progress.total_count_reduction_percent);
+            self.progress_total_travel_count_reduction_percent(progress.total_travel_count_reduction_percent);
+            self.progress_source_file_total_travel_count(progress.source_file_total_travel_count);
+            self.progress_target_file_total_travel_count(progress.target_file_total_travel_count);
         }
 
         self.getPreprocessingTasks = function() {

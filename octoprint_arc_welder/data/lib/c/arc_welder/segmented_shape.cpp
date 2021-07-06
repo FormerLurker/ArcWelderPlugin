@@ -359,7 +359,7 @@ bool circle::is_over_deviation(const array_list<printer_point>& points, const do
       double distance = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, center.x, center.y);
       if (std::fabs(distance - radius) > resolution_mm)
       {
-        return true;
+       return true;
       }
     }
   }
@@ -380,9 +380,9 @@ double arc::get_j() const
 
 bool arc::try_create_arc(
   const circle& c,
-  const point& start_point,
-  const point& mid_point,
-  const point& end_point,
+  const printer_point& start_point,
+  const printer_point& mid_point,
+  const printer_point& end_point,
   arc& target_arc,
   double approximate_length,
   double resolution,

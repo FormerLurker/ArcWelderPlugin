@@ -29,34 +29,18 @@ struct unwritten_command
 {
 	unwritten_command() {
 		is_extruder_relative = false;
-		e_relative = 0;
-		offset_e = 0;
-		extrusion_length = 0;
-		is_g1_g2 = false;
+		length = 0;
+		is_g0_g1 = false;
 	}
-	unwritten_command(parsed_command &cmd, bool is_relative, double command_length) {
-		is_extruder_relative = is_relative;
-		is_g1_g2 = cmd.command == "G0" || cmd.command == "G1";
-		gcode = cmd.gcode;
-		comment = cmd.comment;
-		extrusion_length = command_length;
+	unwritten_command(parsed_command &cmd, bool is_relative, bool is_travel, double command_length) 
+		: is_extruder_relative(is_relative), is_travel(is_travel), is_g0_g1(cmd.command == "G0" || cmd.command == "G1"), gcode(cmd.gcode), comment(cmd.comment), length(command_length)
+	{
+
 	}
-	/*
-	unwritten_command(position* p, double command_length) {
-	  
-		e_relative = p->get_current_extruder().e_relative;
-		offset_e = p->get_current_extruder().get_offset_e();
-		is_extruder_relative = p->is_extruder_relative;
-		is_g1_g2 = p->command.command == "G0" || p->command.command == "G1";
-		gcode = p->command.gcode;
-		comment = p->command.comment;
-		extrusion_length = command_length;
-	}	*/
-	bool is_g1_g2;
+	bool is_g0_g1;
 	bool is_extruder_relative;
-	double e_relative;
-	double offset_e;
-	double extrusion_length;
+	bool is_travel;
+	double length;
 	std::string gcode;
 	std::string comment;
 

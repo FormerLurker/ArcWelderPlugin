@@ -57,9 +57,23 @@ void logger::set_log_level_by_value(const int level_value)
 		logger_levels_[type_index] = log_level;
 	}
 }
+
 void logger::set_log_level(const int logger_type, const int log_level)
 {
 	logger_levels_[logger_type] = log_level;
+}
+std::string logger::get_log_level_name(std::string logger_name)
+{
+	std::string log_level_name = "UNKNOWN";
+	for (int type_index = 0; type_index < num_loggers_; type_index++)
+	{
+		if (logger_names_[type_index] == logger_name)
+		{
+			log_level_name = log_level_names[logger_levels_[type_index]];
+			break;
+		}
+	}
+	return log_level_name;
 }
 
 void logger::set_log_level(const int log_level)
