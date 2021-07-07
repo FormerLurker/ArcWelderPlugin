@@ -157,12 +157,11 @@
                                         <input id="arc_welder_max_gcode_length" class="input-small" required="true" type="number" min="0" max="255"
                                                step="1"
                                                data-bind="value: plugin_settings().max_gcode_length">
-                                        <span class="add-on">decimals</span>
+                                        <span class="add-on" data-bind="text: (plugin_settings().max_gcode_length() > 0 ? 'characters' : 'unlimited')"></span>
                                     </div>
                                     <a class="arc_welder_help" data-help-url="settings.max_gcode_length.md"
                                        data-help-title="Max Gcode Length"></a>
                                 </div>
-                                <p><span class="label label-important">Warning</span>0=Unlimited. Values below 55 are not recommended.</p>
                             </div>
                             <div class="control-group">
                                 <label class="control-label" for="arc_welder_file_processing">
@@ -326,6 +325,20 @@
                                         Enabled
                                         <a class="arc_welder_help" data-help-url="settings.g90_g91_influences_extruder.md"
                                        data-help-title="G90/G91 Influences Extruder"></a>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="control-group" data-bind="visible: plugin_settings().use_octoprint_settings()">
+                                <label class="control-label"><strong>G90/G91
+                                    Influence Extruder</strong></label>
+                                <div class="controls">
+                                    <label class="checkbox">
+                                        <input class="input-text" type="checkbox"
+                                               disabled
+                                               data-bind="checked: settings.feature_g90InfluencesExtruder">
+                                        Enabled - <i>from Octoprint Settings->Features</i>
+                                        <a class="arc_welder_help" data-help-url="settings.octoprint.g90_influences_extruder.md"
+                                       data-help-title="G90 Influences Extruder - Octoprint Setting"></a>
                                     </label>
                                 </div>
                             </div>
