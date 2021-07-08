@@ -639,12 +639,19 @@ $(function () {
 
                 if (!g90_influences_extruder_setting_correct)
                 {
-                    if(g90_g91_influences_extruder){
-                        errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be ENABLED, but it is disabled.  Edit the Arc Welder settings, enable the G90/G91 Influences Extruder setting, and run the firmware check again.");
+                    var correct_setting = "DISABLED";
+                    if(g90_g91_influences_extruder) {
+                        correct_setting = "ENABLED";
                     }
-                    else{
-                        errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be DISABLED, but it is enabled.  Edit the Arc Welder settings, disable the G90/G91 Influences Extruder setting, and run the firmware check again.");
+
+                    var setting_location = "Edit the Arc Welder setting 'G90/G91 Influences Extruder'";
+                    if (self.use_octoprint_settings()) {
+                        setting_location = "Edit the Ocotprint feature setting 'G90/G91 overrides relative extruder mode'"
                     }
+
+                    var error_string = "Your firmware requires the 'G90/G91 Influences Extruder' setting to be " + correct_setting + ".  " + setting_location + ", set the value to " + correct_setting + ", and run the firmware check again.";
+                    errors.push(error_string);
+
                 }
                 if (allow_3d_arcs && g2_g3_z_parameter_supported===false)
                 {
@@ -655,20 +662,29 @@ $(function () {
             return errors;
         });
 
+        self.use_octoprint_settings = ko.pureComputed(function() {
+            return ArcWelder.Tab.plugin_settings.use_octoprint_settings();
+        });
+
+        self.g90_influences_extruder_setting = ko.pureComputed(function() {
+            var g90_g91_influences_extruder_plugin = ArcWelder.Tab.plugin_settings.g90_g91_influences_extruder();
+            var g90_g91_influences_extruder_octoprint = ArcWelder.Tab.octoprint_settings.feature.g90InfluencesExtruder();
+            if (self.use_octoprint_settings())
+            {
+                return g90_g91_influences_extruder_octoprint;
+            }
+            return g90_g91_influences_extruder_plugin;
+        });
+
         self.g90_influences_extruder_setting_correct = ko.pureComputed(function(){
             var g90_g91_influences_extruder_firmware = self.g90_g91_influences_extruder();
-            if (g90_g91_influences_extruder_firmware !== null)
+            var g90_g91_influences_extruder_current = self.g90_influences_extruder_setting();
+
+            if (
+                g90_g91_influences_extruder_firmware !== null
+                && g90_g91_influences_extruder_firmware != g90_g91_influences_extruder_current)
             {
-                // Get the current setting
-                g90_g91_influences_extruder_current = ArcWelder.Tab.plugin_settings.g90_g91_influences_extruder();
-                if (ArcWelder.Tab.plugin_settings.use_octoprint_settings())
-                {
-                    g90_g91_influences_extruder_current = ArcWelder.Tab.octoprint_settings.feature.g90InfluencesExtruder();
-                }
-                if (g90_g91_influences_extruder_firmware !=  g90_g91_influences_extruder_current)
-                {
-                    return false;
-                }
+                return false;
             }
             return true;
         });
