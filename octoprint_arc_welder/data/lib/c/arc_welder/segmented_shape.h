@@ -25,7 +25,6 @@
 #pragma once
 #include <string>
 #include <limits>
-#define PI_DOUBLE 3.14159265358979323846264338327950288
 
 #include <list> 
 #include "utilities.h"
@@ -104,7 +103,7 @@ struct vector : point
 	
 };
 
-#define DEFAULT_MAX_RADIUS_MM 10000.0 // 10m
+#define DEFAULT_MAX_RADIUS_MM 9999.0 // 9.999m
 struct circle {
 	circle() {
 		center.x = 0;

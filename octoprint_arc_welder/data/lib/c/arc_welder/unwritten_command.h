@@ -31,13 +31,15 @@ struct unwritten_command
 		is_extruder_relative = false;
 		length = 0;
 		is_g0_g1 = false;
+		is_g2_g3 = false;
 	}
 	unwritten_command(parsed_command &cmd, bool is_relative, bool is_travel, double command_length) 
-		: is_extruder_relative(is_relative), is_travel(is_travel), is_g0_g1(cmd.command == "G0" || cmd.command == "G1"), gcode(cmd.gcode), comment(cmd.comment), length(command_length)
+		: is_extruder_relative(is_relative), is_travel(is_travel), is_g0_g1(cmd.command == "G0" || cmd.command == "G1"), is_g2_g3(cmd.command == "G2" || cmd.command == "G3"), gcode(cmd.gcode), comment(cmd.comment), length(command_length)
 	{
 
 	}
 	bool is_g0_g1;
+	bool is_g2_g3;
 	bool is_extruder_relative;
 	bool is_travel;
 	double length;

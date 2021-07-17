@@ -55,7 +55,7 @@ You can also convert existing files from the file manager by clicking a new icon
 
 When a new file is queued, it will display within the collapsable *Processor Tasks* section within the *Arc Welder* tab.  You can cancel any queued tasks by clicking on the red X icon.  When the file begins processing, a progress bar will display along with a bunch of cool statistics about the conversion process.  If your file is marked for printing (see the *print after processing* setting below), a printer icon will appear next to it.  Don't worry, Arc Welder will not print any queued files if a print starts while it is processing or queued.  In fact, to protect your print, arc welder will automatically cancel and re-queue any files that are currently processing.  You can also cancel a file that is currently processing by clicking on the red X next to its name.
 
-Once a file has been converted, the *Arc Welder* tab will show detailed statistics within the tab about the conversion, including before/after file sizes, compression information, before and after segment length statistics, and more.  You can view these statistics at any time by selecting a welded file or by clicking the statistics icon in the file manager.
+Once a file has been converted, the *Arc Welder* tab will show detailed statistics within the tab about the conversion, including before/after file sizes, compression information, before and after extrusion and travel statistics, and more.  You can view these statistics at any time by selecting a welded file or by clicking the statistics icon in the file manager.
 
 ### Settings and Setup
 

@@ -28,6 +28,7 @@
 // Had to increase the zero tolerance because prusa slicer doesn't always 
 // retract enough while wiping.
 #define ZERO_TOLERANCE 0.000005
+#define PI_DOUBLE 3.14159265358979323846264338327950288
 
 class utilities{
 public:
@@ -41,6 +42,7 @@ public:
 	
 	static double get_cartesian_distance(double x1, double y1, double x2, double y2);
 	static double get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2);
+	static double get_arc_distance(double x1, double y1, double z1, double x2, double y2, double z2, double i, double j, double r, bool is_clockwise);
 	/*  Todo:  Implement for gcode comment processor
 	static bool case_insensitive_compare_char(char& c1, char& c2);
 	static bool case_insensitive_compare(std::string& str1, std::string& str2);
@@ -57,6 +59,7 @@ public:
 	static std::string get_percent_change_string(int v1, int v2, int precision);
 	static int get_num_digits(int x);
 	static int get_num_digits(double x);
+	static int get_num_digits(double x, int precision);
 
 	static std::vector<std::string> splitpath(const std::string& str);
 	static bool get_file_path(const std::string& file_path, std::string& path);

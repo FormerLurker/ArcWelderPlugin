@@ -203,7 +203,9 @@ void py_logger::log(const int logger_type, const int log_level, const std::strin
 			return;
 		}
 	}
-	PyObject* pyMessage = gcode_arc_converter::PyBytesOrString_FromString(message);
+	//PyObject* pyMessage = gcode_arc_converter::PyBytesOrString_FromString(message);
+	PyObject* pyMessage = gcode_arc_converter::PyUnicode_SafeFromString(message);
+	
 	if (pyMessage == NULL)
 	{
 		std::cout << "Unable to convert the log message '" << message.c_str() << "' to a PyString/Unicode message.\r\n";

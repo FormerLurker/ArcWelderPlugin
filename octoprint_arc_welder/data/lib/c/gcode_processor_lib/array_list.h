@@ -35,7 +35,7 @@ public:
 		count_ = 0;
 		items_ = new T[max_size_];
 	}
-	
+
 	array_list(int max_size)
 	{
 		auto_grow_ = false;
@@ -44,11 +44,11 @@ public:
 		count_ = 0;
 		items_ = new T[max_size];
 	}
-	
+
 	virtual ~array_list() {
 		delete[] items_;
 	}
-	
+
 	void resize(int max_size)
 	{
 		T* new_items = new T[max_size];
@@ -71,7 +71,7 @@ public:
 		}
 		return index_position;
 	}
-	
+
 	void push_front(T object)
 	{
 		if (count_ == max_size_)
@@ -93,7 +93,7 @@ public:
 		count_++;
 		items_[front_index_] = object;
 	}
-	
+
 	void push_back(T object)
 	{
 		if (count_ == max_size_)
@@ -110,7 +110,7 @@ public:
 		items_[pos] = object;
 		count_++;
 	}
-	
+
 	T& pop_front()
 	{
 		if (count_ == 0)
@@ -135,7 +135,7 @@ public:
 		{
 			throw std::exception();
 		}
-		int pos = get_index_position(count_-1);
+		int pos = get_index_position(count_ - 1);
 		count_--;
 		return items_[pos];
 	}
@@ -151,23 +151,23 @@ public:
 		int opos = get_index_position(index);
 		return items_[opos];
 	}
-	
+
 	int count() const
 	{
 		return count_;
 	}
-	
+
 	int get_max_size() const
 	{
 		return max_size_;
 	}
-	
+
 	void clear()
 	{
 		count_ = 0;
 		front_index_ = 0;
 	}
-	
+
 	void copy(const array_list<T>& source)
 	{
 		if (max_size_ < source.max_size_)

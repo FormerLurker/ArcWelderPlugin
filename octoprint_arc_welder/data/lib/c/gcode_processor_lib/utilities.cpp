@@ -87,6 +87,30 @@ double utilities::get_cartesian_distance(double x1, double y1, double z1, double
 	return std::sqrt(dist_squared);
 }
 
+double utilities::get_arc_distance(double x1, double y1, double z1, double x2, double y2, double z2, double i, double j, double r, bool is_clockwise)
+{
+	double center_x = x1 - i;
+	double center_y = y1 - j;
+	double radius = hypot(i, j);
+	double z_dist = z2-z1;
+	double rt_x = x2 - center_x;
+	double rt_y = y2 - center_y;
+	double angular_travel_total = std::atan2(i * rt_y - j * rt_x, i * rt_x + j * rt_y);
+	if (angular_travel_total < 0) { angular_travel_total += (double)(2.0 * PI_DOUBLE); }
+	// Adjust the angular travel if the direction is clockwise
+	if (is_clockwise) { angular_travel_total -= (float)(2 * PI_DOUBLE); }
+	// Full circle fix.
+	if (x1 == x2 && y1 == y2 && angular_travel_total == 0)
+	{
+		angular_travel_total += (float)(2 * PI_DOUBLE);
+	}
+	
+	// 20200417 - FormerLurker - rename millimeters_of_travel to millimeters_of_travel_arc to better describe what we are
+	// calculating here
+	return hypot(angular_travel_total * radius, std::fabs(z_dist));
+
+}
+
 std::string utilities::to_string(double value)
 {
 	std::ostringstream os;
@@ -218,6 +242,14 @@ int utilities::get_num_digits(int x)
 								(x < 100000000 ? 8 :
 									(x < 1000000000 ? 9 :
 										(x < 10000000000 ? 10 : -1))))))))));
+}
+
+int utilities::get_num_digits(double x, int precision)
+{
+	return get_num_digits(
+		(int) std::ceil(x * std::pow(10, (double)precision) - .4999999999999)
+		/ std::pow(10, (double)precision)
+	);
 }
 
 int utilities::get_num_digits(double x)

@@ -368,20 +368,42 @@ int segmented_arc::get_shape_gcode_length()
 
   double i = current_arc_.get_i();
   double j = current_arc_.get_j();
-  
-  int num_spaces = 3 + (has_z ? 1 : 0) + (has_e ? 1 : 0) + (has_f ? 1 : 0);
+
+
+  int num_spaces = 4 + (has_z ? 1 : 0) + (has_e ? 1 : 0) + (has_f ? 1 : 0);
   int num_decimal_points = 4 + (has_z ? 1 : 0) + (has_e ? 1 : 0);  // note f has no decimal point
-  int num_decimals = xyz_precision * (4 + (has_z ? 1 : 0) + (has_e ? 1 : 0)); // Note f is an int
+  int num_decimals = xyz_precision * (4 + (has_z ? 1 : 0)) + e_precision * (has_e ? 1 : 0); // Note f is an int
   int num_digits = (
-    utilities::get_num_digits(current_arc_.end_point.x) +
-    utilities::get_num_digits(current_arc_.end_point.y) +
-    (has_z ? utilities::get_num_digits(current_arc_.end_point.z) : 0) +
-    utilities::get_num_digits(i) +
-    utilities::get_num_digits(j) +
-    (has_f ? utilities::get_num_digits(f) : 0)
+    utilities::get_num_digits(current_arc_.end_point.x, xyz_precision) +
+    utilities::get_num_digits(current_arc_.end_point.y, xyz_precision) +
+    (has_z ? utilities::get_num_digits(current_arc_.end_point.z, xyz_precision) : 0) +
+    (has_e ? utilities::get_num_digits(e, e_precision) : 0) +
+    utilities::get_num_digits(i, xyz_precision) +
+    utilities::get_num_digits(j, xyz_precision) +
+    (has_f ? utilities::get_num_digits(f,0) : 0)
   );
+  int num_minus_signs = (
+    (current_arc_.end_point.x < 0 ? 1 : 0) + 
+    (current_arc_.end_point.y < 0 ? 1 : 0) +
+    (i < 0 ? 1 : 0) +
+    (j < 0 ? 1 : 0) +
+    (has_e && e < 0 ? 1 : 0) +
+    (has_z && current_arc_.end_point.z < 0 ? 1 : 0)
+  );
+
+  int num_parameters = 4 + (has_e ? 1 : 0) + (has_z ? 1: 0) + (has_f ? 1: 0);
   // Return the length of the gcode.
-  return 3 + num_spaces + num_decimal_points + num_decimal_points + num_digits;
+  int gcode_length = 2 + num_spaces + num_decimal_points + num_digits + num_minus_signs + num_decimals + num_parameters;
+  
+  // Keep this around in case we have any future issues with the gcode length calculation
+  #ifdef Debug
+  std::string gcode = get_shape_gcode();
+  if (gcode.length() != gcode_length)
+  {
+    return 9999999; 
+  }
+  #endif
+  return gcode_length;
   
 
 
