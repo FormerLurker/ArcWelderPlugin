@@ -359,8 +359,9 @@ class PreProcessorWorker(threading.Thread):
             for job_guid in guids_to_cancel:
                 removed_task = self.remove_task(job_guid)
                 if removed_task:
-                    self._cancel_callback(removed_task, False)
                     logger.info("Cancelled job with guid %s.", job_guid)
+                    if not removed_task.get("is_cancelled", False):
+                        self._cancel_callback(removed_task, False)
                 else:
                     logger.info("Unable to cancel  job with guid %s.  It may be completed or it may have already been cancelled.", job_guid)
 
@@ -368,8 +369,6 @@ class PreProcessorWorker(threading.Thread):
         is_cancelled = False
         logger.verbose("Progress Received: %s", progress)
         current_task = None
-        # allow other threads to process
-        time.sleep(0.1)
         try:
             with self.r_lock:
                 self._check_for_cancelled_tasks()
@@ -388,7 +387,9 @@ class PreProcessorWorker(threading.Thread):
         except Exception as e:
             logger.exception("An error occurred receiving progress from the py_arc_welder.")
             return False
-
+        finally:
+            # allow other threads to process
+            time.sleep(0.1)
         return not is_cancelled
 
 
