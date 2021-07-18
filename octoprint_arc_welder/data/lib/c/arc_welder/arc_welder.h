@@ -433,6 +433,7 @@ typedef bool(*progress_callback)(arc_welder_progress, logger* p_logger, int logg
 #define DEFAULT_ALLOW_DYNAMIC_PRECISION false
 #define DEFAULT_ALLOW_TRAVEL_ARCS true
 #define DEFAULT_EXTRUSION_RATE_VARIANCE_PERCENT 0.05
+#define DEFAULT_NOTIFICATION_PERIOD_SECONDS 0.5
 
 struct arc_welder_args
 {
@@ -454,7 +455,9 @@ struct arc_welder_args
 		extrusion_rate_variance_percent(DEFAULT_EXTRUSION_RATE_VARIANCE_PERCENT),
 		max_gcode_length(DEFAULT_MAX_GCODE_LENGTH),
 		buffer_size(DEFAULT_GCODE_BUFFER_SIZE),
+		notification_period_seconds(DEFAULT_NOTIFICATION_PERIOD_SECONDS),
 		callback(NULL){};
+		
 
 	arc_welder_args(std::string source, std::string target, logger* ptr_log) : arc_welder_args()
 	{
@@ -479,6 +482,7 @@ struct arc_welder_args
 		double extrusion_rate_variance_percent;
 		int buffer_size;
 		int max_gcode_length;
+		double notification_period_seconds;
 		
 		progress_callback callback;
 
@@ -520,7 +524,8 @@ struct arc_welder_args
 				stream << "\tMax Gcode Length             : " << std::setprecision(0) << max_gcode_length << " characters\n";
 			}
 			stream << "\tLog Level                    : " << log_level_name << "\n";
-			stream << "\tHide Progress Updates        : " << (callback == NULL ? "True" : "False");
+			stream << "\tHide Progress Updates        : " << (callback == NULL ? "True" : "False") << "\n";
+			stream << "\tProgress Notification Period : " << std::setprecision(2) << notification_period_seconds << " seconds";
 			return stream.str();
 		};
 		
@@ -560,6 +565,7 @@ public:
 		double extrusion_rate_variance_percent,
 		int max_gcode_length,
 		int buffer_size,
+		double notification_period_seconds,
 		progress_callback callback);
 
 	arc_welder(arc_welder_args args) : arc_welder(
@@ -580,6 +586,7 @@ public:
 		args.extrusion_rate_variance_percent,
 		args.max_gcode_length,
 		args.buffer_size,
+		args.notification_period_seconds,
 		args.callback
 	){};
 	
@@ -587,10 +594,11 @@ public:
 	void set_logger_type(int logger_type);
 	virtual ~arc_welder();
 	arc_welder_results process();
-	double notification_period_seconds;
+	
 protected:
 	virtual bool on_progress_(const arc_welder_progress& progress);
 private:
+	
 	arc_welder_progress get_progress_(long source_file_position, double start_clock);
 	void add_arcwelder_comment_to_target();
 	void reset();
@@ -617,6 +625,7 @@ private:
 	int points_compressed_;
 	int arcs_created_;
 	int arcs_aborted_by_flow_rate_;
+	double notification_period_seconds_;
 	source_target_segment_statistics segment_statistics_;
 	source_target_segment_statistics travel_statistics_;
 	long get_file_size(const std::string& file_path);

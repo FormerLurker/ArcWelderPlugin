@@ -54,6 +54,7 @@ arc_welder::arc_welder(
   double extrusion_rate_variance_percent,
   int max_gcode_length,
   int buffer_size,
+  double notification_period_seconds,
   progress_callback callback) : current_arc_(
     DEFAULT_MIN_SEGMENTS,
     buffer_size,
@@ -95,10 +96,10 @@ arc_welder::arc_welder(
   allow_travel_arcs_ = allow_travel_arcs;
   allow_dynamic_precision_ = allow_dynamic_precision;
   extrusion_rate_variance_percent_ = extrusion_rate_variance_percent;
-  notification_period_seconds = 1;
   lines_processed_ = 0;
   gcodes_processed_ = 0;
   file_size_ = 0;
+  notification_period_seconds_ = notification_period_seconds;
   last_gcode_line_written_ = 0;
   points_compressed_ = 0;
   arcs_created_ = 0;
@@ -192,7 +193,7 @@ long arc_welder::get_file_size(const std::string& file_path)
 
 double arc_welder::get_next_update_time() const
 {
-  return clock() + (notification_period_seconds * CLOCKS_PER_SEC);
+  return clock() + (notification_period_seconds_ * CLOCKS_PER_SEC);
 }
 
 double arc_welder::get_time_elapsed(double start_clock, double end_clock)

@@ -62,7 +62,8 @@ class PreProcessorWorker(threading.Thread):
         cancel_callback,
         failed_callback,
         success_callback,
-        completed_callback
+        completed_callback,
+        get_cancellations_callback
     ):
         super(PreProcessorWorker, self).__init__()
         self._source_path = os.path.join(data_folder, "source.gcode")
@@ -79,6 +80,7 @@ class PreProcessorWorker(threading.Thread):
         self._failed_callback = failed_callback
         self._success_callback = success_callback
         self._completed_callback = completed_callback
+        self._get_cancellations_callback = get_cancellations_callback
         self._is_processing = False
         self._current_task = None
         self._is_cancelled = False
@@ -86,14 +88,18 @@ class PreProcessorWorker(threading.Thread):
 
     def cancel_all(self):
         with self.r_lock:
+            # cancel the current task if it exists
+            if self._current_task:
+                self._current_task["is_cancelled"] = True
+                self._current_task["is_cancelled_all"] = True
+            # cancel all incoming tasks
             while not self._incoming_task_queue.empty():
                 task = self._incoming_task_queue.get(False)
                 logger.info("Preprocessing of %s has been cancelled.", task["processor_args"]["source_path"])
-                self._cancel_callback(task)
+            # cancel all tasks in the dequeue
             while not len(self._task_deque) == 0:
                 task = self._task_deque.pop()
                 logger.info("Preprocessing of %s has been cancelled.", task["processor_args"]["source_path"])
-                self._cancel_callback(task)
 
     def is_processing(self):
         with self.r_lock:
@@ -128,6 +134,8 @@ class PreProcessorWorker(threading.Thread):
 
     def add_task(self, new_task):
         with self.r_lock:
+            # first check for any tasks to cancel
+            self._check_for_cancelled_tasks()
             results = {
                 "success": False,
                 "error_message": ""
@@ -167,11 +175,11 @@ class PreProcessorWorker(threading.Thread):
         with self.r_lock:
             if self._current_task and self._current_task["guid"] == guid:
                 self._current_task["is_cancelled"] = True
-                return True
+                return self._current_task
             for existing_task in self._task_deque:
                 if existing_task["guid"] == guid:
                     self._task_deque.remove(existing_task)
-                    return True
+                    return existing_task
         return False
 
     # set print_after_processing to False for all tasks
@@ -293,25 +301,26 @@ class PreProcessorWorker(threading.Thread):
 
         results["source_name"] = source_name
         if results.get("is_cancelled", False):
-            cancelled_by_print = False
             if task.get("cancelled_on_print_start", False):
                 # Restore the original source path and reset the target
                 task["processor_args"]["source_path"] = original_source_path
                 task["processor_args"]["target_path"] = ""
                 # need to reset cancelled_on_print_start else it will just cancel over and over
                 task["cancelled_on_print_start"] = False
-                cancelled_by_print = True
                 with self.r_lock:
                     self._task_deque.appendleft(task)
                 logger.info(
                     "Preprocessing of %s has been cancelled automatically because printing has started.  Re-adding "
                     "task to the queue. "
                     , task["processor_args"]["source_path"])
-            else:
+                self._cancel_callback(task, True)
+            elif task.get("is_cancelled_all", False):
                 logger.info(
-                    "Preprocessing of %s has been cancelled by the user."
+                    "Preprocessing of %s has been cancelled via the Cancel All button."
                     , task["processor_args"]["source_path"])
-            self._cancel_callback(task, cancelled_by_print)
+                self._cancel_callback(None, False)
+            else:
+                self._cancel_callback(task, False)
         elif results["success"]:
             logger.info("Preprocessing of %s completed.", task["processor_args"]["source_path"])
             with self.r_lock:
@@ -339,22 +348,43 @@ class PreProcessorWorker(threading.Thread):
                     return existing_task
         return False
 
+    def _check_for_cancelled_tasks(self):
+        cancel_all, guids_to_cancel = self._get_cancellations_callback()
+        cancelled_items = False
+        if cancel_all:
+            logger.info("Cancelling all processing tasks.")
+            self.cancel_all()
+        elif len(guids_to_cancel) > 0:
+            cancelled_items = True
+            for job_guid in guids_to_cancel:
+                removed_task = self.remove_task(job_guid)
+                if removed_task:
+                    self._cancel_callback(removed_task, False)
+                    logger.info("Cancelled job with guid %s.", job_guid)
+                else:
+                    logger.info("Unable to cancel  job with guid %s.  It may be completed or it may have already been cancelled.", job_guid)
+
     def _progress_received(self, progress):
         is_cancelled = False
+        logger.verbose("Progress Received: %s", progress)
+        current_task = None
+        # allow other threads to process
+        time.sleep(0.1)
         try:
             with self.r_lock:
+                self._check_for_cancelled_tasks()
                 # the progress payload will all be in bytes (str for python 2) format.
                 # Make sure everything is in unicode (str for python3) because mixed encoding
                 # messes with things.
                 #encoded_progresss = utilities.dict_encode(progress)
                 #logger.verbose("Progress Received: %s", encoded_progresss)
-                logger.verbose("Progress Received: %s", progress)
+
                 current_task = self._get_task(progress["guid"])
                 is_cancelled = current_task.get("is_cancelled", False)
                 #self._progress_callback(encoded_progresss, current_task)
-                self._progress_callback(progress, current_task)
-                if current_task.get("cancelled_on_print_start", False):
-                    return False
+            self._progress_callback(progress, current_task)
+            if current_task.get("cancelled_on_print_start", False) or is_cancelled:
+                return False
         except Exception as e:
             logger.exception("An error occurred receiving progress from the py_arc_welder.")
             return False

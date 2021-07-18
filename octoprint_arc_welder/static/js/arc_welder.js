@@ -1354,6 +1354,19 @@ $(function () {
                     };
                     PNotifyExtensions.displayPopupForKey(options, ArcWelder.PopupKey("preprocessing-cancelled"), []);
                     break;
+                case "all-preprocessing-cancelled":
+                    var options = {
+                        title: "Arc Welder - All Tasks Cancelled",
+                        text: data.message,
+                        type: "warning",
+                        hide: true,
+                        addclass: "arc-welder",
+                        desktop: {
+                            desktop: true
+                        }
+                    };
+                    PNotifyExtensions.displayPopupForKey(options, ArcWelder.PopupKey("preprocessing-cancelled"), []);
+                    break;
                 case "preprocessing-success":
                     if (self.plugin_settings.notification_settings.show_completed_notification()) {
                         //  Load all stats for the newly processed file
@@ -1404,8 +1417,9 @@ $(function () {
             self.progress_points_compressed(progress.points_compressed);
             self.progress_compression_ratio(progress.compression_ratio);
             self.progress_compression_percent(progress.compression_percent);
-            self.progress_space_saved(progress.source_file_size - progress.target_file_size);
-            self.progress_source_position(progress.source_file_size);
+            self.progress_space_saved(progress.source_file_position - progress.target_file_size);
+            self.progress_source_position(progress.source_file_position);
+            self.progress_source_file_size(progress.source_file_size);
             self.progress_target_file_size(progress.target_file_size);
             self.progress_percent_complete(progress.percent_complete);
             self.progress_source_file_total_count(progress.source_file_total_count);

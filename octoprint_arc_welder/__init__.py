@@ -191,6 +191,11 @@ class ArcWelderPlugin(
         # firmware checker
         self._firmware_checker = None
 
+        # List of processes to cancel
+        self._process_guids_to_cancel = []
+        # flag to cancel all processing
+        self._cancel_all_processing = False
+
     def get_settings_version(self):
         return 2
 
@@ -225,6 +230,7 @@ class ArcWelderPlugin(
             self.preprocessing_failed,
             self.preprocessing_success,
             self.preprocessing_completed,
+            self.preprocessing_cancellations
         )
         self._preprocessor_worker.daemon = True
         logger.info("Starting the Preprocessor worker thread.")
@@ -281,12 +287,10 @@ class ArcWelderPlugin(
             job_guid = request_values.get("guid", "")
             if cancel_all:
                 logger.info("Cancelling all processing tasks.")
-                self._preprocessor_worker.cancel_all()
+                self._cancel_all_processing = True
             else:
                 logger.info("Cancelling job with guid %s.", job_guid)
-                if not self._preprocessor_worker.remove_task(job_guid):
-                    return jsonify({"success": False}, "The task does not exist.  It may have already completed.")
-            self.send_preprocessing_tasks_update()
+                self._process_guids_to_cancel.append(job_guid);
             return jsonify({"success": True})
 
     @octoprint.plugin.BlueprintPlugin.route("/clearLog", methods=["POST"])
@@ -1046,24 +1050,31 @@ class ArcWelderPlugin(
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def preprocessing_cancelled(self, task, auto_cancelled):
-        source_name = task["octoprint_args"]["source_name"]
-        target_name = task["octoprint_args"]["target_name"]
-        if auto_cancelled:
-            message = "Cannot process while printing.  Arc Welding has been cancelled for '{0}'.  The file will be " \
-                      "processed once printing has completed."
-            if task.get("print_after_processing_cancelled", False):
-                message += "  'Print after Processing' has been cancelled for all items to protect your printer."
-        else:
-            message = "Preprocessing has been cancelled for '{0}'."
+        if task is not None:
+            source_name = task["octoprint_args"]["source_name"]
+            target_name = task["octoprint_args"]["target_name"]
+            if auto_cancelled:
+                message = "Cannot process while printing.  Arc Welding has been cancelled for '{0}'.  The file will be " \
+                          "processed once printing has completed."
+                if task.get("print_after_processing_cancelled", False):
+                    message += "  'Print after Processing' has been cancelled for all items to protect your printer."
+            else:
+                message = "Preprocessing has been cancelled for '{0}'."
 
-        message = message.format(source_name)
-        data = {
-            "message_type": "preprocessing-cancelled",
-            "source_name": source_name,
-            "target_name": target_name,
-            "guid": task["guid"],
-            "message": message
-        }
+            message = message.format(source_name)
+            data = {
+                "message_type": "preprocessing-cancelled",
+                "source_name": source_name,
+                "target_name": target_name,
+                "guid": task["guid"],
+                "message": message
+            }
+        else:
+            message = "All preprocessing tasks were cancelled."
+            data = {
+                "message_type": "all-preprocessing-cancelled",
+                "message": message
+            }
         self._plugin_manager.send_plugin_message(self._identifier, data)
         self.send_preprocessing_tasks_update()
 
@@ -1161,6 +1172,13 @@ class ArcWelderPlugin(
             "message": message
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
+
+    def preprocessing_cancellations(self):
+        cancel_all = self._cancel_all_processing
+        guids_to_cancel = self._process_guids_to_cancel
+        self._cancel_all_processing = False
+        self._process_guids_to_cancel = []
+        return cancel_all, guids_to_cancel
 
     def on_event(self, event, payload):
         if event == Events.PRINT_STARTED:

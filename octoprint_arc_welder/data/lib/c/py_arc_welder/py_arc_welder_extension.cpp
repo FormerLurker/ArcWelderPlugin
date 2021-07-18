@@ -198,7 +198,9 @@ extern "C"
 		args.py_progress_callback = py_progress_callback;
 		args.log = p_py_logger;
 		py_arc_welder arc_welder_obj(args);
-		arc_welder_results results = arc_welder_obj.process();
+		arc_welder_results results;
+		results = arc_welder_obj.process();
+		
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
 		p_py_logger->log(GCODE_CONVERSION, INFO, message);
 		Py_XDECREF(py_progress_callback);

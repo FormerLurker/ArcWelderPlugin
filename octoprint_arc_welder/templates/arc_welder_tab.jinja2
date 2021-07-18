@@ -39,6 +39,9 @@
                 </H4>
             </div>
             <div class="span6 text-right">
+                <a title="Cancel All Tasks"
+                   data-bind="click: function(){cancelAllPreprocessing();}, visible: processing_task" style=""><i
+                        class="text-error fa fa-times-circle fa-lg"></i></a>
                 <a title="Open Arc Welder Settings"
                    data-bind="click: function() {ArcWelder.openArcWelderSettings('settings');}" style=""><i
                         class="fa fa-gear fa-lg"></i></a>
@@ -57,7 +60,8 @@
                                 class="fa fa-times text-error fa-lg"></i></a>
                         <span data-bind="visible: processing_task() && processing_task().task.octoprint_args.print_after_processing"
                               title="Will print after processing is completed.">&nbsp;<i class="fa fa-print fa-lg"></i>&nbsp;</span>
-                        <span data-bind="text: processing_task_file_name"></span>
+                        <span data-bind="text: processing_task_file_name"></span><span data-bind="visible: progress_source_file_size() > 0">&nbsp;-&nbsp;<span
+                            data-bind="text: progress_source_file_size.formatted"></span></span>
                     </div>
                 </div>
                 <div class="row-fluid">
