@@ -27,8 +27,6 @@
 #include "utilities.h"
 #include "segmented_shape.h"
 #include <iostream>
-//#include <iomanip>
-//#include <sstream>
 #include <stdio.h>
 #include <cmath>
 

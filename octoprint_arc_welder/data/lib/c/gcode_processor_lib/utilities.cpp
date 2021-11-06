@@ -19,21 +19,30 @@
 // You can contact the author at the following email address: 
 // FormerLurker@pm.me
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "utilities.h"
-#include <cmath>
-#include <sstream>
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
-#include "fpconv.h"
 
-const std::string utilities::WHITESPACE_ = " \n\r\t\f\v";
-const char utilities::GUID_RANGE[] = "0123456789abcdef";
-const bool utilities::GUID_DASHES[] = { 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0 };
+#include "utilities.h"
+
+namespace utilities {
+	const std::string WHITESPACE_ = " \n\r\t\f\v";
+	const char GUID_RANGE[] = "0123456789abcdef";
+	const bool GUID_DASHES[] = { 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0 };
+
+	extern const char PATH_SEPARATOR_ =
+#ifdef _WIN32
+		'\\';
+#else
+		'/';
+#endif
+
+}
 
 bool utilities::is_zero(double x, double tolerance)
 {
-	return std::fabs(x) < tolerance;
+	return fabs(x) < tolerance;
+}
+bool utilities::is_zero(double x)
+{
+	return fabs(x) < ZERO_TOLERANCE;
 }
 
 int utilities::round_up_to_int(double x, double tolerance)
@@ -41,10 +50,21 @@ int utilities::round_up_to_int(double x, double tolerance)
 	return int(x + tolerance);
 }
 
+int utilities::round_up_to_int(double x)
+{
+	return int(x + ZERO_TOLERANCE);
+}
+
 bool utilities::is_equal(double x, double y, double tolerance)
 {
-	double abs_difference = std::fabs(x - y);
+	double abs_difference = fabs(x - y);
 	return abs_difference < tolerance;
+}
+
+bool utilities::is_equal(double x, double y)
+{
+	double abs_difference = fabs(x - y);
+	return abs_difference < ZERO_TOLERANCE;
 }
 
 bool utilities::greater_than(double x, double y, double tolerance)
@@ -52,9 +72,19 @@ bool utilities::greater_than(double x, double y, double tolerance)
 	return x > y && !is_equal(x, y, tolerance);
 }
 
+bool utilities::greater_than(double x, double y)
+{
+	return x > y && !is_equal(x, y);
+}
+
 bool utilities::greater_than_or_equal(double x, double y, double tolerance)
 {
 	return x > y || is_equal(x, y, tolerance);
+}
+
+bool utilities::greater_than_or_equal(double x, double y)
+{
+	return x > y || is_equal(x, y);
 }
 
 bool utilities::less_than(double x, double y, double tolerance)
@@ -62,9 +92,19 @@ bool utilities::less_than(double x, double y, double tolerance)
 	return x < y && !is_equal(x, y, tolerance);
 }
 
+bool utilities::less_than(double x, double y)
+{
+	return x < y && !is_equal(x, y);
+}
+
 bool utilities::less_than_or_equal(double x, double y, double tolerance)
 {
 	return x < y || is_equal(x, y, tolerance);
+}
+
+bool utilities::less_than_or_equal(double x, double y)
+{
+	return x < y || is_equal(x, y);
 }
 
 
@@ -74,7 +114,7 @@ double utilities::get_cartesian_distance(double x1, double y1, double x2, double
 	double xdif = x1 - x2;
 	double ydif = y1 - y2;
 	double dist_squared = xdif * xdif + ydif * ydif;
-	return std::sqrt(dist_squared);
+	return sqrt(dist_squared);
 }
 
 double utilities::get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2)
@@ -84,7 +124,7 @@ double utilities::get_cartesian_distance(double x1, double y1, double z1, double
 	double ydif = y1 - y2;
 	double zdif = z1 - z2;
 	double dist_squared = xdif * xdif + ydif * ydif + zdif * zdif;
-	return std::sqrt(dist_squared);
+	return sqrt(dist_squared);
 }
 
 double utilities::get_arc_distance(double x1, double y1, double z1, double x2, double y2, double z2, double i, double j, double r, bool is_clockwise)
@@ -92,10 +132,10 @@ double utilities::get_arc_distance(double x1, double y1, double z1, double x2, d
 	double center_x = x1 - i;
 	double center_y = y1 - j;
 	double radius = hypot(i, j);
-	double z_dist = z2-z1;
+	double z_dist = z2 - z1;
 	double rt_x = x2 - center_x;
 	double rt_y = y2 - center_y;
-	double angular_travel_total = std::atan2(i * rt_y - j * rt_x, i * rt_x + j * rt_y);
+	double angular_travel_total = atan2(i * rt_y - j * rt_x, i * rt_x + j * rt_y);
 	if (angular_travel_total < 0) { angular_travel_total += (double)(2.0 * PI_DOUBLE); }
 	// Adjust the angular travel if the direction is clockwise
 	if (is_clockwise) { angular_travel_total -= (float)(2 * PI_DOUBLE); }
@@ -104,10 +144,10 @@ double utilities::get_arc_distance(double x1, double y1, double z1, double x2, d
 	{
 		angular_travel_total += (float)(2 * PI_DOUBLE);
 	}
-	
+
 	// 20200417 - FormerLurker - rename millimeters_of_travel to millimeters_of_travel_arc to better describe what we are
 	// calculating here
-	return hypot(angular_travel_total * radius, std::fabs(z_dist));
+	return hypot(angular_travel_total * radius, fabs(z_dist));
 
 }
 
@@ -142,6 +182,33 @@ std::string utilities::trim(const std::string& s)
 	return rtrim(ltrim(s));
 }
 
+std::string utilities::join(const std::string* strings, size_t length, std::string sep)
+{
+	std::string output;
+	for (int i = 0; i < length; i++)
+	{
+		if (i > 0)
+		{
+			output += sep;
+		}
+		output += strings[i];
+	}
+	return output;
+}
+
+std::string utilities::join(const std::vector<std::string> strings, std::string sep)
+{
+	std::string output;
+
+	for (std::vector<std::string>::const_iterator p = strings.begin();
+		p != strings.end(); ++p) {
+		output += *p;
+		if (p != strings.end() - 1)
+			output += sep;
+	}
+	return output;
+}
+
 std::istream& utilities::safe_get_line(std::istream& is, std::string& t)
 {
 	t.clear();
@@ -174,7 +241,7 @@ std::istream& utilities::safe_get_line(std::istream& is, std::string& t)
 	}
 }
 
-std::string utilities::center(std::string input, int width) 
+std::string utilities::center(std::string input, int width)
 {
 	int input_width = (int)input.length();
 	int difference = width - input_width;
@@ -182,7 +249,7 @@ std::string utilities::center(std::string input, int width)
 	{
 		return input;
 	}
-	int left_padding = difference /2;
+	int left_padding = difference / 2;
 	int right_padding = width - left_padding - input_width;
 	return std::string(left_padding, ' ') + input + std::string(right_padding, ' ');
 }
@@ -231,7 +298,7 @@ std::string utilities::get_percent_change_string(int v1, int v2, int precision)
 
 int utilities::get_num_digits(int x)
 {
-	x = abs(x);
+	x = (int)abs(x);
 	return (x < 10 ? 1 :
 		(x < 100 ? 2 :
 			(x < 1000 ? 3 :
@@ -247,14 +314,14 @@ int utilities::get_num_digits(int x)
 int utilities::get_num_digits(double x, int precision)
 {
 	return get_num_digits(
-		(int) std::ceil(x * std::pow(10, (double)precision) - .4999999999999)
-		/ std::pow(10, (double)precision)
+		(int)ceil(x * pow(10, (double)precision) - .4999999999999)
+		/ pow(10, (double)precision)
 	);
 }
 
 int utilities::get_num_digits(double x)
 {
-	return get_num_digits((int) x);
+	return get_num_digits((int)x);
 }
 
 // Nice utility function found here: https://stackoverflow.com/questions/8520560/get-a-file-name-from-a-path
@@ -285,7 +352,7 @@ std::vector<std::string> utilities::splitpath(const std::string& str)
 	return result;
 }
 
-bool utilities::get_file_path(const std::string& file_path, std::string & path)
+bool utilities::get_file_path(const std::string& file_path, std::string& path)
 {
 	std::vector<std::string> file_parts = splitpath(file_path);
 	if (file_parts.size() == 0)
@@ -311,12 +378,12 @@ std::string utilities::create_uuid() {
 bool utilities::get_temp_file_path_for_file(const std::string& file_path, std::string& temp_file_path)
 {
 	temp_file_path = "";
-	if (!utilities::get_file_path(file_path, temp_file_path))
+	if (!get_file_path(file_path, temp_file_path))
 	{
 		return false;
 	}
 	temp_file_path = temp_file_path;
-	temp_file_path += utilities::create_uuid();
+	temp_file_path += create_uuid();
 	temp_file_path += ".tmp";
 	return true;
 }
@@ -331,7 +398,92 @@ double utilities::hypot(double x, double y)
 	}
 	if (y == 0.0) return x;
 	y /= x;
-	return x * std::sqrt(1.0 + y * y);
+	return x * sqrt(1.0 + y * y);
+}
+
+double utilities::atan2(double y, double x)
+{
+	return std::atan2(y, x);
+}
+
+double utilities::atan2f(double y, double x)
+{
+	return std::atan2(y, x);
+}
+
+double utilities::floor(double x)
+{
+	return std::floor(x);
+}
+
+double utilities::floorf(double x)
+{
+	return std::floor(x);
+}
+
+double utilities::ceil(double x)
+{
+	return std::ceil(x);
+}
+
+double utilities::cos(double x)
+{
+	return std::cos(x);
+}
+
+double utilities::sin(double x)
+{
+	return std::sin(x);
+}
+
+double utilities::cosf(double x)
+{
+	return std::cos(x);
+}
+
+double utilities::sinf(double x)
+{
+	return std::sin(x);
+}
+
+double utilities::abs(double x)
+{
+	return std::abs(x);
+}
+
+double utilities::fabs(double x)
+{
+	return std::fabs(x);
+}
+
+double utilities::fabsf(double x)
+{
+	return std::fabs(x);
+}
+
+double utilities::sqrt(double x)
+{
+	return std::sqrt(x);
+}
+
+double utilities::sqrtf(double x)
+{
+	return std::sqrt(x);
+}
+
+double utilities::pow(int e, double x)
+{
+	return std::pow(e, x);
+}
+
+double utilities::min(float x, float y)
+{
+	return std::min(x, y);
+}
+
+void* utilities::memcpy(void* dest, const void* src, size_t n)
+{
+	return std::memcpy(dest, src, n);
 }
 
 std::string utilities::dtos(double x, unsigned char precision)
@@ -339,14 +491,14 @@ std::string utilities::dtos(double x, unsigned char precision)
 	static char buffer[FPCONV_BUFFER_LENGTH];
 	char* p = buffer;
 	buffer[fpconv_dtos(x, buffer, precision)] = '\0';
-	/* This is code that can be used to compare the output of the 
+	/* This is code that can be used to compare the output of the
 		 modified fpconv_dtos function to the ofstream output
 		 Note:  It currently only fails for some checks where the original double does not store
 					  perfectly.  In this case I actually think the dtos output is better than ostringstream!
 	std::ostringstream stream;
 	stream << std::fixed;
 	stream << std::setprecision(precision) << x;
-	
+
 	if (std::string(buffer) != stream.str())
 	{
 		std::cout << std::fixed << "Failed to convert: " << std::setprecision(24) << x << " Precision:" << std::setprecision(0) << static_cast <int> (precision) << " String:" << std::string(buffer) << " Stream:" << stream.str() << std::endl;
@@ -355,7 +507,7 @@ std::string utilities::dtos(double x, unsigned char precision)
 	return buffer;
 }
 /*
-bool utilities::case_insensitive_compare_char(char& c1, char& c2)
+bool case_insensitive_compare_char(char& c1, char& c2)
 {
 	if (c1 == c2)
 		return true;
@@ -366,10 +518,34 @@ bool utilities::case_insensitive_compare_char(char& c1, char& c2)
 
 /*
  * Case Insensitive String Comparision
- 
-bool utilities::case_insensitive_compare(std::string& str1, std::string& str2)
+
+bool case_insensitive_compare(std::string& str1, std::string& str2)
 {
-	return ((str1.size() == str2.size()) &&	std::equal(str1.begin(), str1.end(), str2.begin(), &utilities::case_insensitive_compare_char));
+	return ((str1.size() == str2.size()) &&	std::equal(str1.begin(), str1.end(), str2.begin(), &case_insensitive_compare_char));
 }
 
 */
+
+std::string utilities::replace(std::string subject, const std::string& search, const std::string& replace) {
+	size_t pos = 0;
+	while ((pos = subject.find(search, pos)) != std::string::npos) {
+		subject.replace(pos, search.length(), replace);
+		pos += replace.length();
+	}
+	return subject;
+}
+
+double utilities::rand_range(double min, double max) {
+	double f = (double)std::rand() / RAND_MAX;
+	return min + f * (max - min);
+}
+
+unsigned char utilities::rand_range(unsigned char min, unsigned char max) {
+	double f = (double)std::rand() / RAND_MAX;
+	return static_cast<unsigned char>(static_cast<double>(min) + f * (static_cast<double>(max) - static_cast<double>(min)));
+}
+
+int utilities::rand_range(int min, int max) {
+	double f = (double)std::rand() / RAND_MAX;
+	return static_cast<int>(static_cast<double>(min) + f * (static_cast<double>(max) - static_cast<double>(min)));
+}

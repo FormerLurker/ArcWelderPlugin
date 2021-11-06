@@ -241,7 +241,7 @@ bool py_gcode_arc_args::parse_args(PyObject* py_args, py_logger* p_py_logger, py
     p_py_logger->log(GCODE_CONVERSION, WARNING, message);
   }
   else {
-    args.default_xyz_precision = gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_xyz_precision);
+    args.default_xyz_precision = (unsigned char)gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_xyz_precision);
     if (args.default_xyz_precision < 3)
     {
       std::string message = "ParseArgs - The default XYZ precision received was less than 3, which could cause problems printing arcs.  Setting to 3.";
@@ -265,7 +265,7 @@ bool py_gcode_arc_args::parse_args(PyObject* py_args, py_logger* p_py_logger, py
     p_py_logger->log(WARNING, GCODE_CONVERSION, message);
   }
   else {
-    args.default_e_precision = gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_e_precision);
+    args.default_e_precision = (unsigned char)gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_e_precision);
     if (args.default_e_precision < 3)
     {
       std::string message = "ParseArgs - The default E precision received was less than 3, which could cause extrusion problems.  Setting to 3.";

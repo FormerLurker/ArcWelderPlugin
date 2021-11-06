@@ -20,83 +20,137 @@
 // FormerLurker@pm.me
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#pragma once
+#ifndef UTILITIES_H
+#define UTILITIES_H
 #include <string>
 #include <vector>
 #include <set>
+#include <cmath>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <algorithm>
+#include <cstring>
+#include "fpconv.h"
+
 #define FPCONV_BUFFER_LENGTH 25
 // Had to increase the zero tolerance because prusa slicer doesn't always 
 // retract enough while wiping.
 #define ZERO_TOLERANCE 0.000005
 #define PI_DOUBLE 3.14159265358979323846264338327950288
 
-class utilities{
-public:
-	static bool is_zero(double x, double tolerance = ZERO_TOLERANCE);
-	static int round_up_to_int(double x, double tolerance = ZERO_TOLERANCE);
-	static bool is_equal(double x, double y, double tolerance = ZERO_TOLERANCE);
-	static bool greater_than(double x, double y, double tolerance = ZERO_TOLERANCE);
-	static bool greater_than_or_equal(double x, double y, double tolerance = ZERO_TOLERANCE);
-	static bool less_than(double x, double y, double tolerance = ZERO_TOLERANCE);
-	static bool less_than_or_equal(double x, double y, double tolerance = ZERO_TOLERANCE);
+namespace utilities{
+	extern const std::string WHITESPACE_;
+	extern const char GUID_RANGE[];
+	extern const bool GUID_DASHES[];
+
+	extern const char PATH_SEPARATOR_;
+	bool is_zero(double x, double tolerance);
+	bool is_zero(double x);
+
+	int round_up_to_int(double x, double tolerance);
+	int round_up_to_int(double x);
+
+	bool is_equal(double x, double y, double tolerance);
+
+	bool is_equal(double x, double y);
+
+	bool greater_than(double x, double y, double tolerance);
+
+	bool greater_than(double x, double y);
+
+	bool greater_than_or_equal(double x, double y, double tolerance);
+	bool greater_than_or_equal(double x, double y);
+
+	bool less_than(double x, double y, double tolerance);
+	bool less_than(double x, double y);
+
+	bool less_than_or_equal(double x, double y, double tolerance);
+
+	bool less_than_or_equal(double x, double y);
+
+	double get_cartesian_distance(double x1, double y1, double x2, double y2);
+
+	double get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2);
+
+	double get_arc_distance(double x1, double y1, double z1, double x2, double y2, double z2, double i, double j, double r, bool is_clockwise);
+	std::string to_string(double value);
+
+	std::string to_string(int value);
+	std::string ltrim(const std::string& s);
+
+	std::string rtrim(const std::string& s);
+
+	std::string trim(const std::string& s);
+	std::string join(const std::string* strings, size_t length, std::string sep);
+
+	std::string join(const std::vector<std::string> strings, std::string sep);
+
+	std::istream& safe_get_line(std::istream& is, std::string& t);
+
+	std::string center(std::string input, int width);
+	double get_percent_change(int v1, int v2);
+	double get_percent_change(double v1, double v2);
+	std::string get_percent_change_string(int v1, int v2, int precision);
+
+	int get_num_digits(int x);
+	int get_num_digits(double x, int precision);
+
+	int get_num_digits(double x);
+	// Nice utility function found here: https://stackoverflow.com/questions/8520560/get-a-file-name-from-a-path
+	std::vector<std::string> splitpath(const std::string& str);
+
+	bool get_file_path(const std::string& file_path, std::string& path);
+
+	std::string create_uuid();
+
+	bool get_temp_file_path_for_file(const std::string& file_path, std::string& temp_file_path);
+
+	double hypot(double x, double y);
+
+	double atan2(double y, double x);
+
+	double atan2f(double y, double x);
+
+	double floor(double x);
+
+	double floorf(double x);
+
+	double ceil(double x);
+
+	double cos(double x);
+
+	double sin(double x);
+
+	double cosf(double x);
+
+	double sinf(double x);
+
+	double abs(double x);
+
+	double fabs(double x);
+
+	double fabsf(double x);
+
+	double sqrt(double x);
+
+	double sqrtf(double x);
+
+	double pow(int e, double x);
+
+	double min(float x, float y);
+
+	void* memcpy(void* dest, const void* src, size_t n);
+
+	std::string dtos(double x, unsigned char precision);
 	
-	static double get_cartesian_distance(double x1, double y1, double x2, double y2);
-	static double get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2);
-	static double get_arc_distance(double x1, double y1, double z1, double x2, double y2, double z2, double i, double j, double r, bool is_clockwise);
-	/*  Todo:  Implement for gcode comment processor
-	static bool case_insensitive_compare_char(char& c1, char& c2);
-	static bool case_insensitive_compare(std::string& str1, std::string& str2);
-	*/
-	static std::string to_string(double value);
-	static std::string to_string(int value);
-	static std::string ltrim(const std::string& s);
-	static std::string rtrim(const std::string& s);
-	static std::string trim(const std::string& s);
-	static std::istream& safe_get_line(std::istream& is, std::string& t);
-	static std::string center(std::string input, int width);
-	static double get_percent_change(int v1, int v2);
-	static double get_percent_change(double v1, double v2);
-	static std::string get_percent_change_string(int v1, int v2, int precision);
-	static int get_num_digits(int x);
-	static int get_num_digits(double x);
-	static int get_num_digits(double x, int precision);
+	std::string replace(std::string subject, const std::string& search, const std::string& replace);
 
-	static std::vector<std::string> splitpath(const std::string& str);
-	static bool get_file_path(const std::string& file_path, std::string& path);
-	static bool get_temp_file_path_for_file(const std::string& file_path, std::string& temp_file_path);
-	static std::string create_uuid();
-	// Man I can't wait till I can drop python 2.7 support so I can stop doing everything myself.  s
-	// td::hypot doesn't work for msvc for python 2.7....
-	static double hypot(double x, double y);
-	static std::string dtos(double x, unsigned char precision);
+	double rand_range(double min, double max);
+	unsigned char rand_range(unsigned char min, unsigned char max);
+	int rand_range(int min, int max);
 
-	static double rand_range(double min, double max) {
-		double f = (double)std::rand() / RAND_MAX;
-		return min + f * (max - min);
-	}
 
-	static unsigned char rand_range(unsigned char min, unsigned char max) {
-		double f = (double)std::rand() / RAND_MAX;
-		return static_cast<unsigned char>(static_cast<double>(min) + f * (static_cast<double>(max) - static_cast<double>(min)));
-	}
 
-	static int rand_range(int min, int max) {
-		double f = (double)std::rand() / RAND_MAX;
-		return static_cast<int>(static_cast<double>(min) + f * (static_cast<double>(max) - static_cast<double>(min)));
-	}
-
-	
-protected:
-	static const std::string WHITESPACE_;
-	static const char PATH_SEPARATOR_ =
-#ifdef _WIN32
-		'\\';
-#else
-		'/';
+}
 #endif
-	static const char GUID_RANGE[];
-	static const bool GUID_DASHES[];
-private:
-	utilities();
-
-};
