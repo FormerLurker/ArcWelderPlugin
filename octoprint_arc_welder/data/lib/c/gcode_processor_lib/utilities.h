@@ -38,6 +38,7 @@
 // retract enough while wiping.
 #define ZERO_TOLERANCE 0.000005
 #define PI_DOUBLE 3.14159265358979323846264338327950288
+#define PI_FLOAT 3.14159265358979323846264338327950288f
 
 namespace utilities{
 	extern const std::string WHITESPACE_;
@@ -107,38 +108,74 @@ namespace utilities{
 	bool get_temp_file_path_for_file(const std::string& file_path, std::string& temp_file_path);
 
 	double hypot(double x, double y);
+	
+	float hypotf(float x, float y);
 
 	double atan2(double y, double x);
 
-	double atan2f(double y, double x);
+	float atan2f(float y, float x);
 
 	double floor(double x);
 
-	double floorf(double x);
+	float floorf(float x);
 
 	double ceil(double x);
+	
+	float ceilf(float x);
 
 	double cos(double x);
 
+	float cosf(float x);
+
 	double sin(double x);
 
-	double cosf(double x);
-
-	double sinf(double x);
+	float sinf(float x);
 
 	double abs(double x);
 
+	int abs(int x);
+
+	float absf(float x);
+
 	double fabs(double x);
 
-	double fabsf(double x);
+	float fabsf(float x);
 
 	double sqrt(double x);
 
-	double sqrtf(double x);
+	float sqrtf(float x);
 
 	double pow(int e, double x);
 
-	double min(float x, float y);
+	double pow(int e, int x);
+
+	double min(double x, double y);
+	
+	float minf(float x, float y);
+	
+	double max(double x, double y);
+	
+	float maxf(float x, float y);
+
+	double radians(double x);
+	
+	float radiansf(float x);
+
+	double sq(double x);
+
+	float sqf(float x);
+
+	bool within(double n, double l, double h);
+
+	bool withinf(float n, float l, float h);
+
+	double constrain(double value, double arg_min, double arg_max);
+
+	float constrainf(float value, float arg_min, float arg_max);
+
+	double reciprocal(double x);
+
+	float reciprocalf(float x);
 
 	void* memcpy(void* dest, const void* src, size_t n);
 

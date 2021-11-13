@@ -616,7 +616,7 @@ void gcode_position::update(parsed_command& command, const long file_line_number
 			{
 				double r;
 				r = snapshot_x_max_; // good stand in for radius
-				const double dist = sqrt(p_current_pos->x*p_current_pos->x + p_current_pos->y*p_current_pos->y);
+				const double dist = utilities::sqrt(p_current_pos->x*p_current_pos->x + p_current_pos->y*p_current_pos->y);
 				is_in_bounds = utilities::less_than_or_equal(dist, r);
 
 			}

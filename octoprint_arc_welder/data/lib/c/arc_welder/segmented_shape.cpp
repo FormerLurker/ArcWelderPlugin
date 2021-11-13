@@ -83,7 +83,7 @@ point point::get_midpoint(point p1, point p2)
 
 bool point::is_near_collinear(const point& p1, const point& p2, const point& p3, double tolerance)
 {
-  return fabs((p1.y - p2.y) * (p1.x - p3.x) - (p1.y - p3.y) * (p1.x - p2.x)) <= 1e-9;
+  return utilities::abs((p1.y - p2.y) * (p1.x - p3.x) - (p1.y - p3.y) * (p1.x - p2.x)) <= 1e-9;
 }
 
 double point::cartesian_distance(const point& p1, const point& p2)
@@ -124,7 +124,7 @@ bool segment::get_closest_perpendicular_point(const point& p1, const point& p2, 
 #pragma region Vector Functions
 double vector::get_magnitude()
 {
-  return sqrt(x * x + y * y + z * z);
+  return utilities::sqrt(x * x + y * y + z * z);
 }
 
 double vector::cross_product_magnitude(vector v1, vector v2)
@@ -144,9 +144,9 @@ double vector::cross_product_magnitude(vector v1, vector v2)
 // Users of this code must verify correctness for their application.
 // dot product (3D) which allows vector operations in arguments
 #define dot(u,v)   ((u).x * (v).x + (u).y * (v).y + (u).z * (v).z)
-#define dotxy(u,v)   ((u).x * (v).x + (u).y * (v).y)
-#define norm(v)     sqrt(dot(v,v))     // norm = length of  vector
-#define d(u,v)      norm(u-v)          // distance = norm of difference
+//#define dotxy(u,v)   ((u).x * (v).x + (u).y * (v).y)
+//#define norm(v)     utilities::sqrt(dot(v,v))     // norm = length of  vector
+//#define d(u,v)      norm(u-v)          // distance = norm of difference
 
 #pragma endregion Distance Calculation Source
 
@@ -259,7 +259,7 @@ bool circle::try_create_circle(const array_list<printer_point>& points, const do
 
 double circle::get_polar_radians(const point& p1) const
 {
-  double polar_radians = atan2(p1.y - center.y, p1.x - center.x);
+  double polar_radians = utilities::atan2(p1.y - center.y, p1.x - center.x);
   if (polar_radians < 0)
     polar_radians = (2.0 * PI_DOUBLE) + polar_radians;
   return polar_radians;
@@ -290,7 +290,7 @@ bool circle::get_deviation_sum_squared(const array_list<printer_point>& points, 
         return false;
       }
     }
-    double deviation = std::fabs(distance_from_center - radius);
+    double deviation = utilities::abs(distance_from_center - radius);
     total_deviation += deviation * deviation;
     if (deviation > resolution_mm)
     {
@@ -305,7 +305,7 @@ bool circle::get_deviation_sum_squared(const array_list<printer_point>& points, 
     if (segment::get_closest_perpendicular_point(points[index], points[index + 1], center, point_to_test))
     {
       double distance = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, center.x, center.y);
-      double deviation = std::fabs(distance - radius);
+      double deviation = utilities::abs(distance - radius);
       total_deviation += deviation * deviation;
       if (deviation > resolution_mm)
       {
@@ -346,7 +346,7 @@ bool circle::is_over_deviation(const array_list<printer_point>& points, const do
           return true;
         }
       }
-      if (std::fabs(distance_from_center - radius) > resolution_mm)
+      if (utilities::abs(distance_from_center - radius) > resolution_mm)
       {
         return true;
       }
@@ -357,7 +357,7 @@ bool circle::is_over_deviation(const array_list<printer_point>& points, const do
     if (segment::get_closest_perpendicular_point(current_point, points[index + 1], center, point_to_test))
     {
       double distance = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, center.x, center.y);
-      if (std::fabs(distance - radius) > resolution_mm)
+      if (utilities::abs(distance - radius) > resolution_mm)
       {
        return true;
       }
@@ -457,7 +457,7 @@ bool arc::try_create_arc(
     // see if an arc moving in the opposite direction had the correct length.
 
     // Find the rest of the angle across the circle
-    double test_radians = std::fabs(angle_radians - 2 * PI_DOUBLE);
+    double test_radians = utilities::abs(angle_radians - 2 * PI_DOUBLE);
     // Calculate the length of that arc
     double test_arc_length = c.radius * test_radians;
     if (allow_3d_arcs)
@@ -667,7 +667,7 @@ bool arc::ray_intersects_segment(const point rayOrigin, const point rayDirection
   vector v3 = vector(-rayDirection.y, rayDirection.x, 0);
 
   double dot = dot(v2, v3);
-  if (std::fabs(dot) < 0.000001)
+  if (utilities::abs(dot) < 0.000001)
     return false;
 
   double t1 = vector::cross_product_magnitude(v2, v1) / dot;
@@ -727,7 +727,7 @@ void segmented_shape::set_xyz_precision(unsigned char precision)
 
 void segmented_shape::set_xyz_tolerance_from_precision()
 {
-  xyz_tolerance_ = std::pow(10.0, -1.0 * static_cast<double>(xyz_precision_));
+  xyz_tolerance_ = utilities::pow(10, -1.0 * static_cast<double>(xyz_precision_));
 }
 
 void segmented_shape::reset_precision()

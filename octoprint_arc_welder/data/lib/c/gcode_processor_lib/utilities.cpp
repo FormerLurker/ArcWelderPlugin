@@ -38,11 +38,11 @@ namespace utilities {
 
 bool utilities::is_zero(double x, double tolerance)
 {
-	return fabs(x) < tolerance;
+	return utilities::abs(x) < tolerance;
 }
 bool utilities::is_zero(double x)
 {
-	return fabs(x) < ZERO_TOLERANCE;
+	return utilities::abs(x) < ZERO_TOLERANCE;
 }
 
 int utilities::round_up_to_int(double x, double tolerance)
@@ -57,13 +57,13 @@ int utilities::round_up_to_int(double x)
 
 bool utilities::is_equal(double x, double y, double tolerance)
 {
-	double abs_difference = fabs(x - y);
+	double abs_difference = utilities::abs(x - y);
 	return abs_difference < tolerance;
 }
 
 bool utilities::is_equal(double x, double y)
 {
-	double abs_difference = fabs(x - y);
+	double abs_difference = utilities::abs(x - y);
 	return abs_difference < ZERO_TOLERANCE;
 }
 
@@ -114,7 +114,7 @@ double utilities::get_cartesian_distance(double x1, double y1, double x2, double
 	double xdif = x1 - x2;
 	double ydif = y1 - y2;
 	double dist_squared = xdif * xdif + ydif * ydif;
-	return sqrt(dist_squared);
+	return utilities::sqrt(dist_squared);
 }
 
 double utilities::get_cartesian_distance(double x1, double y1, double z1, double x2, double y2, double z2)
@@ -124,30 +124,30 @@ double utilities::get_cartesian_distance(double x1, double y1, double z1, double
 	double ydif = y1 - y2;
 	double zdif = z1 - z2;
 	double dist_squared = xdif * xdif + ydif * ydif + zdif * zdif;
-	return sqrt(dist_squared);
+	return utilities::sqrt(dist_squared);
 }
 
 double utilities::get_arc_distance(double x1, double y1, double z1, double x2, double y2, double z2, double i, double j, double r, bool is_clockwise)
 {
 	double center_x = x1 - i;
 	double center_y = y1 - j;
-	double radius = hypot(i, j);
+	double radius = utilities::hypot(i, j);
 	double z_dist = z2 - z1;
 	double rt_x = x2 - center_x;
 	double rt_y = y2 - center_y;
-	double angular_travel_total = atan2(i * rt_y - j * rt_x, i * rt_x + j * rt_y);
-	if (angular_travel_total < 0) { angular_travel_total += (double)(2.0 * PI_DOUBLE); }
+	double angular_travel_total = utilities::atan2(i * rt_y - j * rt_x, i * rt_x + j * rt_y);
+	if (angular_travel_total < 0) { angular_travel_total += 2.0 * PI_DOUBLE; }
 	// Adjust the angular travel if the direction is clockwise
-	if (is_clockwise) { angular_travel_total -= (float)(2 * PI_DOUBLE); }
+	if (is_clockwise) { angular_travel_total -= 2.0 * PI_DOUBLE; }
 	// Full circle fix.
 	if (x1 == x2 && y1 == y2 && angular_travel_total == 0)
 	{
-		angular_travel_total += (float)(2 * PI_DOUBLE);
+		angular_travel_total += 2.0 * PI_DOUBLE;
 	}
 
 	// 20200417 - FormerLurker - rename millimeters_of_travel to millimeters_of_travel_arc to better describe what we are
 	// calculating here
-	return hypot(angular_travel_total * radius, fabs(z_dist));
+	return utilities::hypot(angular_travel_total * radius, utilities::abs(z_dist));
 
 }
 
@@ -298,7 +298,7 @@ std::string utilities::get_percent_change_string(int v1, int v2, int precision)
 
 int utilities::get_num_digits(int x)
 {
-	x = (int)abs(x);
+	x = utilities::abs(x);
 	return (x < 10 ? 1 :
 		(x < 100 ? 2 :
 			(x < 1000 ? 3 :
@@ -314,8 +314,8 @@ int utilities::get_num_digits(int x)
 int utilities::get_num_digits(double x, int precision)
 {
 	return get_num_digits(
-		(int)ceil(x * pow(10, (double)precision) - .4999999999999)
-		/ pow(10, (double)precision)
+		(int)utilities::ceil(x * utilities::pow(10, precision) - .4999999999999)
+		/ utilities::pow(10, precision)
 	);
 }
 
@@ -398,7 +398,20 @@ double utilities::hypot(double x, double y)
 	}
 	if (y == 0.0) return x;
 	y /= x;
-	return x * sqrt(1.0 + y * y);
+	return x * utilities::sqrt(1.0 + y * y);
+}
+
+float utilities::hypotf(float x, float y)
+{
+	if (x < 0.0f) x = -x;
+	if (y < 0.0f) y = -y;
+	if (x < y) {
+		float tmp = x;
+		x = y; y = tmp;
+	}
+	if (y == 0.0f) return x;
+	y /= x;
+	return x * utilities::sqrtf(1.0f + y * y);
 }
 
 double utilities::atan2(double y, double x)
@@ -406,9 +419,9 @@ double utilities::atan2(double y, double x)
 	return std::atan2(y, x);
 }
 
-double utilities::atan2f(double y, double x)
+float utilities::atan2f(float y, float x)
 {
-	return std::atan2(y, x);
+	return std::atan2f(y, x);
 }
 
 double utilities::floor(double x)
@@ -416,9 +429,9 @@ double utilities::floor(double x)
 	return std::floor(x);
 }
 
-double utilities::floorf(double x)
+float utilities::floorf(float x)
 {
-	return std::floor(x);
+	return std::floorf(x);
 }
 
 double utilities::ceil(double x)
@@ -426,9 +439,19 @@ double utilities::ceil(double x)
 	return std::ceil(x);
 }
 
+float utilities::ceilf(float x)
+{
+	return std::ceilf(x);
+}
+
 double utilities::cos(double x)
 {
 	return std::cos(x);
+}
+
+float utilities::cosf(float x)
+{
+	return std::cosf(x);
 }
 
 double utilities::sin(double x)
@@ -436,17 +459,22 @@ double utilities::sin(double x)
 	return std::sin(x);
 }
 
-double utilities::cosf(double x)
+float utilities::sinf(float x)
 {
-	return std::cos(x);
-}
-
-double utilities::sinf(double x)
-{
-	return std::sin(x);
+	return std::sinf(x);
 }
 
 double utilities::abs(double x)
+{
+	return std::abs(x);
+}
+
+int utilities::abs(int x)
+{
+	return std::abs(x);
+}
+
+float utilities::absf(float x)
 {
 	return std::abs(x);
 }
@@ -456,9 +484,9 @@ double utilities::fabs(double x)
 	return std::fabs(x);
 }
 
-double utilities::fabsf(double x)
+float utilities::fabsf(float x)
 {
-	return std::fabs(x);
+	return std::fabsf(x);
 }
 
 double utilities::sqrt(double x)
@@ -466,9 +494,9 @@ double utilities::sqrt(double x)
 	return std::sqrt(x);
 }
 
-double utilities::sqrtf(double x)
+float utilities::sqrtf(float x)
 {
-	return std::sqrt(x);
+	return std::sqrtf(x);
 }
 
 double utilities::pow(int e, double x)
@@ -476,9 +504,79 @@ double utilities::pow(int e, double x)
 	return std::pow(e, x);
 }
 
-double utilities::min(float x, float y)
+double utilities::pow(int e, int x)
+{
+	return std::pow(e, x);
+}
+
+double utilities::min(double x, double y)
 {
 	return std::min(x, y);
+}
+
+float utilities::minf(float x, float y)
+{
+	return std::min(x, y);
+}
+
+double utilities::max(double x, double y)
+{
+	return std::max(x, y);
+}
+
+float utilities::maxf(float x, float y)
+{
+	return std::max(x, y);
+}
+
+double utilities::radians(double x)
+{
+	return (x * PI_DOUBLE) / 180.0;
+}
+
+float utilities::radiansf(float x)
+{
+	return (x * PI_FLOAT) / 180.0f;
+}
+
+double utilities::sq(double x)
+{
+	return x * x;
+}
+
+float utilities::sqf(float x)
+{
+	return x * x;
+}
+
+bool utilities::within(double value, double min, double max)
+{
+	return ((value) >= (min) && (value) <= (max));
+}
+
+bool utilities::withinf(float value, float min, float max)
+{
+	return ((value) >= (min) && (value) <= (max));
+}
+
+double utilities::constrain(double value, double arg_min, double arg_max)
+{
+	return ((value) < (arg_min) ? (arg_min) : ((value) > (arg_max) ? (arg_max) : (value)));
+}
+
+float utilities::constrainf(float value, float arg_min, float arg_max)
+{
+	return ((value) < (arg_min) ? (arg_min) : ((value) > (arg_max) ? (arg_max) : (value)));
+}
+
+double utilities::reciprocal(double x)
+{
+	return 1.0 / x;
+}
+
+float utilities::reciprocalf(float x)
+{
+	return 1.0f / x;
 }
 
 void* utilities::memcpy(void* dest, const void* src, size_t n)

@@ -495,7 +495,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
       // Calculate R
       if (r == 0)
       {
-        r = std::sqrt(i * i + j * j);
+        r = utilities::sqrt(i * i + j * j);
       }
       // Now we know the radius and the chord length;
       movement_length_mm = utilities::get_arc_distance(p_pre_pos->x, p_pre_pos->y, p_pre_pos->z, p_cur_pos->x, p_cur_pos->y, p_cur_pos->z, i, j, r, p_cur_pos->command.command == "G2");
@@ -535,7 +535,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
     mm_extruded_per_mm_travel = extruder_current.e_relative / movement_length_mm;
     if (previous_extrusion_rate_ > 0)
     {
-      extrusion_rate_change_percent = std::fabs(utilities::get_percent_change(previous_extrusion_rate_, mm_extruded_per_mm_travel));
+      extrusion_rate_change_percent = utilities::abs(utilities::get_percent_change(previous_extrusion_rate_, mm_extruded_per_mm_travel));
     }
   }
   if (previous_extrusion_rate_ != 0 && utilities::greater_than(extrusion_rate_change_percent, extrusion_rate_variance_percent_))

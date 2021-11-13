@@ -240,10 +240,12 @@ bool segmented_arc::try_add_point_internal_(printer_point p)
       // Apply firmware compensation
       // See how many arcs will be interpolated
       double circumference = 2.0 * PI_DOUBLE * current_arc_.radius;
-      int num_segments = (int)std::floor(circumference / min_arc_segments_);
+      // TODO: Should this be ceil?
+      int num_segments = (int)utilities::floor(circumference / min_arc_segments_);
       if (num_segments < min_arc_segments_) {
         //num_segments = (int)std::ceil(circumference/approximate_length) * (int)std::ceil(approximate_length / mm_per_arc_segment);
-        num_segments = (int)std::floor(circumference / original_shape_length_);
+        // TODO: Should this be ceil?
+        num_segments = (int)utilities::floor(circumference / original_shape_length_);
         if (num_segments < min_arc_segments_) {
           abort_arc = true;
           num_firmware_compensations_++; 
