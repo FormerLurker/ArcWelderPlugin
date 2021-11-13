@@ -421,7 +421,7 @@ double utilities::atan2(double y, double x)
 
 float utilities::atan2f(float y, float x)
 {
-	return std::atan2f(y, x);
+	return std::atan2(y, x);
 }
 
 double utilities::floor(double x)
@@ -431,7 +431,7 @@ double utilities::floor(double x)
 
 float utilities::floorf(float x)
 {
-	return std::floorf(x);
+	return std::floor(x);
 }
 
 double utilities::ceil(double x)
@@ -441,7 +441,7 @@ double utilities::ceil(double x)
 
 float utilities::ceilf(float x)
 {
-	return std::ceilf(x);
+	return std::ceil(x);
 }
 
 double utilities::cos(double x)
@@ -451,7 +451,7 @@ double utilities::cos(double x)
 
 float utilities::cosf(float x)
 {
-	return std::cosf(x);
+	return std::cos(x);
 }
 
 double utilities::sin(double x)
@@ -461,7 +461,7 @@ double utilities::sin(double x)
 
 float utilities::sinf(float x)
 {
-	return std::sinf(x);
+	return std::sin(x);
 }
 
 double utilities::abs(double x)
@@ -486,7 +486,7 @@ double utilities::fabs(double x)
 
 float utilities::fabsf(float x)
 {
-	return std::fabsf(x);
+	return std::fabs(x);
 }
 
 double utilities::sqrt(double x)
@@ -496,7 +496,7 @@ double utilities::sqrt(double x)
 
 float utilities::sqrtf(float x)
 {
-	return std::sqrtf(x);
+	return std::sqrt(x);
 }
 
 double utilities::pow(int e, double x)
