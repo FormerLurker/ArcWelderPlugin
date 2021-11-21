@@ -52,8 +52,15 @@
     margin-bottom:5px;
 }
 
-.arc-welder .statistics-text{
+.arc-welder pre.statistics-text{
     margin-top: 5px;
+    margin-bottom: 5px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    padding: 5px;
+    word-break: break-all;
+    word-wrap: break-word;
+    line-height: normal;
+    font-size: 1em;
 }
 
 div.ui-pnotify.arc-welder {

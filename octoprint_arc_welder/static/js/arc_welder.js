@@ -639,12 +639,19 @@ $(function () {
 
                 if (!g90_influences_extruder_setting_correct)
                 {
-                    if(g90_g91_influences_extruder){
-                        errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be ENABLED, but it is disabled.  Edit the Arc Welder settings, enable the G90/G91 Influences Extruder setting, and run the firmware check again.");
+                    var correct_setting = "DISABLED";
+                    if(g90_g91_influences_extruder) {
+                        correct_setting = "ENABLED";
                     }
-                    else{
-                        errors.push("Your firmware requires the 'G90/G91 Influences Extruder' setting to be DISABLED, but it is enabled.  Edit the Arc Welder settings, disable the G90/G91 Influences Extruder setting, and run the firmware check again.");
+
+                    var setting_location = "Edit the Arc Welder setting 'G90/G91 Influences Extruder'";
+                    if (self.use_octoprint_settings()) {
+                        setting_location = "Edit the Ocotprint feature setting 'G90/G91 overrides relative extruder mode'"
                     }
+
+                    var error_string = "Your firmware requires the 'G90/G91 Influences Extruder' setting to be " + correct_setting + ".  " + setting_location + ", set the value to " + correct_setting + ", and run the firmware check again.";
+                    errors.push(error_string);
+
                 }
                 if (allow_3d_arcs && g2_g3_z_parameter_supported===false)
                 {
@@ -655,20 +662,29 @@ $(function () {
             return errors;
         });
 
+        self.use_octoprint_settings = ko.pureComputed(function() {
+            return ArcWelder.Tab.plugin_settings.use_octoprint_settings();
+        });
+
+        self.g90_influences_extruder_setting = ko.pureComputed(function() {
+            var g90_g91_influences_extruder_plugin = ArcWelder.Tab.plugin_settings.g90_g91_influences_extruder();
+            var g90_g91_influences_extruder_octoprint = ArcWelder.Tab.octoprint_settings.feature.g90InfluencesExtruder();
+            if (self.use_octoprint_settings())
+            {
+                return g90_g91_influences_extruder_octoprint;
+            }
+            return g90_g91_influences_extruder_plugin;
+        });
+
         self.g90_influences_extruder_setting_correct = ko.pureComputed(function(){
             var g90_g91_influences_extruder_firmware = self.g90_g91_influences_extruder();
-            if (g90_g91_influences_extruder_firmware !== null)
+            var g90_g91_influences_extruder_current = self.g90_influences_extruder_setting();
+
+            if (
+                g90_g91_influences_extruder_firmware !== null
+                && g90_g91_influences_extruder_firmware != g90_g91_influences_extruder_current)
             {
-                // Get the current setting
-                g90_g91_influences_extruder_current = ArcWelder.Tab.plugin_settings.g90_g91_influences_extruder();
-                if (ArcWelder.Tab.plugin_settings.use_octoprint_settings())
-                {
-                    g90_g91_influences_extruder_current = ArcWelder.Tab.octoprint_settings.feature.g90InfluencesExtruder();
-                }
-                if (g90_g91_influences_extruder_firmware !=  g90_g91_influences_extruder_current)
-                {
-                    return false;
-                }
+                return false;
             }
             return true;
         });
@@ -829,12 +845,20 @@ $(function () {
         self.statistics_source_file_total_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_target_file_total_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_segment_statistics_text = ko.observable();
+        self.statistics_total_travel_count_reduction_percent = ko.observable().extend({arc_welder_numeric: 1});
+        self.statistics_source_file_total_travel_length = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_target_file_total_travel_length = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_source_file_total_travel_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_target_file_total_travel_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_segment_travel_statistics_text = ko.observable();
         self.statistics_seconds_elapsed = ko.observable().extend({arc_welder_timer: {format:"long"}});
         self.statistics_gcodes_processed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_lines_processed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_points_compressed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_arcs_created = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_num_firmware_compensations = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_num_gcode_length_exceptions = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.statistics_arcs_aborted_by_flowrate = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.statistics_source_file_size = ko.observable().extend({arc_welder_file_size: 1});
         self.statistics_source_file_position = ko.observable();
         self.statistics_target_file_size = ko.observable().extend({arc_welder_file_size: 1});
@@ -851,6 +875,8 @@ $(function () {
         self.progress_seconds_remaining = ko.observable().extend({arc_welder_timer: {format:"estimate"}});
         self.progress_arcs_created = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.progress_num_firmware_compensations = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.progress_num_gcode_length_exceptions = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.progress_arcs_aborted_by_flowrate = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.progress_points_compressed = ko.observable().extend({arc_welder_short_number: {precision:1}});
         self.progress_source_file_size = ko.observable().extend({arc_welder_file_size: 1});
         self.progress_target_file_size = ko.observable().extend({arc_welder_file_size: 1});
@@ -862,7 +888,9 @@ $(function () {
         self.progress_source_file_total_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
         self.progress_target_file_total_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
         self.progress_total_count_reduction_percent = ko.observable(0).extend({arc_welder_numeric: 1});
-
+        self.progress_source_file_total_travel_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
+        self.progress_target_file_total_travel_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
+        self.progress_total_travel_count_reduction_percent = ko.observable(0).extend({arc_welder_numeric: 1});
         /* Firmware Observables */
         self.firmware_info = new ArcWelder.FirmwareViewModel()
         self.is_processing = ko.observable(false);
@@ -1007,20 +1035,34 @@ $(function () {
             return default_precision;
         };
 
-
-        self.progress_firmware_compensation_percent = ko.pureComputed(function(){
-            var arcs_created = self.progress_arcs_created();
-            var num_firmware_compensations = self.progress_num_firmware_compensations();
-            var total = arcs_created + num_firmware_compensations;
-            return ArcWelder.getPercentChange(arcs_created, total);
-        }).extend({arc_welder_numeric: 1});
-
-        self.statistics_firmware_compensation_percent = ko.pureComputed(function(){
-            var arcs_created = self.statistics_arcs_created();
-            var num_firmware_compensations = self.statistics_num_firmware_compensations();
-            var total = arcs_created + num_firmware_compensations;
-            return ArcWelder.getPercentChange(arcs_created, total);
-        }).extend({arc_welder_numeric: 1});
+        self.max_gcode_length_string = ko.pureComputed(function(){
+            var max_gcode_length_string = "Unlimited";
+            var max_gcode_length = self.plugin_settings.max_gcode_length();
+            if (max_gcode_length && max_gcode_length > 0) {
+                max_gcode_length_string = max_gcode_length.toString();
+                if (max_gcode_length < 55)
+                {
+                    max_gcode_length_string += " (values below 55 are not recommended)"
+                }
+            }
+            return max_gcode_length_string;
+        });
+        self.max_radius_mm_string = ko.pureComputed(function(){
+            var max_radius_mm_string = "Default";
+            var max_radius_mm = self.plugin_settings.max_radius_mm();
+            if (max_radius_mm && max_radius_mm > 0) {
+                max_radius_mm_string = max_radius_mm.toString() + "mm";
+                if (max_radius_mm > 9999)
+                {
+                    max_radius_mm_string += " (values above 9999 are not recommended)"
+                }
+                else if (max_radius_mm < 999)
+                {
+                    max_radius_mm_string += " (values below 999 are not recommended)"
+                }
+            }
+            return max_radius_mm_string;
+        });
 
         self.file_processing_setting_name = ko.pureComputed(function(){
             return ArcWelder.getOptionNameForValue(
@@ -1080,14 +1122,17 @@ $(function () {
 
         self.onBeforeBinding = function () {
             // Make plugin setting access a little more terse
-            self.plugin_settings = self.settings.settings.plugins.arc_welder;
+            //self.plugin_settings = self.settings.settings.plugins.arc_welder;
+            // Update - We want to make a copy here so that only saved changes propogate to the tab
+            self.plugin_settings = ko.mapping.fromJS(ko.mapping.toJS(self.settings.settings.plugins.arc_welder));
+
             self.octoprint_settings = self.settings.settings;
             self.version(self.plugin_settings.version());
             self.git_version(self.plugin_settings.git_version());
         };
 
         self.onAfterBinding = function() {
-            ArcWelder.Help.bindHelpLinks("#tab_plugin_arc_welder_controls");
+            ArcWelder.Help.bindHelpLinks(ArcWelder.tabDivSelector);
             self.plugin_settings.path_tolerance_percent.extend({arc_welder_numeric: 1});
         };
 
@@ -1179,12 +1224,20 @@ $(function () {
                 self.statistics_source_file_total_count(statistics.source_file_total_count);
                 self.statistics_target_file_total_count(statistics.target_file_total_count);
                 self.statistics_segment_statistics_text(statistics.segment_statistics_text);
+                self.statistics_total_travel_count_reduction_percent(statistics.total_travel_count_reduction_percent);
+                self.statistics_source_file_total_travel_length(statistics.source_file_total_travel_length);
+                self.statistics_target_file_total_travel_length(statistics.target_file_total_travel_length);
+                self.statistics_source_file_total_travel_count(statistics.source_file_total_travel_count);
+                self.statistics_target_file_total_travel_count(statistics.target_file_total_travel_count);
+                self.statistics_segment_travel_statistics_text(statistics.segment_travel_statistics_text);
                 self.statistics_seconds_elapsed(statistics.seconds_elapsed);
                 self.statistics_gcodes_processed(statistics.gcodes_processed);
                 self.statistics_lines_processed(statistics.lines_processed);
                 self.statistics_points_compressed(statistics.points_compressed);
                 self.statistics_arcs_created(statistics.arcs_created);
                 self.statistics_num_firmware_compensations(statistics.num_firmware_compensations);
+                self.statistics_num_gcode_length_exceptions(statistics.num_gcode_length_exceptions);
+                self.statistics_arcs_aborted_by_flowrate(statistics.arcs_aborted_by_flowrate);
                 self.statistics_source_file_size(statistics.source_file_size);
                 self.statistics_source_file_position(statistics.source_file_position);
                 self.statistics_target_file_size(statistics.target_file_size);
@@ -1209,9 +1262,18 @@ $(function () {
 
         };
 
+        self.updateArcwelderSettings = function(settings)
+        {
+            ko.mapping.fromJS(ko.mapping.toJS(settings), self.plugin_settings);
+
+        }
         // receive events
         self.onEventFileSelected = function(payload) {
             self.current_statistics_file(payload);
+        }
+
+        self.onEventSettingsUpdated = function(payload) {
+            self.updateArcwelderSettings(self.settings.settings.plugins.arc_welder);
         }
         // Handle Plugin Messages from Server
 
@@ -1304,6 +1366,19 @@ $(function () {
                     };
                     PNotifyExtensions.displayPopupForKey(options, ArcWelder.PopupKey("preprocessing-cancelled"), []);
                     break;
+                case "all-preprocessing-cancelled":
+                    var options = {
+                        title: "Arc Welder - All Tasks Cancelled",
+                        text: data.message,
+                        type: "warning",
+                        hide: true,
+                        addclass: "arc-welder",
+                        desktop: {
+                            desktop: true
+                        }
+                    };
+                    PNotifyExtensions.displayPopupForKey(options, ArcWelder.PopupKey("preprocessing-cancelled"), []);
+                    break;
                 case "preprocessing-success":
                     if (self.plugin_settings.notification_settings.show_completed_notification()) {
                         //  Load all stats for the newly processed file
@@ -1349,16 +1424,22 @@ $(function () {
             self.progress_seconds_remaining(progress.seconds_remaining);
             self.progress_arcs_created(progress.arcs_created);
             self.progress_num_firmware_compensations(progress.num_firmware_compensations);
+            self.progress_num_gcode_length_exceptions(progress.num_gcode_length_exceptions);
+            self.progress_arcs_aborted_by_flowrate(progress.arcs_aborted_by_flowrate);
             self.progress_points_compressed(progress.points_compressed);
             self.progress_compression_ratio(progress.compression_ratio);
             self.progress_compression_percent(progress.compression_percent);
-            self.progress_space_saved(progress.source_file_size - progress.target_file_size);
-            self.progress_source_position(progress.source_file_size);
+            self.progress_space_saved(progress.source_file_position - progress.target_file_size);
+            self.progress_source_position(progress.source_file_position);
+            self.progress_source_file_size(progress.source_file_size);
             self.progress_target_file_size(progress.target_file_size);
             self.progress_percent_complete(progress.percent_complete);
             self.progress_source_file_total_count(progress.source_file_total_count);
             self.progress_target_file_total_count(progress.target_file_total_count);
             self.progress_total_count_reduction_percent(progress.total_count_reduction_percent);
+            self.progress_total_travel_count_reduction_percent(progress.total_travel_count_reduction_percent);
+            self.progress_source_file_total_travel_count(progress.source_file_total_travel_count);
+            self.progress_target_file_total_travel_count(progress.target_file_total_travel_count);
         }
 
         self.getPreprocessingTasks = function() {
@@ -1738,11 +1819,13 @@ $(function () {
     ArcWelder.openTab = function() {
         $('#tab_plugin_arc_welder_link a').click();
     }
+    ArcWelder.tabDivId = "tab_plugin_arc_welder_controls";
+    ArcWelder.tabDivSelector = "#" + ArcWelder.tabDivId;
 
     OCTOPRINT_VIEWMODELS.push([
         ArcWelder.ArcWelderViewModel,
         ["settingsViewModel", "loginStateViewModel", "filesViewModel", "printerStateViewModel"],
-        ["#tab_plugin_arc_welder_controls"]
+        [ArcWelder.tabDivSelector]
     ]);
 });
 

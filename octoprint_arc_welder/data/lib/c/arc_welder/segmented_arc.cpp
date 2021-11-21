@@ -27,8 +27,6 @@
 #include "utilities.h"
 #include "segmented_shape.h"
 #include <iostream>
-//#include <iomanip>
-//#include <sstream>
 #include <stdio.h>
 #include <cmath>
 
@@ -38,7 +36,10 @@ segmented_arc::segmented_arc() : segmented_shape(DEFAULT_MIN_SEGMENTS, DEFAULT_M
   min_arc_segments_ = DEFAULT_MIN_ARC_SEGMENTS,
   mm_per_arc_segment_ = DEFAULT_MM_PER_ARC_SEGMENT;
   allow_3d_arcs_ = DEFAULT_ALLOW_3D_ARCS;
+  max_gcode_length_ = DEFAULT_MAX_GCODE_LENGTH;
+  num_gcode_length_exceptions_ = 0;
   num_firmware_compensations_ = 0;
+  
 }
 
 segmented_arc::segmented_arc(
@@ -51,7 +52,8 @@ segmented_arc::segmented_arc(
   double mm_per_arc_segment,
   bool allow_3d_arcs,
   unsigned char default_xyz_precision,
-  unsigned char default_e_precision
+  unsigned char default_e_precision,
+  int max_gcode_length
 ) : segmented_shape(min_segments, max_segments, resolution_mm, path_tolerance_percent, default_xyz_precision, default_e_precision)
 {
   max_radius_mm_ = max_radius_mm;
@@ -69,7 +71,15 @@ segmented_arc::segmented_arc(
     min_arc_segments_ = 0;
   }
   allow_3d_arcs_ = allow_3d_arcs;
+  max_gcode_length_ = max_gcode_length;
+  if (max_gcode_length_ < 1)
+  {
+    max_gcode_length_ = 0;
+  }
   num_firmware_compensations_ = 0;
+  num_gcode_length_exceptions_ = 0;
+  
+
 }
 
 segmented_arc::~segmented_arc()
@@ -108,7 +118,10 @@ int segmented_arc::get_num_firmware_compensations() const
 {
   return num_firmware_compensations_;
 }
-
+int segmented_arc::get_num_gcode_length_exceptions() const 
+{
+  return num_gcode_length_exceptions_;
+}
 double segmented_arc::get_mm_per_arc_segment() const
 {
   return mm_per_arc_segment_;
@@ -127,11 +140,12 @@ bool segmented_arc::try_add_point(printer_point p)
 
   bool point_added = false;
   // if we don't have enough segnemts to check the shape, just add
-  if (points_.count() > get_max_segments() - 1)
+    
+  if (points_.count() == points_.get_max_size())
   {
     // Too many points, we can't add more
-    return false;
-  }
+    points_.resize(points_.get_max_size()*2);
+  } 
   if (points_.count() > 0)
   {
     printer_point p1 = points_[points_.count() - 1];
@@ -139,6 +153,23 @@ bool segmented_arc::try_add_point(printer_point p)
     {
       // Z axis changes aren't allowed
       return false;
+    }
+
+    // If we have more than 2 points, we need to make sure the current and previous moves are all of the same type.
+    if (points_.count() > 2)
+    {
+      // TODO:  Do we need this?
+      // We already have at least an initial point and a second point.  Make cure the current point and the previous are either both
+      // travel moves, or both extrusion
+      if (!(
+        (p1.e_relative > 0 && p.e_relative > 0) // Extrusions 
+        || (p1.e_relative < 0 && p.e_relative < 0) // Retractions
+        || (p1.e_relative == 0 && p.e_relative == 0) // Travel
+        )
+        )
+      {
+        return false;
+      }
     }
 
     if (utilities::is_zero(p.distance))
@@ -193,9 +224,6 @@ bool segmented_arc::try_add_point_internal_(printer_point p)
   if (points_.count() < get_min_segments() - 1)
     return false;
 
-  // Create a test circle
-  circle target_circle;
-
   // the circle is new..  we have to test it now, which is expensive :(
   points_.push_back(p);
   double previous_shape_length = original_shape_length_;
@@ -204,15 +232,22 @@ bool segmented_arc::try_add_point_internal_(printer_point p)
   if (arc::try_create_arc(points_, current_arc_, original_shape_length_, max_radius_mm_, resolution_mm_, path_tolerance_percent_, min_arc_segments_, mm_per_arc_segment_, get_xyz_tolerance(), allow_3d_arcs_))
   {
     bool abort_arc = false;
+    if (max_gcode_length_ > 0 && get_shape_gcode_length() > max_gcode_length_)
+    {
+      abort_arc = true;
+      num_gcode_length_exceptions_++;
+    }
     if (min_arc_segments_ > 0 && mm_per_arc_segment_ > 0)
     {
       // Apply firmware compensation
       // See how many arcs will be interpolated
       double circumference = 2.0 * PI_DOUBLE * current_arc_.radius;
-      int num_segments = (int)std::floor(circumference / min_arc_segments_);
+      // TODO: Should this be ceil?
+      int num_segments = (int)utilities::floor(circumference / min_arc_segments_);
       if (num_segments < min_arc_segments_) {
         //num_segments = (int)std::ceil(circumference/approximate_length) * (int)std::ceil(approximate_length / mm_per_arc_segment);
-        num_segments = (int)std::floor(circumference / original_shape_length_);
+        // TODO: Should this be ceil?
+        num_segments = (int)utilities::floor(circumference / original_shape_length_);
         if (num_segments < min_arc_segments_) {
           abort_arc = true;
           num_firmware_compensations_++; 
@@ -239,7 +274,7 @@ bool segmented_arc::try_add_point_internal_(printer_point p)
       // or because both I and J == 0
       current_arc_ = original_arc;
     }
-    else if (!abort_arc)
+    else
     {
       if (!is_shape())
       {
@@ -254,22 +289,12 @@ bool segmented_arc::try_add_point_internal_(printer_point p)
   return false;
 }
 
-std::string segmented_arc::get_shape_gcode_absolute(double e, double f)
-{
-  bool has_e = e_relative_ != 0;
-  return get_shape_gcode_(has_e, e, f);
-}
-
-std::string segmented_arc::get_shape_gcode_relative(double f)
-{
-  bool has_e = e_relative_ != 0;
-  return get_shape_gcode_(has_e, e_relative_, f);
-}
-
-std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) const
+std::string segmented_arc::get_shape_gcode() const
 {
   std::string gcode;
-  // Calculate gcode size
+  double e = current_arc_.end_point.is_extruder_relative ? e_relative_ : current_arc_.end_point.e_offset;
+  double f = current_arc_.start_point.f == current_arc_.end_point.f ? 0 : current_arc_.end_point.f;
+  bool has_e = e_relative_ != 0;
   bool has_f = utilities::greater_than_or_equal(f, 1);
   bool has_z = allow_3d_arcs_ && !utilities::is_equal(
     current_arc_.start_point.z, current_arc_.end_point.z, get_xyz_tolerance()
@@ -285,6 +310,9 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
     gcode += "G3";
 
   }
+  // TODO: Limit Gcode Precision based on max_gcode_length
+
+
   // Add X, Y, I and J
   gcode += " X";
   gcode += utilities::dtos(current_arc_.end_point.x, get_xyz_precision());
@@ -324,6 +352,62 @@ std::string segmented_arc::get_shape_gcode_(bool has_e, double e, double f) cons
   }
 
   return gcode;
+
+}
+
+int segmented_arc::get_shape_gcode_length()
+{
+  double e = current_arc_.end_point.is_extruder_relative ? e_relative_ : current_arc_.end_point.e_offset;
+  double f = current_arc_.start_point.f == current_arc_.end_point.f ? 0 : current_arc_.end_point.f;
+  bool has_e = e_relative_ != 0;
+  bool has_f = utilities::greater_than_or_equal(f, 1);
+  bool has_z = allow_3d_arcs_ && !utilities::is_equal(
+    current_arc_.start_point.z, current_arc_.end_point.z, get_xyz_tolerance()
+  );
+  
+  int xyz_precision = get_xyz_precision();
+  int e_precision = get_e_precision();
+
+  double i = current_arc_.get_i();
+  double j = current_arc_.get_j();
+
+
+  int num_spaces = 4 + (has_z ? 1 : 0) + (has_e ? 1 : 0) + (has_f ? 1 : 0);
+  int num_decimal_points = 4 + (has_z ? 1 : 0) + (has_e ? 1 : 0);  // note f has no decimal point
+  int num_decimals = xyz_precision * (4 + (has_z ? 1 : 0)) + e_precision * (has_e ? 1 : 0); // Note f is an int
+  int num_digits = (
+    utilities::get_num_digits(current_arc_.end_point.x, xyz_precision) +
+    utilities::get_num_digits(current_arc_.end_point.y, xyz_precision) +
+    (has_z ? utilities::get_num_digits(current_arc_.end_point.z, xyz_precision) : 0) +
+    (has_e ? utilities::get_num_digits(e, e_precision) : 0) +
+    utilities::get_num_digits(i, xyz_precision) +
+    utilities::get_num_digits(j, xyz_precision) +
+    (has_f ? utilities::get_num_digits(f,0) : 0)
+  );
+  int num_minus_signs = (
+    (current_arc_.end_point.x < 0 ? 1 : 0) + 
+    (current_arc_.end_point.y < 0 ? 1 : 0) +
+    (i < 0 ? 1 : 0) +
+    (j < 0 ? 1 : 0) +
+    (has_e && e < 0 ? 1 : 0) +
+    (has_z && current_arc_.end_point.z < 0 ? 1 : 0)
+  );
+
+  int num_parameters = 4 + (has_e ? 1 : 0) + (has_z ? 1: 0) + (has_f ? 1: 0);
+  // Return the length of the gcode.
+  int gcode_length = 2 + num_spaces + num_decimal_points + num_digits + num_minus_signs + num_decimals + num_parameters;
+  
+  // Keep this around in case we have any future issues with the gcode length calculation
+  #ifdef Debug
+  std::string gcode = get_shape_gcode();
+  if (gcode.length() != gcode_length)
+  {
+    return 9999999; 
+  }
+  #endif
+  return gcode_length;
+  
+
 
 }
 

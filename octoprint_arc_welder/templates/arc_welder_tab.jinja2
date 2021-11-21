@@ -27,21 +27,26 @@
 
     <div>
         <div class="row-fluid short-rows">
-        <div class="span6">
-            <H4 class="no-margin">
-            <a href="#" class="no-underline"
-               data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_current_preprocessor_tasks', toggle_observable: current_tasks_visible }">
-                Processor Tasks
-                <i class="fa fa-spinner fa-spin" data-bind="visible: is_processing"></i>
-                <i class="fa fa-exclamation text-warning" data-bind="visible: queued_not_processing"></i>
-                <i class="fa fa-no-shadow fa-caret-down"></i>
-            </a>
-        </H4>
+            <div class="span6">
+                <H4 class="no-margin">
+                    <a href="#" class="no-underline"
+                       data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc_welder_current_preprocessor_tasks', toggle_observable: current_tasks_visible }">
+                        Processor Tasks
+                        <i class="fa fa-spinner fa-spin" data-bind="visible: is_processing"></i>
+                        <i class="fa fa-exclamation text-warning" data-bind="visible: queued_not_processing"></i>
+                        <i class="fa fa-no-shadow fa-caret-down"></i>
+                    </a>
+                </H4>
+            </div>
+            <div class="span6 text-right">
+                <a title="Cancel All Tasks"
+                   data-bind="click: function(){cancelAllPreprocessing();}, visible: processing_task" style=""><i
+                        class="text-error fa fa-times-circle fa-lg"></i></a>
+                <a title="Open Arc Welder Settings"
+                   data-bind="click: function() {ArcWelder.openArcWelderSettings('settings');}" style=""><i
+                        class="fa fa-gear fa-lg"></i></a>
+            </div>
         </div>
-        <div class="span6 text-right">
-            <a title="Open Arc Welder Settings" data-bind="click: function() {ArcWelder.openArcWelderSettings('settings');}" style=""><i class="fa fa-gear fa-lg"></i></a>
-        </div>
-    </div>
 
         <div id="arc_welder_current_preprocessor_tasks">
             <div data-bind="visible: preprocessing_tasks().length == 0">
@@ -51,9 +56,12 @@
                 <div class="row-fluid">
                     <div class="span12">
                         <Strong>Active Task:</Strong>&nbsp;
-                        <a data-bind="click: function(){cancelPreprocessing(processing_task());}" href="#"> <i class="fa fa-times text-error fa-lg" ></i></a>
-                        <span data-bind="visible: processing_task() && processing_task().task.octoprint_args.print_after_processing" title="Will print after processing is completed.">&nbsp;<i class="fa fa-print fa-lg"></i>&nbsp;</span>
-                        <span data-bind="text: processing_task_file_name"></span>
+                        <a data-bind="click: function(){cancelPreprocessing(processing_task());}" href="#" title="Cancel the Active Task"> <i
+                                class="fa fa-times text-error fa-lg"></i></a>
+                        <span data-bind="visible: processing_task() && processing_task().task.octoprint_args.print_after_processing"
+                              title="Will print after processing is completed.">&nbsp;<i class="fa fa-print fa-lg"></i>&nbsp;</span>
+                        <span data-bind="text: processing_task_file_name"></span><span data-bind="visible: progress_source_file_size() > 0">&nbsp;-&nbsp;<span
+                            data-bind="text: progress_source_file_size.formatted"></span></span>
                     </div>
                 </div>
                 <div class="row-fluid">
@@ -67,6 +75,12 @@
                     </div>
                 </div>
                 <div class="short-rows" data-bind="visible: progress_percent_complete()>0">
+                    <div class="row-fluid" data-bind="visible: progress_percent_complete()==100">
+                        <div class="span4 text-right"></div>
+                        <div class="span8">
+                            <p>Saving file and processing results...</p>
+                        </div>
+                    </div>
                     <div class="row-fluid">
                         <div class="span4 text-right"><strong>Time Remaining:</strong></div>
                         <div class="span8">
@@ -82,14 +96,26 @@
                     <div class="row-fluid">
                         <div class="span4 text-right"><strong>Arcs:</strong></div>
                         <div class="span8">
-                            Created <span data-bind="text: progress_arcs_created.formatted"></span> from <span data-bind="text: progress_points_compressed.formatted"></span> extrusions
+                            Created <span data-bind="text: progress_arcs_created.formatted"></span> from <span
+                                data-bind="text: progress_points_compressed.formatted"></span>&nbsp;points
                         </div>
                     </div>
                     <div class="row-fluid" data-bind="visible: progress_num_firmware_compensations() > 0">
                         <div class="span4 text-right"><strong>Firmware Compensations:</strong></div>
                         <div class="span8">
-                            <span data-bind="text: progress_num_firmware_compensations.formatted"></span> arcs aborted
-                            (<span data-bind="text: progress_firmware_compensation_percent"></span>% reduction</span>)
+                            <span data-bind="text: progress_num_firmware_compensations.formatted"></span>&nbsp;arcs aborted
+                        </div>
+                    </div>
+                    <div class="row-fluid" data-bind="visible: progress_arcs_aborted_by_flowrate() > 0">
+                        <div class="span4 text-right"><strong >Flowrate Changes:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: progress_arcs_aborted_by_flowrate.formatted"></span>&nbsp;arcs aborted
+                        </div>
+                    </div>
+                    <div class="row-fluid" data-bind="visible: progress_num_gcode_length_exceptions() > 0">
+                        <div class="span4 text-right"><strong>GCode Length Exceptions:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: progress_num_gcode_length_exceptions.formatted"></span>&nbsp;arcs aborted
                         </div>
                     </div>
                     <div class="row-fluid">
@@ -99,32 +125,48 @@
                             &#8260;
                             <span data-bind="text: progress_source_file_total_count.formatted"></span>
                             =&nbsp;<span data-bind="text: Math.abs(progress_total_count_reduction_percent())"></span>%
-                            <span data-bind="text: progress_total_count_reduction_percent() < 0 ? 'reduction' : 'increase'"></span>
+                            <span data-bind="text: progress_total_count_reduction_percent() < 0 ? 'reduction' : (progress_total_count_reduction_percent() > 0 ? 'increase' : 'unchanged')"></span>
+                        </div>
+                    </div>
+                    <div class="row-fluid" data-bind="visible: progress_source_file_total_travel_count()> 0">
+                        <div class="span4 text-right"><strong>Target/Source Travels:</strong></div>
+                        <div class="span8">
+                            <span data-bind="text: progress_target_file_total_travel_count.formatted"></span>
+                            &#8260;
+                            <span data-bind="text: progress_source_file_total_travel_count.formatted"></span>
+                            =&nbsp;<span data-bind="text: Math.abs(progress_total_travel_count_reduction_percent())"></span>%
+                            <span data-bind="text: progress_total_travel_count_reduction_percent() < 0 ? 'reduction' : (progress_total_travel_count_reduction_percent() > 0 ? 'increase' : 'unchanged')"></span>
                         </div>
                     </div>
                     <div class="row-fluid">
                         <div class="span4 text-right"><strong>Compression:</strong></div>
                         <div class="span8">
-                            <span data-bind="text: progress_compression_ratio"></span>&#8758;1 (<span data-bind="text: progress_compression_percent"></span>%)
+                            <span data-bind="text: progress_compression_ratio"></span>&#8758;1 (<span
+                                data-bind="text: progress_compression_percent"></span>%)
                         </div>
                     </div>
                     <div class="row-fluid">
                         <div class="span4 text-right"><strong>File Size:</strong></div>
                         <div class="span8">
-                            <span data-bind="text: progress_source_position.formatted"></span> - <span data-bind="text: progress_space_saved.formatted"></span> = <span data-bind="text: progress_target_file_size.formatted"></span>
+                            <span data-bind="text: progress_source_position.formatted"></span> - <span
+                                data-bind="text: progress_space_saved.formatted"></span> = <span
+                                data-bind="text: progress_target_file_size.formatted"></span>
                         </div>
                     </div>
                 </div>
                 <div class="short-rows" data-bind="visible: progress_percent_complete()==0">
                     <p>Loading Statistics <i class="fa fa-spinner fa-spin"></i></p>
                 </div>
+
             </div>
             <div data-bind="visible: queued_tasks().length > 0">
                 <h5>Queued for Processing</h5>
                 <ol data-bind="foreach: queued_tasks">
                     <li class="queued-task">
-                        <a data-bind="click: function(){$parent.cancelPreprocessing($data);}" href="#" title="Remove from Queue"><i class="fa fa-times text-error" ></i></a>
-                        <span data-bind="visible: $data.task.octoprint_args.print_after_processing" title="Will print after processing is completed.">&nbsp;<i class="fa fa-print"></i>&nbsp;
+                        <a data-bind="click: function(){$parent.cancelPreprocessing($data);}" href="#"
+                           title="Remove from Queue"><i class="fa fa-times text-error"></i></a>
+                        <span data-bind="visible: $data.task.octoprint_args.print_after_processing"
+                              title="Will print after processing is completed.">&nbsp;<i class="fa fa-print"></i>&nbsp;
                         </span>
                         <span data-bind="text: $data.task.octoprint_args.source_name"></span>
 
@@ -137,7 +179,7 @@
     <H4>
         <a id="arc_welder_show_statistics" href="#" class="no-underline"
            data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc-welder-stats-container', toggle_observable: file_statistics_visible }">
-                File Statistics
+            File Statistics
             <i class="fa fa-no-shadow fa-caret-down"></i>
         </a>
     </H4>
@@ -166,25 +208,42 @@
             </div>
             <div class="row-fluid">
                 <div class="span4 text-right"><strong>Source File:</strong></div>
-                <div class="span8"><sapn data-bind="text:statistics_source_name, attr:{title:statistics_source_name}"></sapn></div>
+                <div class="span8">
+                    <sapn data-bind="text:statistics_source_name, attr:{title:statistics_source_name}"></sapn>
+                </div>
             </div>
             <div class="row-fluid">
                 <div class="span4 text-right"><strong>Target File:</strong></div>
-                <div class="span8"><sapn data-bind="text:statistics_target_display_name, attr:{title:statistics_target_display_name}"></sapn></div>
+                <div class="span8">
+                    <sapn data-bind="text:statistics_target_display_name, attr:{title:statistics_target_display_name}"></sapn>
+                </div>
             </div>
             <div class="row-fluid">
                 <div class="span4 text-right"><strong>Arcs:</strong></div>
                 <div class="span8">
-                    Created <span data-bind="text: statistics_arcs_created.formatted"></span> from <span data-bind="text: statistics_points_compressed.formatted"></span> extrusions
+                    Created <span data-bind="text: statistics_arcs_created.formatted"></span> from <span
+                        data-bind="text: statistics_points_compressed.formatted"></span> extrusions
                 </div>
             </div>
             <div class="row-fluid" data-bind="visible: statistics_num_firmware_compensations() > 0">
-                        <div class="span4 text-right"><strong>Firmware Compensations:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: statistics_num_firmware_compensations.formatted"></span>
-                            arcs aborted (<span data-bind="text: statistics_firmware_compensation_percent"></span>% reduction</span>)
-                        </div>
-                    </div>
+                <div class="span4 text-right"><strong>Firmware Compensations:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_num_firmware_compensations.formatted"></span>&nbsp;arcs aborted
+                </div>
+            </div>
+            <div class="row-fluid" data-bind="visible: statistics_num_gcode_length_exceptions() > 0">
+                <div class="span4 text-right"><strong>GCode Length Exceptions:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_num_gcode_length_exceptions.formatted"></span>&nbsp;arcs aborted
+                </div>
+            </div>
+            <div class="row-fluid" data-bind="visible: statistics_arcs_aborted_by_flowrate() > 0">
+                <div class="span4 text-right"><strong>Flowrate Changes:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_arcs_aborted_by_flowrate.formatted"></span>&nbsp;arcs aborted
+                </div>
+            </div>
+
             <div class="row-fluid">
                 <div class="span4 text-right"><strong>Target/Source Extrusions:</strong></div>
                 <div class="span8">
@@ -192,25 +251,40 @@
                     &#8260;
                     <span data-bind="text: statistics_source_file_total_count.formatted"></span>
                     =&nbsp;<span data-bind="text: Math.abs(statistics_total_count_reduction_percent())"></span>%
-                    <span data-bind="text: statistics_total_count_reduction_percent() < 0 ? 'reduction' : 'increase'"></span>
+                    <span data-bind="text: statistics_total_count_reduction_percent() < 0 ? 'reduction' : (statistics_total_count_reduction_percent() > 0 ? 'increase' : 'unchanged')"></span>
+                </div>
+            </div>
+            <div class="row-fluid" data-bind="visible: statistics_target_file_total_travel_count()">
+                <div class="span4 text-right"><strong>Target/Source Travels:</strong></div>
+                <div class="span8">
+                    <span data-bind="text: statistics_target_file_total_travel_count.formatted"></span>
+                    &#8260;
+                    <span data-bind="text: statistics_source_file_total_travel_count.formatted"></span>
+                    =&nbsp;<span data-bind="text: Math.abs(statistics_total_travel_count_reduction_percent())"></span>%
+                    <span data-bind="text: statistics_total_travel_count_reduction_percent() < 0 ? 'reduction' : (statistics_total_travel_count_reduction_percent() > 0 ? 'increase' : 'unchanged')"></span>
                 </div>
             </div>
             <div class="row-fluid">
                 <div class="span4 text-right"><strong>Compression:</strong></div>
                 <div class="span8">
-                     <span data-bind="text: statistics_compression_ratio"></span>&#8758;1 (<span data-bind="text: statistics_compression_percent"></span>%)
+                    <span data-bind="text: statistics_compression_ratio"></span>&#8758;1 (<span
+                        data-bind="text: statistics_compression_percent"></span>%)
                 </div>
             </div>
             <div class="row-fluid">
                 <div class="span4 text-right"><strong>File Size:</strong></div>
                 <div class="span8">
-                    <span data-bind="text: statistics_source_file_size.formatted"></span> - <span data-bind="text: statistics_space_saved_string"></span> = <span data-bind="text: statistics_target_file_size.formatted"></span>
+                    <span data-bind="text: statistics_source_file_size.formatted"></span> - <span
+                        data-bind="text: statistics_space_saved_string"></span> = <span
+                        data-bind="text: statistics_target_file_size.formatted"></span>
                 </div>
             </div>
             <div class="row-fluid">
                 <div class="span4 text-right"><strong>Line Count:</strong></div>
                 <div class="span8">
-                    <span data-bind="text: statistics_lines_processed.formatted"></span> - <span data-bind="text: statistics_points_compressed.formatted"></span> = <span data-bind="text: statistics_target_file_lines"></span>
+                    <span data-bind="text: statistics_lines_processed.formatted"></span> - <span
+                        data-bind="text: statistics_points_compressed.formatted"></span> = <span
+                        data-bind="text: statistics_target_file_lines"></span>
                 </div>
             </div>
             <div class="row-fluid">
@@ -219,12 +293,18 @@
                     <span data-bind="text: statistics_seconds_elapsed.formatted"></span>
                 </div>
             </div>
-            <div class="row-fluid">
-                <div class="span4 text-right">
-                    <strong>Segment Length Statistics:</strong>
+            <div data-bind="visible: statistics_source_file_total_count()">
+                <div class="row-fluid">
+                    <div class="span12 text-center">
+                        <pre class="text-center statistics-text"><div><strong>Extrusion/Retraction Detail</strong></div><div data-bind="html: statistics_segment_statistics_text"></div></pre>
+                    </div>
                 </div>
-                <div class="span8 text-center">
-                    <pre class="text-center statistics-text" data-bind="text: statistics_segment_statistics_text"></pre>
+            </div>
+            <div data-bind="visible: statistics_source_file_total_travel_count()">
+                <div class="row-fluid">
+                    <div class="span12 text-center">
+                        <pre class="text-center statistics-text"><div><strong>Travel Detail</strong></div><div data-bind="visible: statistics_source_file_total_travel_count() != statistics_target_file_total_travel_count(), html: statistics_segment_travel_statistics_text"></div><div data-bind="visible: statistics_source_file_total_travel_count() == statistics_target_file_total_travel_count()">No travel moves were converted to arcs.  This is normal for a 3d print.</div></pre>
+                    </div>
                 </div>
             </div>
         </div>
@@ -241,15 +321,16 @@
         </H4>
         <div id="arc_welder_firmware_compatibility">
             <div data-bind="visible: !firmware_info.loaded()">
-                        <p class="text-error"><strong>Firmware Info Loading</strong></p>
-                        <p>Please wait while firmware info loads.</p>
-                    </div>
+                <p class="text-error"><strong>Firmware Info Loading</strong></p>
+                <p>Please wait while firmware info loads.</p>
+            </div>
             <div data-bind="visible: firmware_info.loaded() && firmware_info.success()===null">
-                        <p class="text-error"><strong>No Firmware Info Available</strong></p>
-                        <p>Please check your firmware by clicking the <strong>Check Firmware</strong> button.</p>
-                    </div>
+                <p class="text-error"><strong>No Firmware Info Available</strong></p>
+                <p>Please check your firmware by clicking the <strong>Check Firmware</strong> button.</p>
+            </div>
             <div id="arc_welder_firmware_info"
-                         data-bind="visible: (firmware_info.success() || firmware_info.success() === null)">
+                 data-bind="visible: (firmware_info.success() || firmware_info.success() === null)">
+
                 <div class="short-rows row-fluid">
                     <div class="span4">
                         <button type="button" class="btn btn-small full-width"
@@ -261,16 +342,17 @@
                     </div>
                     <div class="span8">
                         <div class="text-success"
-                            data-bind="visible: !(firmware_info.has_errors() || firmware_info.has_warnings())">
+                             data-bind="visible: !(firmware_info.has_errors() || firmware_info.has_warnings())">
                             Your firmware is good to go!
                         </div>
                         <div data-bind="visible: firmware_info.has_errors() || firmware_info.has_warnings()">
                             <p data-bind="visible: firmware_info.has_errors()"
                                class="text-error">
-                                Your firmware may have issues running gcode produced by Arc Welder.  You may need to alter firmware settings or upgrade to a newer version.
+                                Your firmware may have issues running gcode produced by Arc Welder. You may need to
+                                alter firmware settings or upgrade to a newer version.
                             </p>
                             <p data-bind="visible: !firmware_info.has_errors()"
-                                class="text-warning">
+                               class="text-warning">
                                 Your firmware may have issues running gcode produced by Arc Welder.
                             </p>
                         </div>
@@ -279,6 +361,12 @@
                 </div>
 
                 <div class="short-rows">
+                    <div class="row-fluid">
+                        <div class="span4 text-right">
+                            <strong>Last Check On:</strong>
+                        </div>
+                        <div class="span8"><span data-bind="text: firmware_info.last_check_datetime"></span></div>
+                    </div>
                     <div class="row-fluid">
                         <div class="span4 text-right"><strong>Name:</strong></div>
                         <div class="span8">
@@ -341,7 +429,7 @@
                     <div>
                         <div class="row-fluid">
                             <div class="span4 text-right"><strong>Arcs Enabled:</strong></div>
-                            <div class="span8" >
+                            <div class="span8">
                                 <span data-bind="text: firmware_info.arcs_enabled.formatted, attr: {class: firmware_info.arcs_enabled.class}"></span>
                             </div>
                         </div>
@@ -375,8 +463,8 @@
                             <div class="span4 text-right"><strong>Errors:</strong></div>
                             <div class="span8">
                                 <ul class="text-error" data-bind="foreach: firmware_info.errors">
-                                <li data-bind="text: $data"></li>
-                            </ul>
+                                    <li data-bind="text: $data"></li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -385,17 +473,12 @@
                             <div class="span4 text-right"><strong>Warnings:</strong></div>
                             <div class="span8">
                                 <ul data-bind="foreach: firmware_info.warnings">
-                                <li class="text-warning" data-bind="text: $data"></li>
-                            </ul>
+                                    <li class="text-warning" data-bind="text: $data"></li>
+                                </ul>
                             </div>
                         </div>
                     </div>
-                    <div class="row-fluid">
-                        <div class="span4 text-right">
-                            <strong>Last Check On:</strong>
-                        </div>
-                        <div class="span8"><span data-bind="text: firmware_info.last_check_datetime"></span></div>
-                    </div>
+
                 </div>
             </div>
             <hr/>
@@ -447,6 +530,14 @@
                 </div>
                 <div class="row-fluid">
                     <div class="span4 text-right">
+                        <strong>Allow Travel Arcs:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: plugin_settings.allow_travel_arcs() ? 'True' : 'False'"></span>
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
                         <strong>Resolution:</strong>
                     </div>
                     <div class="span8">
@@ -460,6 +551,17 @@
                     </div>
                     <div class="span8">
                         <span data-bind="text: plugin_settings.path_tolerance_percent"></span>%
+                    </div>
+                </div>
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong>Extrusion Rate Variance:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="visible: plugin_settings.extrusion_rate_variance_percent() != 0">
+                            <span data-bind="text: plugin_settings.extrusion_rate_variance_percent"></span>%
+                        </span>
+                        <span data-bind="visible: plugin_settings.extrusion_rate_variance_percent() == 0">Disabled</span>
                     </div>
                 </div>
                 <div class="row-fluid">
@@ -488,19 +590,30 @@
                 </div>
                 <div class="row-fluid">
                     <div class="span4 text-right">
-                        <strong>Maximum Arc Radius:</strong>
+                        <strong data-bind="css: {'text-warning': plugin_settings.max_radius_mm() < 999 || plugin_settings.max_radius_mm() > 9999}">Maximum
+                            Arc Radius:</strong>
                     </div>
                     <div class="span8">
-                        <span data-bind="text: plugin_settings.max_radius_mm"></span>mm
+                        <span data-bind="text: max_radius_mm_string"></span>
                     </div>
                 </div>
-                <div class="row-fluid" >
+                <div class="row-fluid">
+                    <div class="span4 text-right">
+                        <strong data-bind="css: {'text-warning': plugin_settings.max_gcode_length() > 0 && plugin_settings.max_gcode_length() < 55}">Maximum
+                            GCode Length:</strong>
+                    </div>
+                    <div class="span8">
+                        <span data-bind="text: max_gcode_length_string"></span>
+                    </div>
+                </div>
+                <div class="row-fluid">
                     <div class="span4 text-right">
                         <strong>Firmware Compensation:</strong>
                     </div>
                     <div class="span8">
                         <div class="text-warning" data-bind="visible: firmware_compensation_enabled">
-                            <span data-bind="text: plugin_settings.mm_per_arc_segment"></span>mm per arc, at minimum <span data-bind="text: plugin_settings.min_arc_segments"></span> segments per full circle
+                            <span data-bind="text: plugin_settings.mm_per_arc_segment"></span>mm per arc, at minimum
+                            <span data-bind="text: plugin_settings.min_arc_segments"></span> segments per full circle
                         </div>
                         <div data-bind="visible: !firmware_compensation_enabled()">
                             Disabled

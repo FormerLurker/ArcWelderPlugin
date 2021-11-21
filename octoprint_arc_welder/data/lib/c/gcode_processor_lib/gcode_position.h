@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "circular_buffer.h"
 #include "gcode_parser.h"
 #include "position.h"
 #include "gcode_comment_processor.h"
@@ -139,6 +140,8 @@ public:
 	void undo_update();
 	position * undo_update(int num_updates);
 	int get_num_positions();
+	int get_max_positions();
+	void grow_max_positions(int size);
 	position get_position(int index);
 	position get_current_position();
 	position get_previous_position();
@@ -149,10 +152,9 @@ public:
 	bool get_g90_91_influences_extruder();
 private:
 	gcode_position(const gcode_position &source);
+	position initial_position_;
 	int position_buffer_size_;
-	position* positions_;
-	int cur_pos_;
-	int num_pos_;
+	circular_buffer<position> positions_;
 	void add_position(parsed_command &);
 	void add_position(position &);
 	bool autodetect_position_;

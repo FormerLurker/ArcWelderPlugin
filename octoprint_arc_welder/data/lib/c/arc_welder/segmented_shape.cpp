@@ -83,7 +83,12 @@ point point::get_midpoint(point p1, point p2)
 
 bool point::is_near_collinear(const point& p1, const point& p2, const point& p3, double tolerance)
 {
-  return fabs((p1.y - p2.y) * (p1.x - p3.x) - (p1.y - p3.y) * (p1.x - p2.x)) <= 1e-9;
+  return utilities::abs((p1.y - p2.y) * (p1.x - p3.x) - (p1.y - p3.y) * (p1.x - p2.x)) <= 1e-9;
+}
+
+double point::cartesian_distance(const point& p1, const point& p2)
+{
+  return utilities::get_cartesian_distance(p1.x, p1.y, p2.x, p2.y);
 }
 
 #pragma endregion Point Functions
@@ -119,7 +124,7 @@ bool segment::get_closest_perpendicular_point(const point& p1, const point& p2, 
 #pragma region Vector Functions
 double vector::get_magnitude()
 {
-  return sqrt(x * x + y * y + z * z);
+  return utilities::sqrt(x * x + y * y + z * z);
 }
 
 double vector::cross_product_magnitude(vector v1, vector v2)
@@ -139,15 +144,14 @@ double vector::cross_product_magnitude(vector v1, vector v2)
 // Users of this code must verify correctness for their application.
 // dot product (3D) which allows vector operations in arguments
 #define dot(u,v)   ((u).x * (v).x + (u).y * (v).y + (u).z * (v).z)
-#define dotxy(u,v)   ((u).x * (v).x + (u).y * (v).y)
-#define norm(v)     sqrt(dot(v,v))     // norm = length of  vector
-#define d(u,v)      norm(u-v)          // distance = norm of difference
+//#define dotxy(u,v)   ((u).x * (v).x + (u).y * (v).y)
+//#define norm(v)     utilities::sqrt(dot(v,v))     // norm = length of  vector
+//#define d(u,v)      norm(u-v)          // distance = norm of difference
 
 #pragma endregion Distance Calculation Source
 
 
 #pragma region Circle Functions
-
 
 bool circle::try_create_circle(const point& p1, const point& p2, const point& p3, const double max_radius, circle& new_circle)
 {
@@ -155,8 +159,6 @@ bool circle::try_create_circle(const point& p1, const point& p2, const point& p3
   {
     return false;
   }
-
-
   double x1 = p1.x;
   double y1 = p1.y;
   double x2 = p2.x;
@@ -196,22 +198,40 @@ bool circle::try_create_circle(const point& p1, const point& p2, const point& p3
 bool circle::try_create_circle(const array_list<printer_point>& points, const double max_radius, const double resolution_mm, const double xyz_tolerance, bool allow_3d_arcs, circle& new_circle)
 {
   int count = points.count();
-
   int middle_index = count / 2;
+  int end_index = count - 1;
+  
 
-  // The middle point will almost always produce the best arcs.
-  if (circle::try_create_circle(points[0], points[middle_index], points[count - 1], max_radius, new_circle) && !new_circle.is_over_deviation(points, resolution_mm, xyz_tolerance, allow_3d_arcs))
+  
+  if (circle::try_create_circle(points[0], points[middle_index], points[end_index], max_radius, new_circle) && !new_circle.is_over_deviation(points, resolution_mm, xyz_tolerance, allow_3d_arcs))
   {
     return true;
   }
-
+  
+       /*
+  // This could be a near complete circle.  In that case, the endpoints might be too close together to generate an accurate circle with the 
+  // precision we have to work with.  Let's adjust our circle into thirds and test those points as a last ditch effort.
+  if (count > 5)
+  {
+    middle_index = count / 3;
+    end_index = middle_index + middle_index;
+    if (circle::try_create_circle(points[0], points[middle_index], points[end_index], max_radius, test_circle) && !test_circle.is_over_deviation(points, resolution_mm, xyz_tolerance, allow_3d_arcs))
+    {
+      new_circle = test_circle;
+      return true;
+    }
+  }
+  return false;
+         */
+  
   // Find the circle with the least deviation, if one exists.
   // Note, this could possibly take a LONG time in the worst case, but it's a pretty unlikely.
   // However, if the midpoint check doesn't pass, it's worth it to spend a bit more time 
   // finding the best fit for the circle (least squares deviation) 
-  circle test_circle;
+  
   double least_deviation;
   bool found_circle=false;
+
   for (int index = 1; index < count - 1; index++)
   {
     
@@ -220,7 +240,7 @@ bool circle::try_create_circle(const array_list<printer_point>& points, const do
       // We already checked this one, and it failed, continue.
       continue;
     }
-    
+    circle test_circle;
     double current_deviation;
     if (circle::try_create_circle(points[0], points[index], points[count - 1], max_radius, test_circle) && test_circle.get_deviation_sum_squared(points, resolution_mm, xyz_tolerance, allow_3d_arcs, current_deviation))
     {
@@ -234,11 +254,12 @@ bool circle::try_create_circle(const array_list<printer_point>& points, const do
     }
   }
   return found_circle;
+  
 }
 
 double circle::get_polar_radians(const point& p1) const
 {
-  double polar_radians = atan2(p1.y - center.y, p1.x - center.x);
+  double polar_radians = utilities::atan2(p1.y - center.y, p1.x - center.x);
   if (polar_radians < 0)
     polar_radians = (2.0 * PI_DOUBLE) + polar_radians;
   return polar_radians;
@@ -269,7 +290,7 @@ bool circle::get_deviation_sum_squared(const array_list<printer_point>& points, 
         return false;
       }
     }
-    double deviation = std::fabs(distance_from_center - radius);
+    double deviation = utilities::abs(distance_from_center - radius);
     total_deviation += deviation * deviation;
     if (deviation > resolution_mm)
     {
@@ -284,7 +305,7 @@ bool circle::get_deviation_sum_squared(const array_list<printer_point>& points, 
     if (segment::get_closest_perpendicular_point(points[index], points[index + 1], center, point_to_test))
     {
       double distance = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, center.x, center.y);
-      double deviation = std::fabs(distance - radius);
+      double deviation = utilities::abs(distance - radius);
       total_deviation += deviation * deviation;
       if (deviation > resolution_mm)
       {
@@ -325,19 +346,20 @@ bool circle::is_over_deviation(const array_list<printer_point>& points, const do
           return true;
         }
       }
-      if (std::fabs(distance_from_center - radius) > resolution_mm)
+      if (utilities::abs(distance_from_center - radius) > resolution_mm)
       {
         return true;
       }
     }
     
     // Check the point perpendicular from the segment to the circle's center, if any such point exists
+    
     if (segment::get_closest_perpendicular_point(current_point, points[index + 1], center, point_to_test))
     {
       double distance = utilities::get_cartesian_distance(point_to_test.x, point_to_test.y, center.x, center.y);
-      if (std::fabs(distance - radius) > resolution_mm)
+      if (utilities::abs(distance - radius) > resolution_mm)
       {
-        return true;
+       return true;
       }
     }
   }
@@ -358,9 +380,9 @@ double arc::get_j() const
 
 bool arc::try_create_arc(
   const circle& c,
-  const point& start_point,
-  const point& mid_point,
-  const point& end_point,
+  const printer_point& start_point,
+  const printer_point& mid_point,
+  const printer_point& end_point,
   arc& target_arc,
   double approximate_length,
   double resolution,
@@ -425,8 +447,8 @@ bool arc::try_create_arc(
     }
   }
   // Calculate the percent difference of the original path
-  double difference = (arc_length - approximate_length) / approximate_length;
-  if (!utilities::is_zero(difference, path_tolerance_percent))
+  double path_difference_percent = utilities::get_percent_change(arc_length, approximate_length);
+  if (!utilities::is_zero(path_difference_percent, path_tolerance_percent))
   {
     // So it's possible our vector calculation above got the direction wrong.
     // This can happen if there is a crazy arrangement of points
@@ -435,7 +457,7 @@ bool arc::try_create_arc(
     // see if an arc moving in the opposite direction had the correct length.
 
     // Find the rest of the angle across the circle
-    double test_radians = std::fabs(angle_radians - 2 * PI_DOUBLE);
+    double test_radians = utilities::abs(angle_radians - 2 * PI_DOUBLE);
     // Calculate the length of that arc
     double test_arc_length = c.radius * test_radians;
     if (allow_3d_arcs)
@@ -446,8 +468,8 @@ bool arc::try_create_arc(
         test_arc_length = utilities::hypot(test_arc_length, end_point.z - start_point.z);
       }
     }
-    difference = (test_arc_length - approximate_length) / approximate_length;
-    if (!utilities::is_zero(difference, path_tolerance_percent))
+    path_difference_percent = utilities::get_percent_change(test_arc_length,approximate_length);
+    if (!utilities::is_zero(path_difference_percent, path_tolerance_percent))
     {
       return false;
     }
@@ -499,7 +521,6 @@ bool arc::try_create_arc(
 {
   circle test_circle = (circle)target_arc;
 
-  
   if (!circle::try_create_circle(points, max_radius_mm, resolution_mm, xyz_tolerance, allow_3d_arcs, test_circle))
   {
     return false;
@@ -645,7 +666,7 @@ bool arc::ray_intersects_segment(const point rayOrigin, const point rayDirection
   vector v3 = vector(-rayDirection.y, rayDirection.x, 0);
 
   double dot = dot(v2, v3);
-  if (std::fabs(dot) < 0.000001)
+  if (utilities::abs(dot) < 0.000001)
     return false;
 
   double t1 = vector::cross_product_magnitude(v2, v1) / dot;
@@ -705,7 +726,7 @@ void segmented_shape::set_xyz_precision(unsigned char precision)
 
 void segmented_shape::set_xyz_tolerance_from_precision()
 {
-  xyz_tolerance_ = std::pow(10.0, -1.0 * static_cast<double>(xyz_precision_));
+  xyz_tolerance_ = utilities::pow(10, -1.0 * static_cast<double>(xyz_precision_));
 }
 
 void segmented_shape::reset_precision()

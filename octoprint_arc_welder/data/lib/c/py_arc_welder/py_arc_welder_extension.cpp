@@ -186,39 +186,29 @@ extern "C"
 		py_gcode_arc_args args;
 		PyObject* py_progress_callback = NULL;
 		
-		if (!ParseArgs(py_convert_file_args, args, &py_progress_callback))
+		if (!py_gcode_arc_args::parse_args(py_convert_file_args, p_py_logger, args, &py_progress_callback))
 		{
 			return NULL;
 		}
-		p_py_logger->set_log_level(args.log_level);
+		p_py_logger->set_log_level((log_levels)args.log_level);
 
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
-		p_py_logger->log(GCODE_CONVERSION, INFO, message);
+		p_py_logger->log(GCODE_CONVERSION, log_levels::INFO, message);
 
-		py_arc_welder arc_welder_obj(
-			args.guid, 
-			args.source_path, 
-			args.target_path, 
-			p_py_logger, 
-			args.resolution_mm, 
-			args.path_tolerance_percent, 
-			args.max_radius_mm, 
-			args.min_arc_segments, 
-			args.mm_per_arc_segment, 
-			args.g90_g91_influences_extruder, 
-			args.allow_3d_arcs, 
-			args.allow_dynamic_precision, 
-			args.default_xyz_precision, 
-			args.default_e_precision, 
-			DEFAULT_GCODE_BUFFER_SIZE, 
-			py_progress_callback
-		);
-		arc_welder_results results = arc_welder_obj.process();
+		args.py_progress_callback = py_progress_callback;
+		args.log = p_py_logger;
+		// Set the encoding to html for the progress output
+		args.box_encoding = utilities::box_drawing::HTML;
+		py_arc_welder arc_welder_obj(args);
+		arc_welder_results results;
+		results = arc_welder_obj.process();
+		
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
-		p_py_logger->log(GCODE_CONVERSION, INFO, message);
+		p_py_logger->log(GCODE_CONVERSION, log_levels::INFO, message);
 		Py_XDECREF(py_progress_callback);
 		// return the arguments
-		PyObject* p_progress = py_arc_welder::build_py_progress(results.progress, args.guid);
+		PyObject* p_progress = py_arc_welder::build_py_progress(results.progress, args.guid, true);
+		
 		if (p_progress == NULL)
 			p_progress = Py_None;
 
@@ -237,213 +227,5 @@ extern "C"
 	}
 }
 
-static bool ParseArgs(PyObject* py_args, py_gcode_arc_args& args, PyObject** py_progress_callback)
-{
-	p_py_logger->log(
-		GCODE_CONVERSION, INFO,
-		"Parsing GCode Conversion Args."
-		);
 
-	// Extract the job guid
-	PyObject* py_guid = PyDict_GetItemString(py_args, "guid");
-	if (py_guid == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the guid parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.guid = gcode_arc_converter::PyUnicode_SafeAsString(py_guid);
-
-	// Extract the source file path
-	PyObject* py_source_path =  PyDict_GetItemString(py_args, "source_path");
-	if (py_source_path == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the source_path parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.source_path = gcode_arc_converter::PyUnicode_SafeAsString(py_source_path);
-
-	// Extract the target file path
-	PyObject* py_target_path = PyDict_GetItemString(py_args, "target_path");
-	if (py_target_path == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the target_path parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.target_path = gcode_arc_converter::PyUnicode_SafeAsString(py_target_path);
-
-	// Extract the resolution in millimeters
-	PyObject* py_resolution_mm = PyDict_GetItemString(py_args, "resolution_mm");
-	if (py_resolution_mm == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the resolution_mm parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.resolution_mm = gcode_arc_converter::PyFloatOrInt_AsDouble(py_resolution_mm);
-	if (args.resolution_mm <= 0)
-	{
-		args.resolution_mm = 0.05; // Set to the default if no resolution is provided, or if it is less than 0.
-	}
-
-	// extract allow_dynamic_precision
-	PyObject* py_allow_dynamic_precision = PyDict_GetItemString(py_args, "allow_dynamic_precision");
-	if (py_allow_dynamic_precision == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve allow_dynamic_precision from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.allow_dynamic_precision = PyLong_AsLong(py_allow_dynamic_precision) > 0;
-
-	// extract default_xyz_precision
-	PyObject* py_default_xyz_precision = PyDict_GetItemString(py_args, "default_xyz_precision");
-	if (py_default_xyz_precision == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the default_xyz_precision parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.default_xyz_precision = gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_xyz_precision);
-	if (args.default_xyz_precision < 3)
-	{
-		std::string message = "ParseArgs - The default XYZ precision received was less than 3, which could cause problems printing arcs.  Setting to 3.";
-		p_py_logger->log(WARNING, GCODE_CONVERSION, message);
-		args.default_xyz_precision = 3;
-	}
-	else if (args.default_xyz_precision > 6)
-	{
-		std::string message = "ParseArgs - The default XYZ precision received was greater than 6, which could can cause checksum errors depending on your firmware.  Setting to 6.";
-		p_py_logger->log(WARNING, GCODE_CONVERSION, message);
-		args.default_xyz_precision = 6;
-	}
-
-	// extract default_e_precision
-	PyObject* py_default_e_precision = PyDict_GetItemString(py_args, "default_e_precision");
-	if (py_default_e_precision == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the default_e_precision parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.default_e_precision = gcode_arc_converter::PyFloatOrInt_AsDouble(py_default_e_precision);
-	if (args.default_e_precision < 3)
-	{
-		std::string message = "ParseArgs - The default E precision received was less than 3, which could cause extrusion problems.  Setting to 3.";
-		p_py_logger->log(WARNING, GCODE_CONVERSION, message);
-		args.default_e_precision = 3;
-	}
-	else if (args.default_e_precision > 6)
-	{
-		std::string message = "ParseArgs - The default E precision received was greater than 6, which could can cause checksum errors depending on your firmware.  Setting to 6.";
-		p_py_logger->log(WARNING, GCODE_CONVERSION, message);
-		args.default_e_precision = 6;
-	}
-
-	// Extract the path tolerance_percent
-	PyObject* py_path_tolerance_percent = PyDict_GetItemString(py_args, "path_tolerance_percent");
-	if (py_path_tolerance_percent == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the py_path_tolerance_percent parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.path_tolerance_percent = gcode_arc_converter::PyFloatOrInt_AsDouble(py_path_tolerance_percent);
-	if (args.path_tolerance_percent < 0)
-	{
-		args.path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT; // Set to the default if no resolution is provided, or if it is less than 0.
-	}
-
-	// Extract the max_radius in mm
-	PyObject* py_max_radius_mm = PyDict_GetItemString(py_args, "max_radius_mm");
-	if (py_max_radius_mm == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the max_radius_mm parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.max_radius_mm = gcode_arc_converter::PyFloatOrInt_AsDouble(py_max_radius_mm);
-	if (args.max_radius_mm > DEFAULT_MAX_RADIUS_MM)
-	{
-		args.max_radius_mm = DEFAULT_MAX_RADIUS_MM; // Set to the default if no resolution is provided, or if it is less than 0.
-	}
-
-	// Extract the mm_per_arc_segment
-	PyObject* py_mm_per_arc_segment = PyDict_GetItemString(py_args, "mm_per_arc_segment");
-	if (py_mm_per_arc_segment == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the mm_per_arc_segment parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.mm_per_arc_segment = gcode_arc_converter::PyFloatOrInt_AsDouble(py_mm_per_arc_segment);
-	if (args.mm_per_arc_segment < 0)
-	{
-		args.mm_per_arc_segment = 0;
-	}
-
-	// Extract min_arc_segments
-	PyObject* py_min_arc_segments = PyDict_GetItemString(py_args, "min_arc_segments");
-	if (py_min_arc_segments == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve the min_arc_segments parameter from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.min_arc_segments = (int) gcode_arc_converter::PyIntOrLong_AsLong(py_min_arc_segments);
-	if (args.min_arc_segments < 0)
-	{
-		args.min_arc_segments = 0; // Set to the default if no resolution is provided, or if it is less than 0.
-	}
-
-	// extract allow_3d_arcs
-	PyObject* py_allow_3d_arcs = PyDict_GetItemString(py_args, "allow_3d_arcs");
-	if (py_allow_3d_arcs == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve allow_3d_arcs from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.allow_3d_arcs = PyLong_AsLong(py_allow_3d_arcs) > 0;
-
-	// Extract G90/G91 influences extruder
-	// g90_influences_extruder
-	PyObject* py_g90_g91_influences_extruder = PyDict_GetItemString(py_args, "g90_g91_influences_extruder");
-	if (py_g90_g91_influences_extruder == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve g90_g91_influences_extruder from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	args.g90_g91_influences_extruder = PyLong_AsLong(py_g90_g91_influences_extruder) > 0;
-
-	// on_progress_received
-	PyObject* py_on_progress_received = PyDict_GetItemString(py_args, "on_progress_received");
-	if (py_on_progress_received == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve on_progress_received from the stabilization args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	// need to incref this so it doesn't vanish later (borrowed reference we are saving)
-	Py_XINCREF(py_on_progress_received);
-	*py_progress_callback = py_on_progress_received;
-
-	// Extract log_level
-	PyObject* py_log_level = PyDict_GetItemString(py_args, "log_level");
-	if (py_log_level == NULL)
-	{
-		std::string message = "ParseArgs - Unable to retrieve log_level from the args.";
-		p_py_logger->log_exception(GCODE_CONVERSION, message);
-		return false;
-	}
-	
-	int log_level_value = static_cast<int>(PyLong_AsLong(py_log_level));
-	// determine the log level as an index rather than as a value
-	args.log_level = p_py_logger->get_log_level_for_value(log_level_value);
-	
-	return true;
-}
 

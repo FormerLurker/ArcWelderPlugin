@@ -190,7 +190,7 @@ static int generate_digits(Fp* fp, Fp* upper, Fp* lower, char* digits, int* K)
   for (divp = tens + 10; kappa > 0; divp++) {
 
     unsigned long long div = *divp;
-    unsigned digit = part1 / div;
+    unsigned digit = (unsigned int)(part1 / div);
 
     if (digit || idx) {
       digits[idx++] = digit + '0';
@@ -216,7 +216,7 @@ static int generate_digits(Fp* fp, Fp* upper, Fp* lower, char* digits, int* K)
     delta *= 10;
     kappa--;
 
-    unsigned digit = part2 >> -one.exp;
+    unsigned digit = (unsigned int)(part2 >> -one.exp);
     if (digit || idx) {
       digits[idx++] = digit + '0';
     }

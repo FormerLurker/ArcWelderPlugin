@@ -144,12 +144,15 @@ class ArcWelderPlugin(
             use_octoprint_settings=True,
             g90_g91_influences_extruder=False,
             allow_3d_arcs=False,
+            allow_travel_arcs=True,
             allow_dynamic_precision=False,
             default_xyz_precision=3,
             default_e_precision=5,
+            max_gcode_length=0,
             resolution_mm=0.05,
             path_tolerance_percent=5.0,  # 5%
-            max_radius_mm=1000*1000,  # 1KM, pretty big :)
+            max_radius_mm=9999,  # 9.999 Meters
+            extrusion_rate_variance_percent=5.0,
             firmware_compensation_enabled=False,
             min_arc_segments=14,  # 0 to disable
             mm_per_arc_segment=1.0,  # 0 to disable
@@ -188,13 +191,18 @@ class ArcWelderPlugin(
         # firmware checker
         self._firmware_checker = None
 
+        # List of processes to cancel
+        self._process_guids_to_cancel = []
+        # flag to cancel all processing
+        self._cancel_all_processing = False
+
     def get_settings_version(self):
         return 2
 
     def on_settings_migrate(self, target, current):
         # If we don't have a current version, look at the current settings file for the most recent version.
         if current is None:
-            current_version = -1
+            current = -1
         if current < 2:
             logger.info("Migrating settings to version 2.")
             # change 'both' to 'always'
@@ -222,6 +230,7 @@ class ArcWelderPlugin(
             self.preprocessing_failed,
             self.preprocessing_success,
             self.preprocessing_completed,
+            self.preprocessing_cancellations
         )
         self._preprocessor_worker.daemon = True
         logger.info("Starting the Preprocessor worker thread.")
@@ -278,12 +287,10 @@ class ArcWelderPlugin(
             job_guid = request_values.get("guid", "")
             if cancel_all:
                 logger.info("Cancelling all processing tasks.")
-                self._preprocessor_worker.cancel_all()
+                self._cancel_all_processing = True
             else:
                 logger.info("Cancelling job with guid %s.", job_guid)
-                if not self._preprocessor_worker.remove_task(job_guid):
-                    return jsonify({"success": False}, "The task does not exist.  It may have already completed.")
-            self.send_preprocessing_tasks_update()
+                self._process_guids_to_cancel.append(job_guid);
             return jsonify({"success": True})
 
     @octoprint.plugin.BlueprintPlugin.route("/clearLog", methods=["POST"])
@@ -584,6 +591,10 @@ class ArcWelderPlugin(
         return self._settings.get_boolean(["allow_3d_arcs"])
 
     @property
+    def _allow_travel_arcs(self):
+        return self._settings.get_boolean(["allow_travel_arcs"])
+
+    @property
     def _allow_dynamic_precision(self):
         return self._settings.get_boolean(['allow_dynamic_precision'])
 
@@ -594,6 +605,10 @@ class ArcWelderPlugin(
     @property
     def _default_e_precision(self):
         return self._settings.get_float(["default_e_precision"])
+
+    @property
+    def _max_gcode_length(self):
+        return self._settings.get_float(["max_gcode_length"])
 
     @property
     def _resolution_mm(self):
@@ -612,6 +627,13 @@ class ArcWelderPlugin(
     @property
     def _path_tolerance_percent_decimal(self):
         return self._path_tolerance_percent / 100.0
+
+    @property
+    def _extrusion_rate_variance_percent(self):
+        extrusion_rate_variance_percent = self._settings.get_float(["extrusion_rate_variance_percent"])
+        if extrusion_rate_variance_percent is None or extrusion_rate_variance_percent < 0:
+            extrusion_rate_variance_percent = self.settings_default["extrusion_rate_variance_percent"]
+        return extrusion_rate_variance_percent
 
     @property
     def _max_radius_mm(self):
@@ -974,26 +996,32 @@ class ArcWelderPlugin(
             "\n\tsource_path: %s"
             "\n\tresolution_mm: %.3f"
             "\n\tpath_tolerance_percent: %.3f"
+            "\n\textrusion_rate_variance_percent: %.3f"
             "\n\tmax_radius_mm: %d"
             "\n\tmm_per_arc_segment: %.3f"
             "\n\tmin_arc_segments: %d"
             "\n\tg90_g91_influences_extruder: %r"
             "\n\tallow_3d_arcs: %r"
+            "\n\tallow_travel_arcs: %r"
             "\n\tallow_dynamic_precision: %r"
             "\n\tdefault_xyz_precision: %d"
             "\n\tdefault_e_precision: %d"
+            "\n\tmax_gcode_length: %d"
             "\n\tlog_level: %d",
             processor_args["source_path"],
             processor_args["resolution_mm"],
             processor_args["path_tolerance_percent"],
+            processor_args["extrusion_rate_variance_percent"],
             processor_args["max_radius_mm"],
             processor_args["min_arc_segments"],
             processor_args["mm_per_arc_segment"],
             processor_args["g90_g91_influences_extruder"],
             processor_args["allow_3d_arcs"],
+            processor_args["allow_travel_arcs"],
             processor_args["allow_dynamic_precision"],
             processor_args["default_xyz_precision"],
             processor_args["default_e_precision"],
+            processor_args["max_gcode_length"],
             processor_args["log_level"]
         )
 
@@ -1022,24 +1050,31 @@ class ArcWelderPlugin(
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
     def preprocessing_cancelled(self, task, auto_cancelled):
-        source_name = task["octoprint_args"]["source_name"]
-        target_name = task["octoprint_args"]["target_name"]
-        if auto_cancelled:
-            message = "Cannot process while printing.  Arc Welding has been cancelled for '{0}'.  The file will be " \
-                      "processed once printing has completed."
-            if task.get("print_after_processing_cancelled", False):
-                message += "  'Print after Processing' has been cancelled for all items to protect your printer."
-        else:
-            message = "Preprocessing has been cancelled for '{0}'."
+        if task is not None:
+            source_name = task["octoprint_args"]["source_name"]
+            target_name = task["octoprint_args"]["target_name"]
+            if auto_cancelled:
+                message = "Cannot process while printing.  Arc Welding has been cancelled for '{0}'.  The file will be " \
+                          "processed once printing has completed."
+                if task.get("print_after_processing_cancelled", False):
+                    message += "  'Print after Processing' has been cancelled for all items to protect your printer."
+            else:
+                message = "Preprocessing has been cancelled for '{0}'."
 
-        message = message.format(source_name)
-        data = {
-            "message_type": "preprocessing-cancelled",
-            "source_name": source_name,
-            "target_name": target_name,
-            "guid": task["guid"],
-            "message": message
-        }
+            message = message.format(source_name)
+            data = {
+                "message_type": "preprocessing-cancelled",
+                "source_name": source_name,
+                "target_name": target_name,
+                "guid": task["guid"],
+                "message": message
+            }
+        else:
+            message = "All preprocessing tasks were cancelled."
+            data = {
+                "message_type": "all-preprocessing-cancelled",
+                "message": message
+            }
         self._plugin_manager.send_plugin_message(self._identifier, data)
         self.send_preprocessing_tasks_update()
 
@@ -1138,6 +1173,13 @@ class ArcWelderPlugin(
         }
         self._plugin_manager.send_plugin_message(self._identifier, data)
 
+    def preprocessing_cancellations(self):
+        cancel_all = self._cancel_all_processing
+        guids_to_cancel = self._process_guids_to_cancel
+        self._cancel_all_processing = False
+        self._process_guids_to_cancel = []
+        return cancel_all, guids_to_cancel
+
     def on_event(self, event, payload):
         if event == Events.PRINT_STARTED:
             current_process_cancelled, print_after_process_stopped = (
@@ -1227,6 +1269,13 @@ class ArcWelderPlugin(
             logger.warning(
                 "The path tolerance percent %0.2f percent is greater than the recommended max of 5%", resolution_mm
             )
+        extrusion_rate_variance_percent = gcode_comment_settings.get("extrusion_rate_variance_percent", self._extrusion_rate_variance_percent)
+        if extrusion_rate_variance_percent < 0:
+            logger.warning(
+                "The extrusion rate tolerance percent of %0.2f is less than 0, and has been set to the default.", extrusion_rate_variance_percent
+            )
+            extrusion_rate_variance_percent = self._extrusion_rate_variance_percent;
+
         max_radius_mm = gcode_comment_settings.get("max_radius_mm", self._max_radius_mm)
         if max_radius_mm > 1000000:
             logger.warning(
@@ -1251,6 +1300,10 @@ class ArcWelderPlugin(
             "allow_3d_arcs", self._allow_3d_arcs
         )
 
+        allow_travel_arcs = gcode_comment_settings.get(
+            "allow_travel_arcs", self._allow_travel_arcs
+        )
+
         g90_g91_influences_extruder = gcode_comment_settings.get(
             "g90_g91_influences_extruder", self._g90_g91_influences_extruder
         )
@@ -1272,6 +1325,10 @@ class ArcWelderPlugin(
         elif default_e_precision > 6:
             default_e_precision = 6
 
+        max_gcode_length = gcode_comment_settings.get(
+            "max_gcode_length", self._max_gcode_length
+        )
+
         # determine the target file name and path
         target_name, target_path, target_display_name = self.get_output_file_name_and_path(source_name, source_path, gcode_comment_settings)
         return {
@@ -1291,14 +1348,17 @@ class ArcWelderPlugin(
                 "source_path": source_path_on_disk,
                 "resolution_mm": resolution_mm,
                 "path_tolerance_percent": path_tolerance_percent / 100.0,  # Convert to decimal percent
+                "extrusion_rate_variance_percent": extrusion_rate_variance_percent / 100.0, # Convert to decimal percent
                 "max_radius_mm": max_radius_mm,
                 "min_arc_segments": min_arc_segments,
                 "mm_per_arc_segment": mm_per_arc_segment,
                 "g90_g91_influences_extruder": g90_g91_influences_extruder,
                 "allow_3d_arcs": allow_3d_arcs,
+                "allow_travel_arcs": allow_travel_arcs,
                 "allow_dynamic_precision": allow_dynamic_precision,
                 "default_xyz_precision": default_xyz_precision,
                 "default_e_precision": default_e_precision,
+                "max_gcode_length": max_gcode_length,
                 "log_level": self._gcode_conversion_log_level
             }
         }

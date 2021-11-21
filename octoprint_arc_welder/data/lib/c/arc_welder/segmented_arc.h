@@ -42,14 +42,14 @@ public:
 		double mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
 		bool allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS,
 		unsigned char default_xyz_precision = DEFAULT_XYZ_PRECISION,
-		unsigned char default_e_precision = DEFAULT_E_PRECISION
+		unsigned char default_e_precision = DEFAULT_E_PRECISION,
+		int max_gcode_length = DEFAULT_MAX_GCODE_LENGTH
 	);
 	virtual ~segmented_arc();
 	virtual bool try_add_point(printer_point p);
 	virtual double get_shape_length();
-	std::string get_shape_gcode_absolute(double e, double f);
-	std::string get_shape_gcode_relative(double f);
-	
+	std::string get_shape_gcode() const;
+	int get_shape_gcode_length();
 	virtual bool is_shape() const;
 	printer_point pop_front(double e_relative);
 	printer_point pop_back(double e_relative);
@@ -57,15 +57,16 @@ public:
 	int get_min_arc_segments() const;
 	double get_mm_per_arc_segment() const;
 	int get_num_firmware_compensations() const;
-
+	int get_num_gcode_length_exceptions() const;
 private:
 	bool try_add_point_internal_(printer_point p);
-	std::string get_shape_gcode_(bool has_e, double e, double f) const;
 	arc current_arc_;
 	double max_radius_mm_;
 	int min_arc_segments_;
 	double mm_per_arc_segment_;
 	int num_firmware_compensations_;
 	bool allow_3d_arcs_;
+	int max_gcode_length_;
+	int num_gcode_length_exceptions_;
 };															
 
