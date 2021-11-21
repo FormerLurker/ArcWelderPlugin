@@ -22,23 +22,30 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "py_arc_welder.h"
 
-PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, std::string guid)
+PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, std::string guid, bool include_detailed_statistics)
 {
   PyObject* pyGuid = gcode_arc_converter::PyUnicode_SafeFromString(guid);
   if (pyGuid == NULL)
     return NULL;
-  // Extrusion Statistics
-  source_target_segment_statistics combined_stats = source_target_segment_statistics::add(progress.segment_statistics, progress.segment_retraction_statistics);
 
-  std::string segment_statistics = combined_stats.str("", utilities::box_drawing::HTML);
+  std::string segment_statistics = "";
+  std::string segment_travel_statistics = "";
+
+  if (include_detailed_statistics)
+  {
+      // Extrusion Statistics
+      source_target_segment_statistics combined_stats = source_target_segment_statistics::add(progress.segment_statistics, progress.segment_retraction_statistics);
+      segment_statistics = combined_stats.str("", utilities::box_drawing::HTML);
+      // Travel Statistics
+      segment_travel_statistics = progress.travel_statistics.str("", utilities::box_drawing::HTML);
+  }
   PyObject* pyMessage = gcode_arc_converter::PyUnicode_SafeFromString(segment_statistics);
   if (pyMessage == NULL)
     return NULL;
   double total_count_reduction_percent = progress.segment_statistics.get_total_count_reduction_percent();
-  // Travel Statistics
-  std::string segment_travel_statistics = progress.travel_statistics.str("", utilities::box_drawing::HTML);
+  
   PyObject* pyTravelMessage = gcode_arc_converter::PyUnicode_SafeFromString(segment_travel_statistics);
-  if (pyMessage == NULL)
+  if (pyTravelMessage == NULL)
     return NULL;
   double total_travel_count_reduction_percent = progress.travel_statistics.get_total_count_reduction_percent();
   PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:f,s:f,s:f,s:i,s:i,s:f}",
@@ -110,7 +117,7 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, 
 
 bool py_arc_welder::on_progress_(const arc_welder_progress& progress)
 {
-  PyObject* py_dict = py_arc_welder::build_py_progress(progress, guid_);
+  PyObject* py_dict = py_arc_welder::build_py_progress(progress, guid_, false);
   if (py_dict == NULL)
   {
     return false;

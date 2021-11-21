@@ -566,7 +566,6 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 
   bool z_axis_ok = allow_3d_arcs_ ||
     utilities::is_equal(p_cur_pos->z, p_pre_pos->z);
-  /* use to catch gcode for debugging since I can't set conditions equal to strings */
   
   if (
     !is_end && cmd.is_known_command && !cmd.is_empty && (

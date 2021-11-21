@@ -207,7 +207,8 @@ extern "C"
 		p_py_logger->log(GCODE_CONVERSION, log_levels::INFO, message);
 		Py_XDECREF(py_progress_callback);
 		// return the arguments
-		PyObject* p_progress = py_arc_welder::build_py_progress(results.progress, args.guid);
+		PyObject* p_progress = py_arc_welder::build_py_progress(results.progress, args.guid, true);
+		
 		if (p_progress == NULL)
 			p_progress = Py_None;
 

@@ -61,7 +61,7 @@ public:
 	virtual ~py_arc_welder() {
 		
 	}
-	static PyObject* build_py_progress(const arc_welder_progress& progress, std::string guid);
+	static PyObject* build_py_progress(const arc_welder_progress& progress, std::string guid, bool include_detailed_statistics);
 protected:
 	std::string guid_;
 	virtual bool on_progress_(const arc_welder_progress& progress);
