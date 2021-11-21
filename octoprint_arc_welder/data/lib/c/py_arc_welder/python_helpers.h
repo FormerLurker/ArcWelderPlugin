@@ -35,6 +35,7 @@ namespace gcode_arc_converter {
 	PyObject* PyString_SafeFromString(const char* str);
 	PyObject* PyUnicode_SafeFromString(std::string str);
 	PyObject* PyBytesOrString_FromString(std::string str);
+	PyObject* PyUnicode_SafeFromWstring(std::wstring wstr);
 	double PyFloatOrInt_AsDouble(PyObject* py_double_or_int);
 	long PyIntOrLong_AsLong(PyObject* value);
 	bool PyFloatLongOrInt_Check(PyObject* value);

@@ -1122,14 +1122,17 @@ $(function () {
 
         self.onBeforeBinding = function () {
             // Make plugin setting access a little more terse
-            self.plugin_settings = self.settings.settings.plugins.arc_welder;
+            //self.plugin_settings = self.settings.settings.plugins.arc_welder;
+            // Update - We want to make a copy here so that only saved changes propogate to the tab
+            self.plugin_settings = ko.mapping.fromJS(ko.mapping.toJS(self.settings.settings.plugins.arc_welder));
+
             self.octoprint_settings = self.settings.settings;
             self.version(self.plugin_settings.version());
             self.git_version(self.plugin_settings.git_version());
         };
 
         self.onAfterBinding = function() {
-            ArcWelder.Help.bindHelpLinks("#tab_plugin_arc_welder_controls");
+            ArcWelder.Help.bindHelpLinks(ArcWelder.tabDivSelector);
             self.plugin_settings.path_tolerance_percent.extend({arc_welder_numeric: 1});
         };
 
@@ -1259,9 +1262,18 @@ $(function () {
 
         };
 
+        self.updateArcwelderSettings = function(settings)
+        {
+            ko.mapping.fromJS(ko.mapping.toJS(settings), self.plugin_settings);
+
+        }
         // receive events
         self.onEventFileSelected = function(payload) {
             self.current_statistics_file(payload);
+        }
+
+        self.onEventSettingsUpdated = function(payload) {
+            self.updateArcwelderSettings(self.settings.settings.plugins.arc_welder);
         }
         // Handle Plugin Messages from Server
 
@@ -1807,11 +1819,13 @@ $(function () {
     ArcWelder.openTab = function() {
         $('#tab_plugin_arc_welder_link a').click();
     }
+    ArcWelder.tabDivId = "tab_plugin_arc_welder_controls";
+    ArcWelder.tabDivSelector = "#" + ArcWelder.tabDivId;
 
     OCTOPRINT_VIEWMODELS.push([
         ArcWelder.ArcWelderViewModel,
         ["settingsViewModel", "loginStateViewModel", "filesViewModel", "printerStateViewModel"],
-        ["#tab_plugin_arc_welder_controls"]
+        [ArcWelder.tabDivSelector]
     ]);
 });
 

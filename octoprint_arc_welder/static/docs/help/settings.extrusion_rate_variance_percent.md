@@ -2,4 +2,6 @@ If the extrusion rate varies along a given arc by more than this percent, the ar
 
 Higher values will result in more arcs being created, and lower values will produce more accurate line widths.
 
+A setting of 0 will disable this feature.
+
 Note:  This feature is experimental.

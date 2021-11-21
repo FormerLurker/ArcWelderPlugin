@@ -44,8 +44,12 @@ namespace gcode_arc_converter {
 	PyObject* PyString_SafeFromString(const char* str)
 	{
 #if PY_MAJOR_VERSION >= 3
-		return PyUnicode_FromString(str);
+		
+		return PyUnicode_DecodeUTF8(str, strlen(str), NULL);
+		//return PyUnicode_FromString(str);
 #else
+		
+		//return PyUnicode_DecodeUTF8(str, strlen(str), NULL);
 		return PyString_FromString(str);
 #endif
 	}
@@ -70,6 +74,12 @@ namespace gcode_arc_converter {
 		Py_DECREF(pyString);
 		return pyUnicode;
 #endif
+	}
+
+	PyObject* PyUnicode_SafeFromWstring(std::wstring wstr)
+	{
+
+		return PyUnicode_FromWideChar(wstr.c_str(), wstr.size());
 	}
 
 	PyObject* PyBytesOrString_FromString(std::string str)

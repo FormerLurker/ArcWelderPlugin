@@ -28,13 +28,15 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, 
   if (pyGuid == NULL)
     return NULL;
   // Extrusion Statistics
-  std::string segment_statistics = progress.segment_statistics.str();
+  source_target_segment_statistics combined_stats = source_target_segment_statistics::add(progress.segment_statistics, progress.segment_retraction_statistics);
+
+  std::string segment_statistics = combined_stats.str("", utilities::box_drawing::HTML);
   PyObject* pyMessage = gcode_arc_converter::PyUnicode_SafeFromString(segment_statistics);
   if (pyMessage == NULL)
     return NULL;
   double total_count_reduction_percent = progress.segment_statistics.get_total_count_reduction_percent();
   // Travel Statistics
-  std::string segment_travel_statistics = progress.travel_statistics.str();
+  std::string segment_travel_statistics = progress.travel_statistics.str("", utilities::box_drawing::HTML);
   PyObject* pyTravelMessage = gcode_arc_converter::PyUnicode_SafeFromString(segment_travel_statistics);
   if (pyMessage == NULL)
     return NULL;

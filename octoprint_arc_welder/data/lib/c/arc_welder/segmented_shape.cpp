@@ -521,7 +521,6 @@ bool arc::try_create_arc(
 {
   circle test_circle = (circle)target_arc;
 
-  
   if (!circle::try_create_circle(points, max_radius_mm, resolution_mm, xyz_tolerance, allow_3d_arcs, test_circle))
   {
     return false;

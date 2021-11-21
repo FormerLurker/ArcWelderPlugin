@@ -190,19 +190,21 @@ extern "C"
 		{
 			return NULL;
 		}
-		p_py_logger->set_log_level(args.log_level);
+		p_py_logger->set_log_level((log_levels)args.log_level);
 
 		std::string message = "py_gcode_arc_converter.ConvertFile - Beginning Arc Conversion.";
-		p_py_logger->log(GCODE_CONVERSION, INFO, message);
+		p_py_logger->log(GCODE_CONVERSION, log_levels::INFO, message);
 
 		args.py_progress_callback = py_progress_callback;
 		args.log = p_py_logger;
+		// Set the encoding to html for the progress output
+		args.box_encoding = utilities::box_drawing::HTML;
 		py_arc_welder arc_welder_obj(args);
 		arc_welder_results results;
 		results = arc_welder_obj.process();
 		
 		message = "py_gcode_arc_converter.ConvertFile - Arc Conversion Complete.";
-		p_py_logger->log(GCODE_CONVERSION, INFO, message);
+		p_py_logger->log(GCODE_CONVERSION, log_levels::INFO, message);
 		Py_XDECREF(py_progress_callback);
 		// return the arguments
 		PyObject* p_progress = py_arc_welder::build_py_progress(results.progress, args.guid);

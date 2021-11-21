@@ -36,89 +36,79 @@
 #include <sstream>
 #include <version.h>
 
-arc_welder::arc_welder(
-  std::string source_path,
-  std::string target_path,
-  logger* log,
-  double resolution_mm,
-  double path_tolerance_percent,
-  double max_radius,
-  int min_arc_segments,
-  double mm_per_arc_segment,
-  bool g90_g91_influences_extruder,
-  bool allow_3d_arcs,
-  bool allow_travel_arcs,
-  bool allow_dynamic_precision,
-  unsigned char default_xyz_precision,
-  unsigned char default_e_precision,
-  double extrusion_rate_variance_percent,
-  int max_gcode_length,
-  int buffer_size,
-  double notification_period_seconds,
-  progress_callback callback) : current_arc_(
-    DEFAULT_MIN_SEGMENTS,
-    buffer_size,
-    resolution_mm,
-    path_tolerance_percent,
-    max_radius,
-    min_arc_segments,
-    mm_per_arc_segment,
-    allow_3d_arcs,
-    default_xyz_precision,
-    default_e_precision,
-    max_gcode_length
-  ),
-  segment_statistics_(
-    segment_statistic_lengths,
-    segment_statistic_lengths_count,
-    log
-  ),
-  travel_statistics_(
-    segment_statistic_lengths,
-    segment_statistic_lengths_count,
-    log
-  )
+
+
+
+arc_welder::arc_welder(arc_welder_args args) : current_arc_(
+        DEFAULT_MIN_SEGMENTS,
+        args.buffer_size,
+        args.resolution_mm,
+        args.path_tolerance_percent,
+        args.max_radius_mm,
+        args.min_arc_segments,
+        args.mm_per_arc_segment,
+        args.allow_3d_arcs,
+        args.default_xyz_precision,
+        args.default_e_precision,
+        args.max_gcode_length
+    ),
+    segment_statistics_(
+        segment_statistic_lengths,
+        segment_statistic_lengths_count,
+        args.log
+    ),
+    segment_retraction_statistics_(
+        segment_statistic_lengths,
+        segment_statistic_lengths_count,
+        args.log
+    ),
+    travel_statistics_(
+        segment_statistic_lengths,
+        segment_statistic_lengths_count,
+        args.log
+    )
 {
-  p_logger_ = log;
-  debug_logging_enabled_ = false;
-  info_logging_enabled_ = false;
-  error_logging_enabled_ = false;
-  verbose_logging_enabled_ = false;
+    p_logger_ = args.log;
+    debug_logging_enabled_ = false;
+    info_logging_enabled_ = false;
+    error_logging_enabled_ = false;
+    verbose_logging_enabled_ = false;
 
-  logger_type_ = 0;
-  resolution_mm_ = resolution_mm;
-  progress_callback_ = callback;
-  verbose_output_ = false;
-  source_path_ = source_path;
-  target_path_ = target_path;
-  gcode_position_args_ = get_args_(g90_g91_influences_extruder, buffer_size);
-  allow_3d_arcs_ = allow_3d_arcs;
-  allow_travel_arcs_ = allow_travel_arcs;
-  allow_dynamic_precision_ = allow_dynamic_precision;
-  extrusion_rate_variance_percent_ = extrusion_rate_variance_percent;
-  lines_processed_ = 0;
-  gcodes_processed_ = 0;
-  file_size_ = 0;
-  notification_period_seconds_ = notification_period_seconds;
-  last_gcode_line_written_ = 0;
-  points_compressed_ = 0;
-  arcs_created_ = 0;
-  arcs_aborted_by_flow_rate_ = 0;
-  waiting_for_arc_ = false;
-  previous_feedrate_ = -1;
-  gcode_position_args_.set_num_extruders(8);
-  previous_extrusion_rate_ = 0;
-  for (int index = 0; index < 8; index++)
-  {
-    gcode_position_args_.retraction_lengths[0] = .0001;
-    gcode_position_args_.z_lift_heights[0] = 0.001;
-    gcode_position_args_.x_firmware_offsets[0] = 0.0;
-    gcode_position_args_.y_firmware_offsets[0] = 0.0;
-  }
+    logger_type_ = 0;
+    resolution_mm_ = args.resolution_mm;
+    progress_callback_ = args.callback;
+    verbose_output_ = false;
+    source_path_ = args.source_path;
+    target_path_ = args.target_path;
+    gcode_position_args_ = get_args_(args.g90_g91_influences_extruder, args.buffer_size);
+    allow_3d_arcs_ = args.allow_3d_arcs;
+    allow_travel_arcs_ = args.allow_travel_arcs;
+    allow_dynamic_precision_ = args.allow_dynamic_precision;
+    extrusion_rate_variance_percent_ = args.extrusion_rate_variance_percent;
+    lines_processed_ = 0;
+    gcodes_processed_ = 0;
+    file_size_ = 0;
+    notification_period_seconds_ = args.notification_period_seconds;
+    last_gcode_line_written_ = 0;
+    points_compressed_ = 0;
+    arcs_created_ = 0;
+    arcs_aborted_by_flow_rate_ = 0;
+    waiting_for_arc_ = false;
+    previous_feedrate_ = -1;
+    gcode_position_args_.set_num_extruders(8);
+    previous_extrusion_rate_ = 0;
+    box_encoding_ = args.box_encoding;
+    for (int index = 0; index < 8; index++)
+    {
+        gcode_position_args_.retraction_lengths[0] = .0001;
+        gcode_position_args_.z_lift_heights[0] = 0.001;
+        gcode_position_args_.x_firmware_offsets[0] = 0.0;
+        gcode_position_args_.y_firmware_offsets[0] = 0.0;
+    }
 
-  // We don't care about the printer settings, except for g91 influences extruder.
+    // We don't care about the printer settings, except for g91 influences extruder.
 
-  p_source_position_ = new gcode_position(gcode_position_args_);
+    p_source_position_ = new gcode_position(gcode_position_args_);
 }
 
 gcode_position_args arc_welder::get_args_(bool g90_g91_influences_extruder, int buffer_size)
@@ -170,7 +160,7 @@ void arc_welder::set_logger_type(int logger_type)
 
 void arc_welder::reset()
 {
-  p_logger_->log(logger_type_, DEBUG, "Resetting all tracking variables.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Resetting all tracking variables.");
   lines_processed_ = 0;
   gcodes_processed_ = 0;
   last_gcode_line_written_ = 0;
@@ -204,11 +194,11 @@ double arc_welder::get_time_elapsed(double start_clock, double end_clock)
 arc_welder_results arc_welder::process()
 {
   arc_welder_results results;
-  p_logger_->log(logger_type_, DEBUG, "Configuring logging settings.");
-  verbose_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, VERBOSE);
-  debug_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, DEBUG);
-  info_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, INFO);
-  error_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, ERROR);
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Configuring logging settings.");
+  verbose_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, log_levels::VERBOSE);
+  debug_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, log_levels::DEBUG);
+  info_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, log_levels::INFO);
+  error_logging_enabled_ = p_logger_->is_log_level_enabled(logger_type_, log_levels::ERROR);
 
   std::stringstream stream;
   // reset tracking variables
@@ -216,16 +206,16 @@ arc_welder_results arc_welder::process()
   // local variable to hold the progress update return.  If it's false, we will exit.
   bool continue_processing = true;
 
-  p_logger_->log(logger_type_, DEBUG, "Configuring progress updates.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Configuring progress updates.");
   int read_lines_before_clock_check = 1000;
   double next_update_time = get_next_update_time();
   const clock_t start_clock = clock();
-  p_logger_->log(logger_type_, DEBUG, "Getting source file size.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Getting source file size.");
   file_size_ = get_file_size(source_path_);
   stream.clear();
   stream.str("");
   stream << "Source file size: " << file_size_;
-  p_logger_->log(logger_type_, DEBUG, stream.str());
+  p_logger_->log(logger_type_, log_levels::DEBUG, stream.str());
 
   // Determine if we need to overwrite the source file
   bool overwrite_source_file = false;
@@ -244,13 +234,13 @@ arc_welder_results arc_welder::process()
     stream.clear();
     stream.str("");
     stream << "Source and target path are the same.  The source file will be overwritten.  Temporary file path: " << temp_file_path;
-    p_logger_->log(logger_type_, DEBUG, stream.str());
+    p_logger_->log(logger_type_, log_levels::DEBUG, stream.str());
     target_path_ = temp_file_path;
   }
 
   // Create the source file read stream and target write stream
   std::ifstream gcodeFile;
-  p_logger_->log(logger_type_, DEBUG, "Opening the source file for reading.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Opening the source file for reading.");
   gcodeFile.open(source_path_.c_str(), std::ifstream::in);
   if (!gcodeFile.is_open())
   {
@@ -259,9 +249,9 @@ arc_welder_results arc_welder::process()
     p_logger_->log_exception(logger_type_, results.message);
     return results;
   }
-  p_logger_->log(logger_type_, DEBUG, "Source file opened successfully.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Source file opened successfully.");
 
-  p_logger_->log(logger_type_, DEBUG, "Opening the target file for writing.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Opening the target file for writing.");
 
   output_file_.open(target_path_.c_str(), std::ios_base::binary | std::ios_base::out);
   if (!output_file_.is_open())
@@ -273,14 +263,14 @@ arc_welder_results arc_welder::process()
     return results;
   }
 
-  p_logger_->log(logger_type_, DEBUG, "Target file opened successfully.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Target file opened successfully.");
   std::string line;
   int lines_with_no_commands = 0;
   parsed_command cmd;
   // Communicate every second
-  p_logger_->log(logger_type_, DEBUG, "Sending initial progress update.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Sending initial progress update.");
   continue_processing = on_progress_(get_progress_(static_cast<long>(gcodeFile.tellg()), static_cast<double>(start_clock)));
-  p_logger_->log(logger_type_, DEBUG, "Processing source file.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Processing source file.");
 
   bool arc_Welder_comment_added = false;
   while (std::getline(gcodeFile, line) && continue_processing)
@@ -311,7 +301,7 @@ arc_welder_results arc_welder::process()
       stream.clear();
       stream.str("");
       stream << "Parsing: " << line;
-      p_logger_->log(logger_type_, VERBOSE, stream.str());
+      p_logger_->log(logger_type_, log_levels::VERBOSE, stream.str());
     }
     parser_.try_parse_gcode(line.c_str(), cmd, true);
     bool has_gcode = false;
@@ -337,7 +327,7 @@ arc_welder_results arc_welder::process()
       {
         if (verbose_logging_enabled_)
         {
-          p_logger_->log(logger_type_, VERBOSE, "Sending progress update.");
+          p_logger_->log(logger_type_, log_levels::VERBOSE, "Sending progress update.");
         }
         continue_processing = on_progress_(get_progress_(static_cast<long>(gcodeFile.tellg()), static_cast<double>(start_clock)));
         next_update_time = get_next_update_time();
@@ -347,22 +337,22 @@ arc_welder_results arc_welder::process()
 
   if (current_arc_.is_shape() && waiting_for_arc_)
   {
-    p_logger_->log(logger_type_, DEBUG, "Processing the final line.");
+    p_logger_->log(logger_type_, log_levels::DEBUG, "Processing the final line.");
     process_gcode(cmd, true, false);
   }
-  p_logger_->log(logger_type_, DEBUG, "Writing all unwritten gcodes to the target file.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Writing all unwritten gcodes to the target file.");
   write_unwritten_gcodes_to_file();
 
-  p_logger_->log(logger_type_, DEBUG, "Fetching the final progress struct.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Fetching the final progress struct.");
 
   arc_welder_progress final_progress = get_progress_(static_cast<long>(file_size_), static_cast<double>(start_clock));
   if (debug_logging_enabled_)
   {
-    p_logger_->log(logger_type_, DEBUG, "Sending final progress update message.");
+    p_logger_->log(logger_type_, log_levels::DEBUG, "Sending final progress update message.");
   }
   on_progress_(final_progress);
 
-  p_logger_->log(logger_type_, DEBUG, "Closing source and target files.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Closing source and target files.");
   output_file_.close();
   gcodeFile.close();
 
@@ -371,19 +361,19 @@ arc_welder_results arc_welder::process()
     stream.clear();
     stream.str("");
     stream << "Deleting the original source file at '" << source_path_ << "'.";
-    p_logger_->log(logger_type_, DEBUG, stream.str());
+    p_logger_->log(logger_type_, log_levels::DEBUG, stream.str());
     stream.clear();
     stream.str("");
     std::remove(source_path_.c_str());
     stream << "Renaming temporary file at '" << target_path_ << "' to '" << source_path_ << "'.";
-    p_logger_->log(0, DEBUG, stream.str());
+    p_logger_->log(0, log_levels::DEBUG, stream.str());
     std::rename(target_path_.c_str(), source_path_.c_str());
   }
 
   results.success = continue_processing;
   results.cancelled = !continue_processing;
   results.progress = final_progress;
-  p_logger_->log(logger_type_, DEBUG, "Returning processing results.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Returning processing results.");
 
   return results;
 }
@@ -396,7 +386,7 @@ bool arc_welder::on_progress_(const arc_welder_progress& progress)
   }
   else if (info_logging_enabled_)
   {
-    p_logger_->log(logger_type_, INFO, progress.str());
+    p_logger_->log(logger_type_, log_levels::INFO, progress.str());
   }
 
   return true;
@@ -430,19 +420,17 @@ arc_welder_progress arc_welder::get_progress_(long source_file_position, double 
   progress.num_firmware_compensations = current_arc_.get_num_firmware_compensations();
   progress.num_gcode_length_exceptions = current_arc_.get_num_gcode_length_exceptions();
   progress.segment_statistics = segment_statistics_;
+  progress.segment_retraction_statistics = segment_retraction_statistics_;
   progress.travel_statistics = travel_statistics_;
+  progress.box_encoding = box_encoding_;
   return progress;
 
 }
 
 int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess)
 {
-  /* use to catch gcode for debugging since I can't set conditions equal to strings
-  if (cmd.gcode == "G1 X118.762 Y104.054 E0.0163")
-  {
-    std::cout << "Found it!";
-  }
-  */
+
+  
   // Update the position for the source gcode file
   p_source_position_->update(cmd, lines_processed_, gcodes_processed_, -1);
   position* p_cur_pos = p_source_position_->get_current_position_ptr();
@@ -462,7 +450,10 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
   bool arc_added = false;
   bool clear_shapes = false;
   double movement_length_mm = 0;
-  bool has_e_changed = extruder_current.e_relative != 0;
+  bool is_extrusion = extruder_current.e_relative > 0;
+  bool is_retraction = extruder_current.e_relative < 0;
+  bool is_travel = !(is_extrusion || is_retraction) && (is_g0_g1 || is_g2_g3);
+  
   // Update the source file statistics
   if (p_cur_pos->has_xy_position_changed)
   {
@@ -512,11 +503,15 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
     {
       if (!is_reprocess)
       {
-        if (has_e_changed)
+        if (is_extrusion)
         {
           segment_statistics_.update(movement_length_mm, true);
         }
-        else if (allow_travel_arcs_)
+        else if (is_retraction)
+        {
+            segment_retraction_statistics_.update(movement_length_mm, true);
+        }
+        else if (allow_travel_arcs_ && is_travel)
         {
           travel_statistics_.update(movement_length_mm, true);
         }
@@ -529,20 +524,24 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
   double mm_extruded_per_mm_travel = 0;
   double extrusion_rate_change_percent = 0;
   bool aborted_by_flow_rate = false;
-  // TODO:  MAKE SURE THIS WORKS FOR TRANSITIONS FROM TRAVEL TO NON TRAVEL MOVES
-  if (movement_length_mm > 0 && has_e_changed)
+  if (extrusion_rate_variance_percent_ != 0)
   {
-    mm_extruded_per_mm_travel = extruder_current.e_relative / movement_length_mm;
-    if (previous_extrusion_rate_ > 0)
-    {
-      extrusion_rate_change_percent = utilities::abs(utilities::get_percent_change(previous_extrusion_rate_, mm_extruded_per_mm_travel));
-    }
+      // TODO:  MAKE SURE THIS WORKS FOR TRANSITIONS FROM TRAVEL TO NON TRAVEL MOVES
+      if (movement_length_mm > 0 && (is_extrusion || is_retraction))
+      {
+          mm_extruded_per_mm_travel = extruder_current.e_relative / movement_length_mm;
+          if (previous_extrusion_rate_ > 0)
+          {
+              extrusion_rate_change_percent = utilities::abs(utilities::get_percent_change(previous_extrusion_rate_, mm_extruded_per_mm_travel));
+          }
+      }
+      if (previous_extrusion_rate_ != 0 && utilities::greater_than(extrusion_rate_change_percent, extrusion_rate_variance_percent_))
+      {
+          arcs_aborted_by_flow_rate_++;
+          aborted_by_flow_rate = true;
+      }
   }
-  if (previous_extrusion_rate_ != 0 && utilities::greater_than(extrusion_rate_change_percent, extrusion_rate_variance_percent_))
-  {
-    arcs_aborted_by_flow_rate_++;
-    aborted_by_flow_rate = true;
-  }
+  
 
   // We need to make sure the printer is using absolute xyz, is extruding, and the extruder axis mode is the same as that of the previous position
   // TODO: Handle relative XYZ axis.  This is possible, but maybe not so important.
@@ -567,7 +566,8 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
 
   bool z_axis_ok = allow_3d_arcs_ ||
     utilities::is_equal(p_cur_pos->z, p_pre_pos->z);
-
+  /* use to catch gcode for debugging since I can't set conditions equal to strings */
+  
   if (
     !is_end && cmd.is_known_command && !cmd.is_empty && (
       is_g0_g1 && z_axis_ok &&
@@ -582,11 +582,13 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
       (
         !waiting_for_arc_ ||
         extruder_current.is_extruding ||
+        extruder_current.is_retracting ||
         // Test for travel conversion
-        (allow_travel_arcs_ && p_cur_pos->is_travel()) ||
-        //(previous_extruder.is_extruding && extruder_current.is_extruding) || // Test to see if 
+        (allow_travel_arcs_ && p_cur_pos->is_travel())
+        //|| (previous_extruder.is_extruding && extruder_current.is_extruding) // Test to see if 
         // we can get more arcs.
-        (previous_extruder.is_retracting && extruder_current.is_retracting)
+        // || (previous_extruder.is_retracting && extruder_current.is_retracting) // Test to see if 
+        // we can get more arcs.
         ) &&
       p_cur_pos->is_extruder_relative == is_previous_extruder_relative &&
       (!waiting_for_arc_ || p_pre_pos->f == p_cur_pos->f) && // might need to skip the waiting for arc check...
@@ -601,7 +603,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
     {
       if (debug_logging_enabled_)
       {
-        p_logger_->log(logger_type_, DEBUG, "Starting new arc from Gcode:" + cmd.gcode);
+        p_logger_->log(logger_type_, log_levels::DEBUG, "Starting new arc from Gcode:" + cmd.gcode);
       }
       write_unwritten_gcodes_to_file();
       // add the previous point as the starting point for the current arc
@@ -633,7 +635,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
         {
           if (num_points + 1 == current_arc_.get_num_segments())
           {
-            p_logger_->log(logger_type_, DEBUG, "Adding point to arc from Gcode:" + cmd.gcode);
+            p_logger_->log(logger_type_, log_levels::DEBUG, "Adding point to arc from Gcode:" + cmd.gcode);
           }
 
         }
@@ -645,25 +647,25 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
     if (debug_logging_enabled_) {
       if (is_end)
       {
-        p_logger_->log(logger_type_, DEBUG, "Procesing final shape, if one exists.");
+        p_logger_->log(logger_type_, log_levels::DEBUG, "Procesing final shape, if one exists.");
       }
       else if (!cmd.is_empty)
       {
         if (!cmd.is_known_command)
         {
-          p_logger_->log(logger_type_, DEBUG, "Command '" + cmd.command + "' is Unknown.  Gcode:" + cmd.gcode);
+          p_logger_->log(logger_type_, log_levels::DEBUG, "Command '" + cmd.command + "' is Unknown.  Gcode:" + cmd.gcode);
         }
         else if (cmd.command != "G0" && cmd.command != "G1")
         {
-          p_logger_->log(logger_type_, DEBUG, "Command '" + cmd.command + "' is not G0/G1, skipping.  Gcode:" + cmd.gcode);
+          p_logger_->log(logger_type_, log_levels::DEBUG, "Command '" + cmd.command + "' is not G0/G1, skipping.  Gcode:" + cmd.gcode);
         }
         else if (!allow_3d_arcs_ && !utilities::is_equal(p_cur_pos->z, p_pre_pos->z))
         {
-          p_logger_->log(logger_type_, DEBUG, "Z axis position changed, cannot convert:" + cmd.gcode);
+          p_logger_->log(logger_type_, log_levels::DEBUG, "Z axis position changed, cannot convert:" + cmd.gcode);
         }
         else if (p_cur_pos->is_relative)
         {
-          p_logger_->log(logger_type_, DEBUG, "XYZ Axis is in relative mode, cannot convert:" + cmd.gcode);
+          p_logger_->log(logger_type_, log_levels::DEBUG, "XYZ Axis is in relative mode, cannot convert:" + cmd.gcode);
         }
         else if (
           waiting_for_arc_ && !(
@@ -694,37 +696,37 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
               ", Retracting: " + (previous_extruder.is_retracting ? "True" : "False") +
               ", Extruding: " + (previous_extruder.is_extruding ? "True" : "False")
             );
-            p_logger_->log(logger_type_, VERBOSE, message);
+            p_logger_->log(logger_type_, log_levels::VERBOSE, message);
           }
           else
           {
-            p_logger_->log(logger_type_, DEBUG, message);
+            p_logger_->log(logger_type_, log_levels::DEBUG, message);
           }
 
         }
         else if (p_cur_pos->is_extruder_relative != p_pre_pos->is_extruder_relative)
         {
-          p_logger_->log(logger_type_, DEBUG, "Extruder axis mode changed, cannot add point to current arc: " + cmd.gcode);
+          p_logger_->log(logger_type_, log_levels::DEBUG, "Extruder axis mode changed, cannot add point to current arc: " + cmd.gcode);
         }
         else if (waiting_for_arc_ && p_pre_pos->f != p_cur_pos->f)
         {
-          p_logger_->log(logger_type_, DEBUG, "Feedrate changed, cannot add point to current arc: " + cmd.gcode);
+          p_logger_->log(logger_type_, log_levels::DEBUG, "Feedrate changed, cannot add point to current arc: " + cmd.gcode);
         }
         else if (waiting_for_arc_ && p_pre_pos->feature_type_tag != p_cur_pos->feature_type_tag)
         {
-          p_logger_->log(logger_type_, DEBUG, "Feature type changed, cannot add point to current arc: " + cmd.gcode);
+          p_logger_->log(logger_type_, log_levels::DEBUG, "Feature type changed, cannot add point to current arc: " + cmd.gcode);
         }
         else if (aborted_by_flow_rate)
         {
           std::stringstream stream;
           stream << std::fixed << std::setprecision(5);
           stream << "Arc Canceled - The extrusion rate variance of " << extrusion_rate_variance_percent_ << "% exceeded by " << extrusion_rate_change_percent - extrusion_rate_variance_percent_ << "% on line " << lines_processed_ << ".  Extruded " << extruder_current.e_relative << "mm over " << movement_length_mm << "mm of travel (" << mm_extruded_per_mm_travel << "mm/mm).  Previous rate: " << previous_extrusion_rate_ << "mm/mm.";
-          p_logger_->log(logger_type_, DEBUG, stream.str());
+          p_logger_->log(logger_type_, log_levels::DEBUG, stream.str());
         }
         else
         {
           // Todo:  Add all the relevant values
-          p_logger_->log(logger_type_, DEBUG, "There was an unknown issue preventing the current point from being added to the arc: " + cmd.gcode);
+          p_logger_->log(logger_type_, log_levels::DEBUG, "There was an unknown issue preventing the current point from being added to the arc: " + cmd.gcode);
         }
       }
     }
@@ -740,7 +742,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
       {
         if (current_arc_.get_num_segments() != 0)
         {
-          p_logger_->log(logger_type_, DEBUG, "Not enough segments, resetting. Gcode:" + cmd.gcode);
+          p_logger_->log(logger_type_, log_levels::DEBUG, "Not enough segments, resetting. Gcode:" + cmd.gcode);
         }
 
       }
@@ -771,7 +773,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
         {
           if (debug_logging_enabled_)
           {
-            p_logger_->log(logger_type_, DEBUG, "Final arc created, exiting.");
+            p_logger_->log(logger_type_, log_levels::DEBUG, "Final arc created, exiting.");
           }
           return 0;
         }
@@ -781,7 +783,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
       {
         if (debug_logging_enabled_)
         {
-          p_logger_->log(logger_type_, DEBUG, "The current arc is not a valid arc, resetting.");
+          p_logger_->log(logger_type_, log_levels::DEBUG, "The current arc is not a valid arc, resetting.");
         }
         current_arc_.clear();
         waiting_for_arc_ = false;
@@ -789,7 +791,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
     }
     else if (debug_logging_enabled_)
     {
-      p_logger_->log(logger_type_, DEBUG, "Could not add point to arc from gcode:" + cmd.gcode);
+      p_logger_->log(logger_type_, log_levels::DEBUG, "Could not add point to arc from gcode:" + cmd.gcode);
     }
 
   }
@@ -798,8 +800,7 @@ int arc_welder::process_gcode(parsed_command cmd, bool is_end, bool is_reprocess
   {
     // This might not work....
     //position* cur_pos = p_source_position_->get_current_position_ptr();
-
-    unwritten_commands_.push_back(unwritten_command(cmd, is_previous_extruder_relative, !has_e_changed && (is_g0_g1 || is_g2_g3), movement_length_mm));
+    unwritten_commands_.push_back(unwritten_command(cmd, is_previous_extruder_relative, is_extrusion, is_retraction, is_travel, movement_length_mm));
 
   }
   else if (!waiting_for_arc_)
@@ -842,19 +843,26 @@ void arc_welder::write_arc_gcodes(double current_feedrate)
     message += buffer;
     message += " segments: ";
     message += gcode;
-    p_logger_->log(logger_type_, DEBUG, message);
+    p_logger_->log(logger_type_, log_levels::DEBUG, message);
   }
 
   // Write everything that hasn't yet been written	
   write_unwritten_gcodes_to_file();
 
   // Update the current extrusion statistics for the current arc gcode
-  if (current_arc_.get_shape_e_relative() != 0)
+  double shape_e_relative = current_arc_.get_shape_e_relative();
+  bool is_retraction = shape_e_relative < 0;
+  bool is_extrusion = shape_e_relative > 0;
+  if (is_extrusion)
   {
     segment_statistics_.update(current_arc_.get_shape_length(), false);
 
   }
-  else if (allow_travel_arcs_) {
+  else if (is_retraction)
+  {
+      segment_retraction_statistics_.update(current_arc_.get_shape_length(), false);
+  }
+  else if (allow_travel_arcs_ ) {
     travel_statistics_.update(current_arc_.get_shape_length(), false);
   }
   // now write the current arc to the file 
@@ -907,11 +915,16 @@ int arc_welder::write_unwritten_gcodes_to_file()
     unwritten_command p = unwritten_commands_.pop_front();
     if ((p.is_g0_g1 || p.is_g2_g3) && p.length > 0)
     {
-      if (!p.is_travel)
+
+      if (p.is_extrusion)
       {
         segment_statistics_.update(p.length, false);
       }
-      else if (allow_travel_arcs_) {
+      else if (p.is_retraction)
+      {
+          segment_retraction_statistics_.update(p.length, false);
+      }
+      else if (p.is_travel && allow_travel_arcs_) {
         travel_statistics_.update(p.length, false);
       }
     }
@@ -939,7 +952,7 @@ std::string arc_welder::get_arc_gcode(const std::string comment)
 
 void arc_welder::add_arcwelder_comment_to_target()
 {
-  p_logger_->log(logger_type_, DEBUG, "Adding ArcWelder comment to the target file.");
+  p_logger_->log(logger_type_, log_levels::DEBUG, "Adding ArcWelder comment to the target file.");
   std::stringstream stream;
   stream << std::fixed;
   stream << "; Postprocessed by [ArcWelder](https://github.com/FormerLurker/ArcWelderLib)\n";

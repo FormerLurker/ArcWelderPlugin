@@ -23,6 +23,89 @@
 #include "utilities.h"
 
 namespace utilities {
+	// Box Drawing Consts
+	// String Consts
+	// Note:  these ascii replacement characters must NOT appear in the text unless they will be replaced with box characters.
+	const char box_drawing::table_elements_replacement[8] = {char(128),char(129),char(130),char(131),char(132),char(133),char(134),char(135) };
+	//enum BoxElementEnum { HORIZONTAL = 0, VERTICAL = 1, UPPER_LEFT = 2, UPPER_RIGHT = 3, MIDDLE_LEFT = 4, MIDDLE_RIGHT = 5, LOWER_LEFT = 6, LOWER_RIGHT = 7 };
+	const std::string box_drawing::table_elements_ascii[8] = {"-","|","+" ,"+" ,"+" ,"+" ,"+" ,"+" };
+	const std::string box_drawing::table_elements_utf8[8] = { "\u2500","\u2502","\u250C" ,"\u2510" ,"\u251C" ,"\u2524" ,"\u2514" ,"\u2518" };
+	const std::string box_drawing::table_elements_html[8] = { "&#9472","&#9474", "&#9484","&#9488","&#9500","&#9508","&#9492","&#9496" };
+	
+	box_drawing::box_drawing()
+	{
+		set_box_type(BoxEncodingEnum::ASCII);
+
+		width_ = 100;
+	}
+	box_drawing::box_drawing(BoxEncodingEnum encoding, int width)
+	{
+		set_box_type(encoding);
+		width_ = width;
+	}
+
+	void box_drawing::set_box_type(BoxEncodingEnum encoding)
+	{
+		box_encoding_ = encoding;
+		for (int index = 0; index < 8; index++)
+		{
+			switch (box_encoding_)
+			{
+			case  BoxEncodingEnum::ASCII:
+				table_elements_[index] = table_elements_ascii[index];
+				break;
+			case BoxEncodingEnum::UTF8:
+				table_elements_[index] = table_elements_utf8[index];
+				break;
+			case BoxEncodingEnum::HTML:
+				table_elements_[index] = table_elements_html[index];
+				break;
+			default:
+				table_elements_[index] = table_elements_ascii[index];
+			}
+			
+		}
+	}
+
+	void box_drawing::top(std::stringstream& stream)
+	{
+		stream << get_box_replacement_element(BoxElementEnum::UPPER_LEFT) << std::setw(width_) << std::setfill(get_box_replacement_element(BoxElementEnum::HORIZONTAL)) << "" << get_box_replacement_element(BoxElementEnum::UPPER_RIGHT) << "\n" << std::setfill(' ');
+	}
+
+	void box_drawing::row(std::stringstream& stream, std::string line)
+	{
+		stream << get_box_replacement_element(BoxElementEnum::VERTICAL) << line << get_box_replacement_element(BoxElementEnum::VERTICAL) << "\n" << std::setfill(' ');
+	}
+
+	void box_drawing::middle(std::stringstream& stream)
+	{
+		stream << get_box_replacement_element(BoxElementEnum::MIDDLE_LEFT) << std::setw(width_) << std::setfill(get_box_replacement_element(BoxElementEnum::HORIZONTAL)) << "" << get_box_replacement_element(BoxElementEnum::MIDDLE_RIGHT) << "\n" << std::setfill(' ');
+	}
+	void box_drawing::bottom(std::stringstream& stream)
+	{
+		stream << get_box_replacement_element(BoxElementEnum::LOWER_LEFT) << std::setw(width_) << std::setfill(get_box_replacement_element(BoxElementEnum::HORIZONTAL)) << "" << get_box_replacement_element(BoxElementEnum::LOWER_RIGHT) << "\n" << std::setfill(' ');
+	}
+	
+	char box_drawing::get_box_replacement_element(BoxElementEnum element)
+	{
+		return table_elements_replacement[(int)element];
+	}
+
+	void box_drawing::make_replacements(std::string &box)
+	{
+		for (int index = 0; index < 8; index++)
+		{
+			char c = table_elements_replacement[index];
+			std::string search;
+			search += c;
+			box = utilities::replace(box, search, table_elements_[index]);
+		}
+
+	}
+
+	
+
+
 	const std::string WHITESPACE_ = " \n\r\t\f\v";
 	const char GUID_RANGE[] = "0123456789abcdef";
 	const bool GUID_DASHES[] = { 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0 };
@@ -500,11 +583,6 @@ float utilities::sqrtf(float x)
 }
 
 double utilities::pow(int e, double x)
-{
-	return std::pow(e, x);
-}
-
-double utilities::pow(int e, int x)
 {
 	return std::pow(e, x);
 }

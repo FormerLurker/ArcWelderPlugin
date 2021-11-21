@@ -147,7 +147,6 @@ namespace utilities{
 
 	double pow(int e, double x);
 
-	double pow(int e, int x);
 
 	double min(double x, double y);
 	
@@ -187,7 +186,35 @@ namespace utilities{
 	unsigned char rand_range(unsigned char min, unsigned char max);
 	int rand_range(int min, int max);
 
+	
+	
+	class box_drawing {
+	
+	public:
+		enum BoxElementEnum { HORIZONTAL = 0, VERTICAL = 1, UPPER_LEFT = 2, UPPER_RIGHT = 3, MIDDLE_LEFT = 4, MIDDLE_RIGHT = 5, LOWER_LEFT = 6, LOWER_RIGHT = 7 };
+		enum BoxEncodingEnum {ASCII=0, UTF8=1, HTML=2};
+		box_drawing();
+		box_drawing(BoxEncodingEnum encoding, int width);
+		static const char table_elements_replacement[8];
+		static const std::string table_elements_ascii[8];
+		static const std::string table_elements_utf8[8];
+		static const std::string table_elements_html[8];
+		char get_box_replacement_element(BoxElementEnum element);
+		void top(std::stringstream& stream);
+	    void row(std::stringstream& stream, std::string line);
+		void middle(std::stringstream& stream);
+		void bottom(std::stringstream& stream);
+		void set_box_type(BoxEncodingEnum encoding);
+		void make_replacements(std::string &box);
 
+		private:
+			std::string table_elements_[8];
+			BoxEncodingEnum box_encoding_;
+			std::string output_;
+			std::stringstream output_stream_;
+			int width_;
+			
+	};
 
 }
 #endif

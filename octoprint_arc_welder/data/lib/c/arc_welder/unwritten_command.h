@@ -32,9 +32,14 @@ struct unwritten_command
 		length = 0;
 		is_g0_g1 = false;
 		is_g2_g3 = false;
+		is_travel = false;
+		is_extrusion = false;
+		is_retraction = false;
+		gcode = "";
+		comment = "";
 	}
-	unwritten_command(parsed_command &cmd, bool is_relative, bool is_travel, double command_length) 
-		: is_extruder_relative(is_relative), is_travel(is_travel), is_g0_g1(cmd.command == "G0" || cmd.command == "G1"), is_g2_g3(cmd.command == "G2" || cmd.command == "G3"), gcode(cmd.gcode), comment(cmd.comment), length(command_length)
+	unwritten_command(parsed_command &cmd, bool is_relative, bool is_extrusion, bool is_retraction, bool is_travel, double command_length) 
+		: is_extruder_relative(is_relative), is_extrusion(is_extrusion), is_retraction(is_retraction), is_travel(is_travel), is_g0_g1(cmd.command == "G0" || cmd.command == "G1"), is_g2_g3(cmd.command == "G2" || cmd.command == "G3"), gcode(cmd.gcode), comment(cmd.comment), length(command_length)
 	{
 
 	}
@@ -42,6 +47,8 @@ struct unwritten_command
 	bool is_g2_g3;
 	bool is_extruder_relative;
 	bool is_travel;
+	bool is_extrusion;
+	bool is_retraction;
 	double length;
 	std::string gcode;
 	std::string comment;

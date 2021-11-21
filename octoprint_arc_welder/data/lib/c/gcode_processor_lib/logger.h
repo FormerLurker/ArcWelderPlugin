@@ -46,18 +46,18 @@ public:
 	void set_log_level_by_value(const int logger_type, const int log_level_value);
 	void set_log_level_by_value(const int log_level_value);
 
-	void set_log_level(const int logger_type, const int log_level);
-	void set_log_level(const int log_level);
+	void set_log_level(const int logger_type, log_levels log_level);
+	void set_log_level(log_levels log_level);
 	
 	std::string get_log_level_name(std::string logger_name);
-	virtual void log(const int logger_type, const int log_level, const std::string& message);
-	virtual void log(const int logger_type, const int log_level, const std::string& message, bool is_exception);
+	virtual void log(const int logger_type, log_levels log_level, const std::string& message);
+	virtual void log(const int logger_type, log_levels log_level, const std::string& message, bool is_exception);
 	virtual void log_exception(const int logger_type, const std::string& message);
-	static int get_log_level_value(const int log_level);
+	static int get_log_level_value(log_levels log_level);
 	static int get_log_level_for_value(int log_level_value);
-	virtual bool is_log_level_enabled(const int logger_type, const int log_level);
+	virtual bool is_log_level_enabled(const int logger_type, log_levels log_level);
 protected:
-	virtual void create_log_message(const int logger_type, const int log_level, const std::string& message, std::string& output);
+	virtual void create_log_message(const int logger_type, log_levels log_level, const std::string& message, std::string& output);
 	
 	bool loggers_created_;
 private:

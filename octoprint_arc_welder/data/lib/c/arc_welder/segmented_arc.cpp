@@ -155,13 +155,15 @@ bool segmented_arc::try_add_point(printer_point p)
       return false;
     }
 
-    // Need to separate travel moves from moves with extrusion
-    if (points_.count() > 1)
+    // If we have more than 2 points, we need to make sure the current and previous moves are all of the same type.
+    if (points_.count() > 2)
     {
+      // TODO:  Do we need this?
       // We already have at least an initial point and a second point.  Make cure the current point and the previous are either both
       // travel moves, or both extrusion
       if (!(
-        (p1.e_relative != 0 && p.e_relative != 0) // Extrusions 
+        (p1.e_relative > 0 && p.e_relative > 0) // Extrusions 
+        || (p1.e_relative < 0 && p.e_relative < 0) // Retractions
         || (p1.e_relative == 0 && p.e_relative == 0) // Travel
         )
         )

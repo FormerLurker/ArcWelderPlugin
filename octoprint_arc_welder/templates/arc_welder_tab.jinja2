@@ -293,24 +293,18 @@
                     <span data-bind="text: statistics_seconds_elapsed.formatted"></span>
                 </div>
             </div>
-            <div class="row-fluid" data-bind="visible: statistics_source_file_total_count()">
-                <div class="span4 text-right">
-                    <strong>Extrusion/Retraction Detail:</strong>
-                </div>
-                <div class="span8 text-center">
-                    <pre class="text-center statistics-text" data-bind="text: statistics_segment_statistics_text"></pre>
+            <div data-bind="visible: statistics_source_file_total_count()">
+                <div class="row-fluid">
+                    <div class="span12 text-center">
+                        <pre class="text-center statistics-text"><div><strong>Extrusion/Retraction Detail</strong></div><div data-bind="html: statistics_segment_statistics_text"></div></pre>
+                    </div>
                 </div>
             </div>
-            <div class="row-fluid" data-bind="visible: statistics_source_file_total_travel_count()">
-                <div class="span4 text-right">
-                    <strong>Travel Detail:</strong>
-                </div>
-
-                <div class="span8 text-center" data-bind="visible: statistics_source_file_total_travel_count() != statistics_target_file_total_travel_count()">
-                    <pre class="text-center statistics-text" data-bind="text: statistics_segment_travel_statistics_text"></pre>
-                </div>
-                <div class="span8 text-center" data-bind="visible: statistics_source_file_total_travel_count() == statistics_target_file_total_travel_count()">
-                    <pre class="text-center statistics-text">No travel moves were converted to arcs.  This is normal for a 3d print.</pre>
+            <div data-bind="visible: statistics_source_file_total_travel_count()">
+                <div class="row-fluid">
+                    <div class="span12 text-center">
+                        <pre class="text-center statistics-text"><div><strong>Travel Detail</strong></div><div data-bind="visible: statistics_source_file_total_travel_count() != statistics_target_file_total_travel_count(), html: statistics_segment_travel_statistics_text"></div><div data-bind="visible: statistics_source_file_total_travel_count() == statistics_target_file_total_travel_count()">No travel moves were converted to arcs.  This is normal for a 3d print.</div></pre>
+                    </div>
                 </div>
             </div>
         </div>
@@ -336,6 +330,7 @@
             </div>
             <div id="arc_welder_firmware_info"
                  data-bind="visible: (firmware_info.success() || firmware_info.success() === null)">
+
                 <div class="short-rows row-fluid">
                     <div class="span4">
                         <button type="button" class="btn btn-small full-width"
@@ -366,6 +361,12 @@
                 </div>
 
                 <div class="short-rows">
+                    <div class="row-fluid">
+                        <div class="span4 text-right">
+                            <strong>Last Check On:</strong>
+                        </div>
+                        <div class="span8"><span data-bind="text: firmware_info.last_check_datetime"></span></div>
+                    </div>
                     <div class="row-fluid">
                         <div class="span4 text-right"><strong>Name:</strong></div>
                         <div class="span8">
@@ -477,12 +478,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="row-fluid">
-                        <div class="span4 text-right">
-                            <strong>Last Check On:</strong>
-                        </div>
-                        <div class="span8"><span data-bind="text: firmware_info.last_check_datetime"></span></div>
-                    </div>
+
                 </div>
             </div>
             <hr/>
@@ -562,7 +558,10 @@
                         <strong>Extrusion Rate Variance:</strong>
                     </div>
                     <div class="span8">
-                        <span data-bind="text: plugin_settings.extrusion_rate_variance_percent"></span>%
+                        <span data-bind="visible: plugin_settings.extrusion_rate_variance_percent() != 0">
+                            <span data-bind="text: plugin_settings.extrusion_rate_variance_percent"></span>%
+                        </span>
+                        <span data-bind="visible: plugin_settings.extrusion_rate_variance_percent() == 0">Disabled</span>
                     </div>
                 </div>
                 <div class="row-fluid">

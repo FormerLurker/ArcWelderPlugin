@@ -61,7 +61,8 @@ struct segment_statistic {
 };
 
 struct source_target_segment_statistics {
-	source_target_segment_statistics(const double segment_tracking_lengths[], const int num_lengths, logger* p_logger = NULL) {
+	source_target_segment_statistics(const double segment_tracking_lengths[], const int num_lengths, logger* p_logger = NULL)
+	{
 		total_length_source = 0;
 		total_length_target = 0;
 		total_count_source = 0;
@@ -73,6 +74,7 @@ struct source_target_segment_statistics {
 		for (int index = 0; index < num_lengths; index++)
 		{
 			double current_max = segment_tracking_lengths[index];
+			segment_statistic_lengths.push_back(segment_tracking_lengths[index]);
 			source_segments.push_back(segment_statistic(current_min, segment_tracking_lengths[index]));
 			target_segments.push_back(segment_statistic(current_min, segment_tracking_lengths[index]));
 			current_min = current_max;
@@ -83,7 +85,8 @@ struct source_target_segment_statistics {
 		p_logger_ = p_logger;
 		logger_type_ = 0;
 	}
-
+	
+	std::vector<double> segment_statistic_lengths;
 	std::vector<segment_statistic> source_segments;
 	std::vector<segment_statistic> target_segments;
 	double total_length_source;
@@ -93,7 +96,7 @@ struct source_target_segment_statistics {
 	int total_count_source;
 	int total_count_target;
 	int num_segment_tracking_lengths;
-  
+	
 	double get_total_count_reduction_percent() const {
 		return utilities::get_percent_change(total_count_source, total_count_target);
 	}
@@ -127,10 +130,49 @@ struct source_target_segment_statistics {
 		}
 	}
 
+	static source_target_segment_statistics add(source_target_segment_statistics stats1, const source_target_segment_statistics stats2)
+	{
+
+		double * lengths = &stats1.segment_statistic_lengths[0];
+		std::copy(stats1.segment_statistic_lengths.begin(), stats1.segment_statistic_lengths.end(), lengths);
+		source_target_segment_statistics combined_stats(lengths, segment_statistic_lengths_count, stats1.p_logger_);
+		if (stats1.num_segment_tracking_lengths != stats2.num_segment_tracking_lengths)
+		{
+			// Todo:  throw a reasonable exception
+			throw std::exception();
+		}
+
+		// Copy the segment statistics
+		for (int index = 0; index <= stats1.num_segment_tracking_lengths; index++)
+		{
+			// Verify the stats are the same
+			if (
+				stats1.source_segments[index].min_mm != stats2.source_segments[index].min_mm
+				|| stats1.source_segments[index].max_mm != stats2.source_segments[index].max_mm
+				)
+			{
+				// Todo:  throw a reasonable exception
+				throw std::exception();
+			}
+			combined_stats.source_segments[index].count = stats1.source_segments[index].count + stats2.source_segments[index].count;
+			combined_stats.target_segments[index].count = stats1.target_segments[index].count + stats2.target_segments[index].count;
+		}
+
+		combined_stats.total_length_source = stats1.total_length_source + stats2.total_length_source;
+		combined_stats.total_length_target = stats1.total_length_target + stats2.total_length_target;
+		combined_stats.total_count_source = stats1.total_count_source + stats2.total_count_source;
+		combined_stats.total_count_target = stats1.total_count_target + stats2.total_count_target;
+
+		return combined_stats;
+	}
 	std::string str() const {
+		return str("", utilities::box_drawing::BoxEncodingEnum::ASCII);
+	}
+
+	std::string str(std::string title, utilities::box_drawing::BoxEncodingEnum box_encoding) const {
 		
 		//if (p_logger_ != NULL) p_logger_->log(logger_type_, VERBOSE, "Building Segment Statistics.");
-
+		
 		std::stringstream output_stream;
 		std::stringstream format_stream;
 		const int min_column_size = 8;
@@ -207,21 +249,51 @@ struct source_target_segment_statistics {
 		}
 		// Get the table width
 		int table_width = mm_col_size + min_max_label_col_size + mm_col_size + source_col_size + target_col_size + percent_col_size;
-		// Add a separator for the statistics
-		//output_stream << std::setw(table_width) << std::setfill('-') << "-" << "\n" << std::setfill(' ') ;
-		// Output the column headers
-		// Center the min and max column.
-		output_stream << utilities::center("Min", mm_col_size);
+		int table_left_padding = 0;
+		int table_right_padding = 0;
+		if (table_width < (int)title.length())
+		{
+			table_left_padding = ((int)title.length() - table_width) / 2;
+			table_right_padding = ((int)title.length() - table_width - table_left_padding);
+			table_width = (int)title.length();
+			
+		}
+		utilities::box_drawing box(box_encoding, table_width);
+		// Draw the top border
+		box.top(output_stream);
+
+		if (title != "")
+		{
+			// Draw the title
+			box.row(output_stream, utilities::center(title, table_width));
+			// Draw the title separator
+			box.middle(output_stream);
+		}
+		
+		// Output the centered column headers
+		// start the row
+		output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL);
+		// add the left padding for the table
+		output_stream << std::string(table_left_padding, ' ');
+		output_stream << std::setfill(' ') << utilities::center("Min", mm_col_size);
 		output_stream << std::setw(min_max_label_col_size) << "";
 		output_stream << utilities::center("Max", mm_col_size);
 		// right align the source, target and change columns
 		output_stream << std::setw(source_col_size) << std::right << "Source";
 		output_stream << std::setw(target_col_size) << std::right << "Target";
 		output_stream << std::setw(percent_col_size) << std::right << "Change";
-		output_stream << "\n";
-		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
+		// Add the right padding for the table
+		output_stream << std::string(table_right_padding, ' ');
+		// end the row
+		output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL) << "\n";
 		output_stream << std::fixed << std::setprecision(max_precision);
+		// Add the separator
+		box.middle(output_stream);
 		for (int index = 0; index < source_segments.size(); index++) {
+			// start the row
+			output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL);
+			// add the left padding for the table
+			output_stream << std::string(table_left_padding, ' ');
 			//extract the necessary variables from the source and target segments
 			double min_mm = source_segments[index].min_mm;
 			double max_mm = source_segments[index].max_mm;
@@ -284,24 +356,34 @@ struct source_target_segment_statistics {
 			output_stream << std::setw(target_col_size) << target_count_string;
 			// Add the percent change string
 			output_stream << std::setw(percent_col_size) << percent_change_string;
-			// End the line
-			output_stream << "\n";
+			// Add the right padding for the table
+			output_stream << std::string(table_right_padding, ' ');
+			// end the row
+			output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL) << "\n";
 		}
-		// Add the total rows separator
-		output_stream << std::setw(table_width) << std::setfill('-') << "" << std::setfill(' ') << "\n";
+		
+		
 		// Add the total rows;
+		// Draw the totals separator
+		box.middle(output_stream);
 		if (utilities::is_equal(total_length_source, total_length_target, 0.001))
 		{
+			// start the row
+			output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL);
 			std::string total_distance_string;
 			format_stream.str(std::string());
 			format_stream << std::fixed << std::setprecision(max_precision) << total_length_source << "mm";
 			total_distance_string = format_stream.str();
 			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance:";
-			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_distance_string << "\n" << std::setfill(' ');
+			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_distance_string << std::setfill(' ');
+			// end the row
+			output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL) << "\n";
 		}
 		else
 		{
-			// We need to output two different distances (this probably should never happen)
+			// We need to output two different distances
+			// start the row
+			output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL);
 			// Format the total source distance string
 			std::string total_source_distance_string;
 			format_stream.str(std::string());
@@ -309,8 +391,12 @@ struct source_target_segment_statistics {
 			total_source_distance_string = format_stream.str();
 			// Add the total source distance row
 			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance source:";
-			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_source_distance_string << "\n" << std::setfill(' ');
+			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_source_distance_string << std::setfill(' ');
+			// end the row
+			output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL) << "\n";
 
+			// start the row
+			output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL);
 			// Format the total target distance string			
 			std::string total_target_distance_string;
 			format_stream.str(std::string());
@@ -318,32 +404,55 @@ struct source_target_segment_statistics {
 			total_target_distance_string = format_stream.str();
 			// Add the total target distance row
 			output_stream << std::setw(totals_row_label_size) << std::right << "Total distance target:";
-			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_target_distance_string << "\n" << std::setfill(' ');
+			output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_target_distance_string << std::setfill(' ');
+			// end the row
+			output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL) << "\n";
 		}
 
 		// Add the total count rows
+		
+		// start the row
+		output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL);
 		// Add the source count
 		output_stream << std::setprecision(0) << std::setw(totals_row_label_size) << std::right << "Total count source:";
-		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_source << "\n" << std::setfill(' ');
+		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_source << std::setfill(' ');
+		// end the row
+		output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL) << "\n";
+
+		// start the row
+		output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL);
 		// Add the target count
 		output_stream << std::setw(totals_row_label_size) << std::right << "Total count target:";
-		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_target << "\n" << std::setfill(' ');
+		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_count_target << std::setfill(' ');
+		// end the row
+		output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL) << "\n";
+
+		// start the row
+		output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL);
 		// Add the total percent change row
 		std::string total_percent_change_string = utilities::get_percent_change_string(total_count_source, total_count_target, 1);
 		output_stream << std::setw(totals_row_label_size) << std::right << "Total percent change:";
 		output_stream << std::setw(table_width - totals_row_label_size) << std::setfill('.') << std::right << total_percent_change_string << std::setfill(' ');
+		// end the row
+		output_stream << box.get_box_replacement_element(utilities::box_drawing::BoxElementEnum::VERTICAL) << "\n";
+
+		// Add the final separator
+		box.bottom(output_stream);
+
 		std::string output_string = output_stream.str();
+		box.make_replacements(output_string);
 		return output_string;
 	}
 
 private:
+	
 	logger* p_logger_;
 	int logger_type_;
 };
 
 // Struct to hold the progress, statistics, and return values
 struct arc_welder_progress {
-	arc_welder_progress() : segment_statistics(segment_statistic_lengths, segment_statistic_lengths_count, NULL), travel_statistics(segment_statistic_lengths, segment_statistic_lengths_count, NULL) {
+	arc_welder_progress() :  segment_statistics(segment_statistic_lengths, segment_statistic_lengths_count, NULL), segment_retraction_statistics(segment_statistic_lengths, segment_statistic_lengths_count, NULL), travel_statistics(segment_statistic_lengths, segment_statistic_lengths_count, NULL) {
 		percent_complete = 0.0;
 		seconds_elapsed = 0.0;
 		seconds_remaining = 0.0;
@@ -359,6 +468,8 @@ struct arc_welder_progress {
 		target_file_size = 0;
 		compression_ratio = 0;
 		compression_percent = 0;
+		combine_extrusion_and_retraction = true;
+		box_encoding = utilities::box_drawing::BoxEncodingEnum::ASCII;
 	}
 	double percent_complete;
 	double seconds_elapsed;
@@ -375,7 +486,11 @@ struct arc_welder_progress {
 	long source_file_position;
 	long source_file_size;
 	long target_file_size;
+	bool combine_extrusion_and_retraction;
+	utilities::box_drawing::BoxEncodingEnum box_encoding;
+
 	source_target_segment_statistics segment_statistics;
+	source_target_segment_statistics segment_retraction_statistics;
 	source_target_segment_statistics travel_statistics;
 
 	std::string simple_progress_str() const {
@@ -395,6 +510,7 @@ struct arc_welder_progress {
 	}
 
 	std::string str() const {
+
 		std::stringstream stream;
 		stream << std::fixed << std::setprecision(2);
 
@@ -407,20 +523,36 @@ struct arc_welder_progress {
 		stream << ", num_firmware_compensations: " << num_firmware_compensations;
 		stream << ", num_gcode_length_exceptions: " << num_gcode_length_exceptions;
 		stream << ", compression_ratio: " << compression_ratio;
-		stream << ", size_reduction: " << compression_percent << "% ";
+		stream << ", size_reduction: " << compression_percent << "% " ;
 		return stream.str();
 	}
 	std::string detail_str() const {
-		std::stringstream stream;
+		std::stringstream wstream;
+		wstream << "\n";
+		
 		if (travel_statistics.total_count_source > 0)
 		{
-			stream << "Target File Travel Statistics:" << "\n" << travel_statistics.str() << "\n";
+			wstream << travel_statistics.str("Target File Travel Statistics", box_encoding) << "\n";
 		}
-		
-		stream << "\n" << "Target File Extrusion Statistics:" << "\n" << segment_statistics.str() << "\n";
-		
-		return stream.str();
+
+		if (combine_extrusion_and_retraction)
+		{
+			source_target_segment_statistics combined_stats = source_target_segment_statistics::add(segment_statistics, segment_retraction_statistics);
+			wstream << combined_stats.str("Target File Extrusion/Retraction Statistics", box_encoding) << "\n";
+		}
+		else 
+		{
+			
+			if (segment_retraction_statistics.total_count_source > 0)
+			{
+				wstream << segment_retraction_statistics.str("Target File Retraction Statistics", box_encoding) << "\n";
+			}
+
+			wstream << segment_statistics.str("Target File Extrusion Statistics", box_encoding) << "\n";
+		}
+		return wstream.str();
 	}
+	
 };
 // define the progress callback type 
 typedef bool(*progress_callback)(arc_welder_progress, logger* p_logger, int logger_type);
@@ -437,30 +569,14 @@ typedef bool(*progress_callback)(arc_welder_progress, logger* p_logger, int logg
 
 struct arc_welder_args
 {
-	arc_welder_args() : 
-		source_path(""),
-		target_path(""),
-		log(NULL),
-		resolution_mm(DEFAULT_RESOLUTION_MM),
-		path_tolerance_percent(ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT),
-		max_radius_mm(DEFAULT_MAX_RADIUS_MM),
-		min_arc_segments(DEFAULT_MIN_ARC_SEGMENTS),
-		mm_per_arc_segment(DEFAULT_MM_PER_ARC_SEGMENT),
-		g90_g91_influences_extruder(DEFAULT_G90_G91_INFLUENCES_EXTRUDER),
-		allow_3d_arcs(DEFAULT_ALLOW_3D_ARCS),
-		allow_travel_arcs(DEFAULT_ALLOW_TRAVEL_ARCS),
-		allow_dynamic_precision(DEFAULT_ALLOW_DYNAMIC_PRECISION),
-		default_xyz_precision(DEFAULT_XYZ_PRECISION),
-		default_e_precision(DEFAULT_E_PRECISION),
-		extrusion_rate_variance_percent(DEFAULT_EXTRUSION_RATE_VARIANCE_PERCENT),
-		max_gcode_length(DEFAULT_MAX_GCODE_LENGTH),
-		buffer_size(DEFAULT_GCODE_BUFFER_SIZE),
-		notification_period_seconds(DEFAULT_NOTIFICATION_PERIOD_SECONDS),
-		callback(NULL){};
+	arc_welder_args() {
+		set_defaults();
+	};
 		
 
-	arc_welder_args(std::string source, std::string target, logger* ptr_log) : arc_welder_args()
+	arc_welder_args(std::string source, std::string target, logger* ptr_log)
 	{
+		set_defaults();
 		source_path = source;
 		target_path = target;
 		log = ptr_log;
@@ -483,6 +599,7 @@ struct arc_welder_args
 		int buffer_size;
 		int max_gcode_length;
 		double notification_period_seconds;
+		utilities::box_drawing::BoxEncodingEnum box_encoding;
 		
 		progress_callback callback;
 
@@ -529,6 +646,31 @@ struct arc_welder_args
 			return stream.str();
 		};
 		
+private:
+	void set_defaults()
+	{
+			source_path = "",
+			target_path = "",
+			log = NULL,
+			resolution_mm = DEFAULT_RESOLUTION_MM,
+			path_tolerance_percent = ARC_LENGTH_PERCENT_TOLERANCE_DEFAULT,
+			max_radius_mm = DEFAULT_MAX_RADIUS_MM,
+			min_arc_segments = DEFAULT_MIN_ARC_SEGMENTS,
+			mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT,
+			g90_g91_influences_extruder = DEFAULT_G90_G91_INFLUENCES_EXTRUDER,
+			allow_3d_arcs = DEFAULT_ALLOW_3D_ARCS,
+			allow_travel_arcs = DEFAULT_ALLOW_TRAVEL_ARCS,
+			allow_dynamic_precision = DEFAULT_ALLOW_DYNAMIC_PRECISION,
+			default_xyz_precision = DEFAULT_XYZ_PRECISION,
+			default_e_precision = DEFAULT_E_PRECISION,
+			extrusion_rate_variance_percent = DEFAULT_EXTRUSION_RATE_VARIANCE_PERCENT,
+			max_gcode_length = DEFAULT_MAX_GCODE_LENGTH,
+			buffer_size = DEFAULT_GCODE_BUFFER_SIZE,
+			notification_period_seconds = DEFAULT_NOTIFICATION_PERIOD_SECONDS,
+			callback = NULL;
+			box_encoding = utilities::box_drawing::BoxEncodingEnum::ASCII;
+	}
+
 };
 
 struct arc_welder_results {
@@ -547,48 +689,8 @@ struct arc_welder_results {
 class arc_welder
 {
 public:
-	arc_welder(
-		std::string source_path,
-		std::string target_path,
-		logger* log,
-		double resolution_mm,
-		double path_tolerance_percent,
-		double max_radius,
-		int min_arc_segments,
-		double mm_per_arc_segment,
-		bool g90_g91_influences_extruder,
-		bool allow_3d_arcs,
-		bool allow_travel_arcs,
-		bool allow_dynamic_precision,
-		unsigned char default_xyz_precision,
-		unsigned char default_e_precision,
-		double extrusion_rate_variance_percent,
-		int max_gcode_length,
-		int buffer_size,
-		double notification_period_seconds,
-		progress_callback callback);
-
-	arc_welder(arc_welder_args args) : arc_welder(
-		args.source_path,
-		args.target_path,
-		args.log,
-		args.resolution_mm,
-		args.path_tolerance_percent,
-		args.max_radius_mm,
-		args.min_arc_segments,
-		args.mm_per_arc_segment,
-		args.g90_g91_influences_extruder,
-		args.allow_3d_arcs,
-		args.allow_travel_arcs,
-		args.allow_dynamic_precision,
-		args.default_xyz_precision,
-		args.default_e_precision,
-		args.extrusion_rate_variance_percent,
-		args.max_gcode_length,
-		args.buffer_size,
-		args.notification_period_seconds,
-		args.callback
-	){};
+	
+	arc_welder(arc_welder_args args);
 	
 	
 	void set_logger_type(int logger_type);
@@ -627,6 +729,7 @@ private:
 	int arcs_aborted_by_flow_rate_;
 	double notification_period_seconds_;
 	source_target_segment_statistics segment_statistics_;
+	source_target_segment_statistics segment_retraction_statistics_;
 	source_target_segment_statistics travel_statistics_;
 	long get_file_size(const std::string& file_path);
 	double get_time_elapsed(double start_clock, double end_clock);
@@ -649,5 +752,5 @@ private:
 	bool info_logging_enabled_;
 	bool verbose_logging_enabled_;
 	bool error_logging_enabled_;
-
+	utilities::box_drawing::BoxEncodingEnum box_encoding_;
 };

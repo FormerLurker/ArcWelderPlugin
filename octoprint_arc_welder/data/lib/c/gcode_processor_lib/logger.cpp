@@ -36,7 +36,7 @@ logger::logger(std::vector<std::string> names, std::vector<int> levels) {
 		logger_names_[index] = names[index];
 		logger_levels_[index] = levels[index];
 	}
-	set_log_level_by_value(NOSET);
+	set_log_level_by_value((int)log_levels::NOSET);
 	
 }
 
@@ -58,9 +58,9 @@ void logger::set_log_level_by_value(const int level_value)
 	}
 }
 
-void logger::set_log_level(const int logger_type, const int log_level)
+void logger::set_log_level(const int logger_type, log_levels log_level)
 {
-	logger_levels_[logger_type] = log_level;
+	logger_levels_[logger_type] = (int)log_level;
 }
 std::string logger::get_log_level_name(std::string logger_name)
 {
@@ -76,17 +76,17 @@ std::string logger::get_log_level_name(std::string logger_name)
 	return log_level_name;
 }
 
-void logger::set_log_level(const int log_level)
+void logger::set_log_level(log_levels log_level)
 {
 	for (int type_index = 0; type_index < num_loggers_; type_index++)
 	{
-		logger_levels_[type_index] = log_level;
+		logger_levels_[type_index] = (int)log_level;
 	}
 }
 
-int logger::get_log_level_value(const int log_level)
+int logger::get_log_level_value(log_levels log_level)
 {
-	return log_level_values[log_level];
+	return log_level_values[(int)log_level];
 }
 int logger::get_log_level_for_value(int log_level_value)
 {
@@ -97,12 +97,12 @@ int logger::get_log_level_for_value(int log_level_value)
 	}
 	return 0;
 }
-bool logger::is_log_level_enabled(const int logger_type, const int log_level)
+bool logger::is_log_level_enabled(const int logger_type, log_levels log_level)
 {
-	return logger_levels_[logger_type] <= log_level;
+	return logger_levels_[logger_type] <= (int)log_level;
 }
 
-void logger::create_log_message(const int logger_type, const int log_level, const std::string& message, std::string& output)
+void logger::create_log_message(const int logger_type, log_levels log_level, const std::string& message, std::string& output)
 {
 	// example message
 	// 2020-04-20 21:36:59,414 - arc_welder.__init__ - INFO - MESSAGE_GOES_HERE
@@ -116,7 +116,7 @@ void logger::create_log_message(const int logger_type, const int log_level, cons
 	// add a spacer
 	output.append(" - ");
 	// add the log level name
-	output.append(log_level_names[log_level]);
+	output.append(log_level_names[(int)log_level]);
 	// add a spacer
 	output.append(" - ");
 	// add the message
@@ -128,12 +128,12 @@ void logger::log_exception(const int logger_type, const std::string& message)
 	log(logger_type, log_levels::ERROR, message, true);
 }
 
-void logger::log(const int logger_type, const int log_level, const std::string& message)
+void logger::log(const int logger_type, log_levels log_level, const std::string& message)
 {
 	log(logger_type, log_level, message, false);
 }
 
-void logger::log(const int logger_type, const int log_level, const std::string& message, bool is_exception)
+void logger::log(const int logger_type, log_levels log_level, const std::string& message, bool is_exception)
 {
 	// Make sure the loggers have been initialized
 	if (!loggers_created_)
