@@ -4,7 +4,7 @@
 // Compresses many G0/G1 commands into G2/G3(arc) commands where possible, ensuring the tool paths stay within the specified resolution.
 // This reduces file size and the number of gcodes per second.
 //
-// Copyright(C) 2020 - Brad Hochgesang
+// Copyright(C) 2021 - Brad Hochgesang
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This program is free software : you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published

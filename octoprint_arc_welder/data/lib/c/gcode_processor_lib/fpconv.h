@@ -52,6 +52,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #ifndef FPCONV_H
 #define FPCONV_H
+
+#define FPCONV_COPYRIGHT_STRING "Fpconv is an algorithm for producing fast floating point strings, which was added with the following notice: Copyright (C) 2014 Milo Yip. The original fpconv algorithm provides the following notice: Copyright(c) 2013 Andreas Samoljuk."
+
 /* Fast and accurate double to string conversion based on Florian Loitsch's
  * Grisu-algorithm[1].
  *

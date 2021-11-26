@@ -3,7 +3,7 @@
 //
 // Tools for parsing gcode and calculating printer state from parsed gcode commands.
 //
-// Copyright(C) 2020 - Brad Hochgesang
+// Copyright(C) 2021 - Brad Hochgesang
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This program is free software : you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published
@@ -291,6 +291,11 @@ std::string utilities::join(const std::vector<std::string> strings, std::string 
 	}
 	return output;
 }
+/* Might need this later
+bool utilities::contains(const std::string source, const std::string substring)
+{
+	return source.find(substring, 0) != std::string::npos;
+}*/
 
 std::istream& utilities::safe_get_line(std::istream& is, std::string& t)
 {
@@ -469,6 +474,16 @@ bool utilities::get_temp_file_path_for_file(const std::string& file_path, std::s
 	temp_file_path += create_uuid();
 	temp_file_path += ".tmp";
 	return true;
+}
+
+bool utilities::does_file_exist(const std::string& file_path)
+{
+	FILE* file;
+	if (file = fopen(file_path.c_str(), "r")) {
+		fclose(file);
+		return true;
+	}
+	return false;
 }
 
 double utilities::hypot(double x, double y)
@@ -703,10 +718,13 @@ bool case_insensitive_compare(std::string& str1, std::string& str2)
 */
 
 std::string utilities::replace(std::string subject, const std::string& search, const std::string& replace) {
-	size_t pos = 0;
-	while ((pos = subject.find(search, pos)) != std::string::npos) {
-		subject.replace(pos, search.length(), replace);
-		pos += replace.length();
+	if (search.length() > 0)
+	{
+		size_t pos = 0;
+		while ((pos = subject.find(search, pos)) != std::string::npos) {
+			subject.replace(pos, search.length(), replace);
+			pos += replace.length();
+		}
 	}
 	return subject;
 }

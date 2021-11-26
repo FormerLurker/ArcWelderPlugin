@@ -3,7 +3,7 @@
 //
 // Tools for parsing gcode and calculating printer state from parsed gcode commands.
 //
-// Copyright(C) 2020 - Brad Hochgesang
+// Copyright(C) 2021 - Brad Hochgesang
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // This program is free software : you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published
@@ -86,7 +86,7 @@ namespace utilities{
 	std::string join(const std::string* strings, size_t length, std::string sep);
 
 	std::string join(const std::vector<std::string> strings, std::string sep);
-
+	// bool contains(const std::string source, const std::string substring); // Might need this later
 	std::istream& safe_get_line(std::istream& is, std::string& t);
 
 	std::string center(std::string input, int width);
@@ -104,6 +104,8 @@ namespace utilities{
 	bool get_file_path(const std::string& file_path, std::string& path);
 
 	std::string create_uuid();
+
+	bool does_file_exist(const std::string& file_path);
 
 	bool get_temp_file_path_for_file(const std::string& file_path, std::string& temp_file_path);
 
