@@ -1039,7 +1039,7 @@ $(function () {
             var max_gcode_length_string = "Unlimited";
             var max_gcode_length = self.plugin_settings.max_gcode_length();
             if (max_gcode_length && max_gcode_length > 0) {
-                max_gcode_length_string = max_gcode_length.toString();
+                max_gcode_length_string = max_gcode_length.toString() + " characters";
                 if (max_gcode_length < 55)
                 {
                     max_gcode_length_string += " (values below 55 are not recommended)"
@@ -1293,6 +1293,26 @@ $(function () {
                             desktop: true
                         }
                     };
+
+
+                    PNotifyExtensions.displayPopupForKey(
+                        options,
+                        ArcWelder.PopupKey(data.key),
+                        ArcWelder.PopupKey(data.close_keys)
+                    );
+                    break;
+                case "setting-errors":
+                    var options = {
+                        title: "Arcwelder Settings Error",
+                        text: "Some settings were not saved:\n" + data.data.join('\n') + "\nAll settings above have been reset to their previous value.",
+                        type: "error",
+                        hide: false,
+                        addclass: "arc-welder",
+                        desktop: {
+                            desktop: true
+                        }
+                    };
+
 
                     PNotifyExtensions.displayPopupForKey(
                         options,

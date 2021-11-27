@@ -558,10 +558,10 @@
                         <strong>Extrusion Rate Variance:</strong>
                     </div>
                     <div class="span8">
-                        <span data-bind="visible: plugin_settings.extrusion_rate_variance_percent() != 0">
+                        <span data-bind="visible: plugin_settings.extrusion_rate_variance_detection_enabled() && plugin_settings.extrusion_rate_variance_percent() != 0">
                             <span data-bind="text: plugin_settings.extrusion_rate_variance_percent"></span>%
                         </span>
-                        <span data-bind="visible: plugin_settings.extrusion_rate_variance_percent() == 0">Disabled</span>
+                        <span data-bind="visible: !plugin_settings.extrusion_rate_variance_detection_enabled() || plugin_settings.extrusion_rate_variance_percent() == 0">Disabled</span>
                     </div>
                 </div>
                 <div class="row-fluid">
@@ -599,11 +599,11 @@
                 </div>
                 <div class="row-fluid">
                     <div class="span4 text-right">
-                        <strong data-bind="css: {'text-warning': plugin_settings.max_gcode_length() > 0 && plugin_settings.max_gcode_length() < 55}">Maximum
-                            GCode Length:</strong>
+                        <strong >G2/G3 Max Length:</strong>
                     </div>
                     <div class="span8">
-                        <span data-bind="text: max_gcode_length_string"></span>
+                        <span data-bind="visible: plugin_settings.max_gcode_length_detection_enabled, text: max_gcode_length_string"></span>
+                        <span data-bind="visible: !plugin_settings.max_gcode_length_detection_enabled()">Unlimited</span>
                     </div>
                 </div>
                 <div class="row-fluid">
@@ -611,7 +611,7 @@
                         <strong>Firmware Compensation:</strong>
                     </div>
                     <div class="span8">
-                        <div class="text-warning" data-bind="visible: firmware_compensation_enabled">
+                        <div data-bind="visible: firmware_compensation_enabled">
                             <span data-bind="text: plugin_settings.mm_per_arc_segment"></span>mm per arc, at minimum
                             <span data-bind="text: plugin_settings.min_arc_segments"></span> segments per full circle
                         </div>

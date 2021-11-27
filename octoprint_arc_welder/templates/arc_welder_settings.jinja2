@@ -82,7 +82,7 @@
                                 <label class="control-label" for="arc_welder_path_percent_tolerance"><strong>Path Tolerance</strong></label>
                                 <div class="controls">
                                     <div class="input-append">
-                                        <input class="input-small" required="true" type="number" min="0.1" max="5"
+                                        <input class="input-small" required="true" type="number" min="0.1" max="99"
                                                step="0.1" id="arc_welder_path_percent_tolerance"
                                                data-bind="value: plugin_settings().path_tolerance_percent">
                                         <span class="add-on">%</span>
@@ -125,7 +125,7 @@
                                     <strong>Default XYZ Precision</strong></label>
                                 <div class="controls">
                                     <div class="input-append">
-                                        <input class="input-small" required="true" type="number" min="3" max="7"
+                                        <input class="input-small" required="true" type="number" min="3" max="6"
                                                step="1" id="arc_welder_default_xyz_precision"
                                                data-bind="value: plugin_settings().default_xyz_precision">
                                         <span class="add-on">decimals</span>
@@ -139,28 +139,13 @@
                                     <strong>Default E Precision</strong></label>
                                 <div class="controls">
                                     <div class="input-append">
-                                        <input class="input-small" required="true" type="number" min="3" max="7"
+                                        <input class="input-small" required="true" type="number" min="3" max="6"
                                                step="1" id="arc_welder_default_e_precision"
                                                data-bind="value: plugin_settings().default_e_precision">
                                         <span class="add-on">decimals</span>
                                     </div>
                                     <a class="arc_welder_help" data-help-url="settings.default_e_precision.md"
                                        data-help-title="Default E Precision"></a>
-                                </div>
-                            </div>
-                            <div class="control-group">
-                                <label class="control-label" for="arc_welder_max_gcode_length">
-                                    <strong>Maximum Gcode Length</strong>
-                                </label>
-                                <div class="controls">
-                                    <div class="input-append">
-                                        <input id="arc_welder_max_gcode_length" class="input-small" required="true" type="number" min="0" max="255"
-                                               step="1"
-                                               data-bind="value: plugin_settings().max_gcode_length">
-                                        <span class="add-on" data-bind="text: (plugin_settings().max_gcode_length() > 0 ? 'characters' : 'unlimited')"></span>
-                                    </div>
-                                    <a class="arc_welder_help" data-help-url="settings.max_gcode_length.md"
-                                       data-help-title="Max Gcode Length"></a>
                                 </div>
                             </div>
                             <div class="control-group">
@@ -180,14 +165,27 @@
                         <fieldset>
                             <legend>Experimental Preprocessor Settings</legend>
                             <div class="control-group">
-                                <label class="control-label" for="arc_welder_extrusion_rate_variance_percent"><strong>Extrusion Rate Variance (experimental)</strong></label>
+                                <label class="control-label" for="arc_welder_extrusion_rate_variance_detection_enabled">
+                                    <strong>Extrusion Rate Variance Detection</strong>
+                                </label>
+                                <div class="controls">
+                                    <label class="checkbox">
+                                        <input class="input-text" type="checkbox" id="arc_welder_extrusion_rate_variance_detection_enabled"
+                                               data-bind="checked: plugin_settings().extrusion_rate_variance_detection_enabled">
+                                        Enabled
+                                        <a class="arc_welder_help" data-help-url="settings.extrusion_rate_variance_detection_enabled.md"
+                                       data-help-title="Extrusion Rate Variance Detection"></a>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="control-group" data-bind="visible:plugin_settings().extrusion_rate_variance_detection_enabled">
+                                <label class="control-label" for="arc_welder_extrusion_rate_variance_percent"><strong>Extrusion Rate Variance Percent</strong></label>
                                 <div class="controls">
                                     <div class="input-append">
                                         <input class="input-small" required="true" type="number" min="0" max="1000"
                                                step="0.1" id="arc_welder_extrusion_rate_variance_percent"
                                                data-bind="value: plugin_settings().extrusion_rate_variance_percent">
                                         <span class="add-on">%</span>
-                                        <span data-bind="visible: plugin_settings().extrusion_rate_variance_percent() == 0" class="text-warning">&nbsp;Disabled</span>
                                     </div>
                                     <a class="arc_welder_help" data-help-url="settings.extrusion_rate_variance_percent.md"
                                        data-help-title="Extrusion Rate Varience"></a>
@@ -217,6 +215,35 @@
                                         <a class="arc_welder_help" data-help-url="settings.allow_travel_arcs.md"
                                        data-help-title="Allow Travel Arcs"></a><br/>
                                     </label>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label class="control-label" for="arc_welder_max_gcode_length_detection_enabled">
+                                    <strong>G2/G3 Max Length Restrictions</strong>
+                                </label>
+                                <div class="controls">
+                                    <label class="checkbox">
+                                        <input class="input-text" type="checkbox" id="arc_welder_max_gcode_length_detection_enabled"
+                                               data-bind="checked: plugin_settings().max_gcode_length_detection_enabled">
+                                        Enabled
+                                        <a class="arc_welder_help" data-help-url="settings.max_gcode_length_detection_enabled.md"
+                                       data-help-title="G2/G3 Max Length Restrictions"></a>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="control-group" data-bind="visible:plugin_settings().max_gcode_length_detection_enabled">
+                                <label class="control-label" for="arc_welder_max_gcode_length">
+                                    <strong>Maximum Gcode Length</strong>
+                                </label>
+                                <div class="controls">
+                                    <div class="input-append">
+                                        <input id="arc_welder_max_gcode_length" class="input-small" required="true" type="number" min="0" max="255"
+                                               step="1"
+                                               data-bind="value: plugin_settings().max_gcode_length">
+                                        <span class="add-on" data-bind="text: (plugin_settings().max_gcode_length() > 0 ? 'characters' : 'unlimited')"></span>
+                                    </div>
+                                    <a class="arc_welder_help" data-help-url="settings.max_gcode_length.md"
+                                       data-help-title="Max Gcode Length"></a>
                                 </div>
                             </div>
                         </fieldset>

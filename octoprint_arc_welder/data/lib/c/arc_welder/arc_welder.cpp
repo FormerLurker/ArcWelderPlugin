@@ -973,7 +973,10 @@ void arc_welder::add_arcwelder_comment_to_target()
   if (allow_3d_arcs_)
   {
     stream << "; allow_3d_arcs=True\n";
-
+  }
+  if (allow_travel_arcs_)
+  {
+      stream << "; allow_travel_arcs=True\n";
   }
   if (allow_dynamic_precision_)
   {

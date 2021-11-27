@@ -148,10 +148,12 @@ class ArcWelderPlugin(
             allow_dynamic_precision=False,
             default_xyz_precision=3,
             default_e_precision=5,
-            max_gcode_length=0,
+            max_gcode_length_detection_enabled=False,
+            max_gcode_length=50,
             resolution_mm=0.05,
             path_tolerance_percent=5.0,  # 5%
             max_radius_mm=9999,  # 9.999 Meters
+            extrusion_rate_variance_detection_enabled=True,
             extrusion_rate_variance_percent=5.0,
             firmware_compensation_enabled=False,
             min_arc_segments=14,  # 0 to disable
@@ -197,7 +199,7 @@ class ArcWelderPlugin(
         self._cancel_all_processing = False
 
     def get_settings_version(self):
-        return 2
+        return 3
 
     def on_settings_migrate(self, target, current):
         # If we don't have a current version, look at the current settings file for the most recent version.
@@ -215,6 +217,14 @@ class ArcWelderPlugin(
             if self._settings.get(["feature_settings", "print_after_processing"]) in ["both", "auto-only"]:
                 self._settings.set(["feature_settings", "print_after_processing"], ArcWelderPlugin.PROCESS_OPTION_ALWAYS)
             logger.info("Settings migrated to version 2 successfully.")
+        if current < 3:
+            logger.info("Migrating settings to version 3.")
+            extrusion_rate_variance = self._settings.get_float(["extrusion_rate_variance_percent"])
+            self._settings.set(["extrusion_rate_variance_detection_enabled"], extrusion_rate_variance > 0)
+            logger.info("Settings migrated to version 3 successfully.")
+            max_gcode_length = self._settings.get_float(["max_gcode_length"])
+            self._settings.set(["max_gcode_length_detection_enabled"], max_gcode_length > 0)
+
 
     def on_after_startup(self):
         logging_configurator.configure_loggers(
@@ -260,11 +270,108 @@ class ArcWelderPlugin(
         return self.settings_default
 
     def on_settings_save(self, data):
+        success, data, errors = self.check_settings(data)
+        if not success:
+            error_data = {
+                "message_type": "setting-errors",
+                "data": errors
+            }
+            self._plugin_manager.send_plugin_message(self._identifier, error_data)
+
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
         # reconfigure logging
         logging_configurator.configure_loggers(
             self._log_file_path, self._logging_configuration
         )
+
+    def check_settings(self, settings):
+        # Check resolution, must be greater than 0
+        errors = [];
+        key = ""
+        try:
+            key = "resolution_mm"
+            if key in settings and float(settings[key]) <= 0:
+                errors.append("The resolution must be greater than 0.")
+                settings[key] = self._settings.get([key])
+
+            key = "path_tolerance_percent"
+            if key in settings and float(settings[key]) <= 0:
+                errors.append("The path tolerance percent must be greater than 0%.")
+                settings[key] = self._settings.get([key])
+            key = "path_tolerance_percent"
+            if key in settings and float(settings[key]) >= 100:
+                errors.append("The path tolerance percent must be less than 100%.")
+                settings[key] = self._settings.get([key])
+            key = "mm_per_arc_segment"
+            if key in settings and float(settings[key]) < 0:
+                errors.append("MM Per Arc Segment (firmware compensation) must be greater than or equal to 0.")
+                settings[key] = self._settings.get([key])
+            key = "min_arc_segments"
+            if key in settings and int(settings[key]) < 0:
+                errors.append("Min Arc Segments (firmware compensation) must be greater than or equal to 0.")
+                settings[key] = self._settings.get([key])
+
+            key = "firmware_compensation_enabled"
+            firmware_compensation_enabled = (
+                bool(settings[key]) if key in settings
+                else self._settings.get([key])
+            )
+
+            # checl firmware compensation variables.
+            key = "mm_per_arc_segment"
+            if key in settings and float(settings[key]) <= 0.0:
+                if firmware_compensation_enabled:
+                    # Only print this error if firmware compensation is enabled
+                    errors.append("If firmware compensation is enabled, MM Per Arc Segment must be greater than 0.")
+                settings[key] = self._settings.get([key])
+            key = "min_arc_segments"
+            if key in settings and int(settings[key]) <= 0.0:
+                if firmware_compensation_enabled:
+                    # Only print this error if firmware compensation is enabled
+                    errors.append("If firmware compensation is enabled, Min Arc Segments must be greater than 0.")
+                settings[key] = self._settings.get([key])
+                has_firmware_compensation_issue = True
+
+            key = "default_xyz_precision"
+            if key in settings and (int(settings[key]) < 3 or int(settings[key]) > 6):
+                errors.append("The XYZ Precision must be between 3 and 6")
+                settings[key] = self._settings.get([key])
+
+            key = "default_e_precision"
+            if key in settings and (int(settings[key]) < 3 or int(settings[key]) > 6):
+                errors.append("The E Precision must be between 3 and 6")
+                settings[key] = self._settings.get([key])
+
+            key = "extrusion_rate_variance_detection_enabled"
+            extrusion_rate_variance_detection_enabled = (
+                bool(settings[key]) if key in settings
+                else self._settings.get([key])
+            )
+            key = "extrusion_rate_variance_percent"
+            if key in settings and float(settings[key]) <= 0:
+                if extrusion_rate_variance_detection_enabled:
+                    errors.append("The Extrusion Rate Variance Percent must be greater than 0.")
+                settings[key] = self._settings.get([key])
+
+            key = "max_gcode_length_detection_enabled"
+            max_gcode_length_detection_enabled = (
+                bool(settings[key]) if key in settings
+                else self._settings.get([key])
+            )
+
+            key = "max_gcode_length"
+            if key in settings and int(settings[key]) < 31:
+                if max_gcode_length_detection_enabled:
+                    errors.append("The Max Gcode Length must be greater than 30.")
+                settings[key] = self._settings.get([key])
+            key = "max_radius_mm"
+            if key in settings and float(settings[key]) <= 0:
+                errors.append("The Maximum Arc Radius must be greater than 0.")
+                settings[key] = self._settings.get([key])
+        except TypeError as e:
+            errors.append("An unexpected error occurred while saving your settings.  There was an error converting " + key + ".  Please check the value and try again.")
+
+        return len(errors) == 0, settings, errors
 
     def get_template_configs(self):
         return [
@@ -607,7 +714,13 @@ class ArcWelderPlugin(
         return self._settings.get_float(["default_e_precision"])
 
     @property
+    def _max_gcode_length_detection_enabled(self):
+        return self._settings.get_boolean(["max_gcode_length_detection_enabled"])
+
+    @property
     def _max_gcode_length(self):
+        if not self._max_gcode_length_detection_enabled:
+            return 0
         return self._settings.get_float(["max_gcode_length"])
 
     @property
@@ -629,11 +742,19 @@ class ArcWelderPlugin(
         return self._path_tolerance_percent / 100.0
 
     @property
+    def _extrusion_rate_variance_detection_enabled(self):
+        return  self._settings.get_boolean(["extrusion_rate_variance_detection_enabled"])
+
+    @property
     def _extrusion_rate_variance_percent(self):
+        if not self._extrusion_rate_variance_detection_enabled:
+            # returning 0 disables extrusion rate variance detection
+            return 0.0
         extrusion_rate_variance_percent = self._settings.get_float(["extrusion_rate_variance_percent"])
         if extrusion_rate_variance_percent is None or extrusion_rate_variance_percent < 0:
             extrusion_rate_variance_percent = self.settings_default["extrusion_rate_variance_percent"]
         return extrusion_rate_variance_percent
+
 
     @property
     def _max_radius_mm(self):
@@ -651,6 +772,9 @@ class ArcWelderPlugin(
 
     @property
     def _min_arc_segments(self):
+        if not self._firmware_compensation_enabled:
+            # returning 0 disabled firmware compensation
+            return 0.0;
         min_arc_segments = self._settings.get_float(["min_arc_segments"])
         if min_arc_segments is None or min_arc_segments < 0:
             min_arc_segments = self.settings_default["min_arc_segments"]
@@ -658,6 +782,9 @@ class ArcWelderPlugin(
 
     @property
     def _mm_per_arc_segment(self):
+        if not self._firmware_compensation_enabled:
+            # returning 0 disabled firmware compensation
+            return 0.0;
         mm_per_arc_segment = self._settings.get_float(["mm_per_arc_segment"])
         if mm_per_arc_segment is None or mm_per_arc_segment < 0:
             mm_per_arc_segment = self.settings_default["mm_per_arc_segment"]
@@ -1267,7 +1394,7 @@ class ArcWelderPlugin(
         path_tolerance_percent = gcode_comment_settings.get("path_tolerance_percent", self._path_tolerance_percent)
         if path_tolerance_percent > 5:
             logger.warning(
-                "The path tolerance percent %0.2f percent is greater than the recommended max of 5%", resolution_mm
+                "The path tolerance percent %0.2f percent is greater than the recommended max of 5%%", path_tolerance_percent
             )
         extrusion_rate_variance_percent = gcode_comment_settings.get("extrusion_rate_variance_percent", self._extrusion_rate_variance_percent)
         if extrusion_rate_variance_percent < 0:
