@@ -64,12 +64,6 @@ logging_configurator = log.LoggingConfigurator("arc_welder", "arc_welder.", "oct
 root_logger = logging_configurator.get_root_logger()
 # so that we can
 logger = logging_configurator.get_logger("__init__")
-from ._version import get_versions
-
-__version__ = get_versions()["version"]
-__git_version__ = get_versions()["full-revisionid"]
-
-del get_versions
 
 class ArcWelderPlugin(
     octoprint.plugin.StartupPlugin,
@@ -137,6 +131,13 @@ class ArcWelderPlugin(
 
     def __init__(self):
         super(ArcWelderPlugin, self).__init__()
+
+        from ._version import get_versions
+
+        self.source_version = get_versions()["version"]
+        self.git_version = get_versions()["full-revisionid"]
+
+        del get_versions
         # Note, you cannot count the number of items left to process using the
         # _processing_queue.  Items put into this queue will be inserted into
         # an internal dequeue by the preprocessor
@@ -181,8 +182,8 @@ class ArcWelderPlugin(
                 log_to_console=False,
                 enabled_loggers=[],
             ),
-            version=__version__,
-            git_version=__git_version__,
+            version=self.source_version,
+            git_version=self.git_version
         )
         # preprocessor worker
         self._preprocessor_worker = None
@@ -245,11 +246,11 @@ class ArcWelderPlugin(
 
     def on_after_startup(self):
 
-        # Update arcwelder version in case we just installed
-        if (self._settings.get(["version"]) != __version__ or self._settings.get(["git_version"]) != __git_version__):
-            self._settings.set(["version"], __version__)
-            self._settings.set(["git_version"], __git_version__)
-            self._settings.save()
+        # Update arcwelder version
+        if (self._settings.get(["version"]) != self._plugin_version or self._settings.get(
+                ["git_version"]) != self.git_version):
+            self._settings.set(["version"], self._plugin_version)
+            self._settings.set(["git_version"], self.git_version)
 
         logging_configurator.configure_loggers(
             self._log_file_path, self._logging_configuration
@@ -303,8 +304,8 @@ class ArcWelderPlugin(
             self._plugin_manager.send_plugin_message(self._identifier, error_data)
 
         # Update arcwelder version
-        if (self._settings.get(["version"]) != __version__ or self._settings.get(["git_version"]) != __git_version__):
-            self._settings.set(["version"], __version__)
+        if (self._settings.get(["version"]) != self._plugin_version or self._settings.get(["git_version"]) != __git_version__):
+            self._settings.set(["version"], self._plugin_version)
             self._settings.set(["git_version"], __git_version__)
 
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
@@ -1815,3 +1816,8 @@ class ArcWelderLargeResponseHandler(LargeResponseHandler):
 
 class TargetFileSaveError(Exception):
     pass
+
+from ._version import get_versions
+__version__ = get_versions()["version"]
+__git_version__ = get_versions()["full-revisionid"]
+del get_versions
