@@ -68,6 +68,7 @@ from ._version import get_versions
 
 __version__ = get_versions()["version"]
 __git_version__ = get_versions()["full-revisionid"]
+
 del get_versions
 
 class ArcWelderPlugin(
@@ -205,28 +206,51 @@ class ArcWelderPlugin(
         # If we don't have a current version, look at the current settings file for the most recent version.
         if current is None:
             current = -1
-        if current < 2:
-            logger.info("Migrating settings to version 2.")
-            # change 'both' to 'always'
-            if self._settings.get(["feature_settings", "file_processing"]) in ["both", "auto-only"]:
-                self._settings.set(["feature_settings", "file_processing"], ArcWelderPlugin.PROCESS_OPTION_ALWAYS)
-            if self._settings.get(["feature_settings", "delete_source"]) in ["both", "auto-only"]:
-                self._settings.set(["feature_settings", "delete_source"], ArcWelderPlugin.PROCESS_OPTION_ALWAYS)
-            if self._settings.get(["feature_settings", "select_after_processing"]) in ["both", "auto-only"]:
-                self._settings.set(["feature_settings", "select_after_processing"], ArcWelderPlugin.PROCESS_OPTION_ALWAYS)
-            if self._settings.get(["feature_settings", "print_after_processing"]) in ["both", "auto-only"]:
-                self._settings.set(["feature_settings", "print_after_processing"], ArcWelderPlugin.PROCESS_OPTION_ALWAYS)
-            logger.info("Settings migrated to version 2 successfully.")
-        if current < 3:
-            logger.info("Migrating settings to version 3.")
-            extrusion_rate_variance = self._settings.get_float(["extrusion_rate_variance_percent"])
-            self._settings.set(["extrusion_rate_variance_detection_enabled"], extrusion_rate_variance > 0)
-            logger.info("Settings migrated to version 3 successfully.")
-            max_gcode_length = self._settings.get_float(["max_gcode_length"])
-            self._settings.set(["max_gcode_length_detection_enabled"], max_gcode_length > 0)
+        # Upgrade
+        if target > current:
+            logger.info("Upgrading settings.")
+            if current < 2:
+                logger.info("Migrating settings to version 2.")
+                # change 'both' to 'always'
+                if self._settings.get(["feature_settings", "file_processing"]) in ["both", "auto-only"]:
+                    self._settings.set(["feature_settings", "file_processing"], ArcWelderPlugin.PROCESS_OPTION_ALWAYS)
+                if self._settings.get(["feature_settings", "delete_source"]) in ["both", "auto-only"]:
+                    self._settings.set(["feature_settings", "delete_source"], ArcWelderPlugin.PROCESS_OPTION_ALWAYS)
+                if self._settings.get(["feature_settings", "select_after_processing"]) in ["both", "auto-only"]:
+                    self._settings.set(["feature_settings", "select_after_processing"], ArcWelderPlugin.PROCESS_OPTION_ALWAYS)
+                if self._settings.get(["feature_settings", "print_after_processing"]) in ["both", "auto-only"]:
+                    self._settings.set(["feature_settings", "print_after_processing"], ArcWelderPlugin.PROCESS_OPTION_ALWAYS)
+                logger.info("Settings migrated to version 2 successfully.")
+            if current < 3:
+                logger.info("Migrating settings to version 3.")
+                extrusion_rate_variance = self._settings.get_float(["extrusion_rate_variance_percent"])
+                self._settings.set(["extrusion_rate_variance_detection_enabled"], extrusion_rate_variance > 0)
+                logger.info("Settings migrated to version 3 successfully.")
+                max_gcode_length = self._settings.get_float(["max_gcode_length"])
+                self._settings.set(["max_gcode_length_detection_enabled"], max_gcode_length > 0)
+        elif current > target:
+            # TODO:  Test downgrade
+            logger.info("Downgrading settings.")
+            if target < 3:
+                logger.info("Downgrading settings to version 2.")
+                extrusion_rate_variance_detection_enabled = self._settings.get_boolean(["extrusion_rate_variance_detection_enabled"])
+                if (not extrusion_rate_variance_detection_enabled):
+                    self._settings.set(["extrusion_rate_variance_percent"], 0)
+
+                max_gcode_length_detection_enabled = self._settings.get_boolean(["max_gcode_length_detection_enabled"])
+                if (not max_gcode_length_detection_enabled):
+                    self._settings.set(["max_gcode_length"], 0)
+                logger.info("Settings downgraded to version 2 successfully.")
 
 
     def on_after_startup(self):
+
+        # Update arcwelder version in case we just installed
+        if (self._settings.get(["version"]) != __version__ or self._settings.get(["git_version"]) != __git_version__):
+            self._settings.set(["version"], __version__)
+            self._settings.set(["git_version"], __git_version__)
+            self._settings.save()
+
         logging_configurator.configure_loggers(
             self._log_file_path, self._logging_configuration
         )
@@ -277,6 +301,11 @@ class ArcWelderPlugin(
                 "data": errors
             }
             self._plugin_manager.send_plugin_message(self._identifier, error_data)
+
+        # Update arcwelder version
+        if (self._settings.get(["version"]) != __version__ or self._settings.get(["git_version"]) != __git_version__):
+            self._settings.set(["version"], __version__)
+            self._settings.set(["git_version"], __git_version__)
 
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
         # reconfigure logging
