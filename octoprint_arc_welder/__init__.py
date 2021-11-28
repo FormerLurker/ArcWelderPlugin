@@ -478,7 +478,7 @@ class ArcWelderPlugin(
         with ArcWelderPlugin.admin_permission.require(http_exception=403):
             self._settings.set([], self.settings_default)
             # force save the settings and trigger a SettingsUpdated event
-            self._settings.save(trigger_event=True)
+            self._settings.save(force=True, trigger_event=True)
             return jsonify({"success": True})
 
     @octoprint.plugin.BlueprintPlugin.route("/checkFirmware", methods=["POST"])
