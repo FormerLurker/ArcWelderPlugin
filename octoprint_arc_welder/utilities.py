@@ -154,8 +154,19 @@ def _search_gcode_file(gcode_file, search_function_list, lines_to_search=100):
                     line[comment_start_index:], fn_def["tag"], fn_def["settings"]
                 )
             elif fn_def["type"] == COMMENT_SEARCH_TYPE_CONTAINS:
-                if fn_def["find"] in line.upper():
-                    fn_result = True
+                find_functions = []
+                find_value = fn_def["find"]
+                # we can have a list of find functions or not
+                # format them all as a list and loop
+                if not isinstance(find_value, list):
+                    find_functions = [find_value]
+                else:
+                    find_functions = find_value
+
+                for find_function in find_functions:
+                    if find_function in line.upper():
+                        fn_result = True
+                        break
             if fn_result:
                 # set the fn_result to the fn_def["value"] if the key exists
                 fn_result = fn_def.get("value", fn_result)
@@ -163,11 +174,15 @@ def _search_gcode_file(gcode_file, search_function_list, lines_to_search=100):
                     # we should stop and return this now
                     return {fn_def["name"]: fn_result}
                 # add the search function result to the result dict
-                result[fn_def["name"]] = fn_result
+                if not fn_def["name"] in result:
+                    result[fn_def["name"]] = fn_result
+                else:
+                    result[fn_def["name"]].update(fn_result)
                 # remove the function from the list and decrement the
-                # function count
-                del search_function_list[fn_index]
-                num_functions -= 1
+                # function count IF this is not a settings search
+                if fn_def["type"] != COMMENT_SEARCH_TYPE_SETTINGS:
+                    del search_function_list[fn_index]
+                    num_functions -= 1
             fn_index -= 1
     if len(result) == 0:
         return False
@@ -282,8 +297,13 @@ def parse_settings_comment(line, tag, settings_dict):
                 result_value = None
                 if param_type == "float":
                     result_value = float(value)
+                elif param_type == "integer":
+                    result_value = int(value)
                 elif param_type == "percent":
+                    # see if there is a percent sign, divide by 100
                     result_value = float(value.replace("%",""))
+                    if value.find("%") < 0:
+                        result_value = result_value * 100
                 elif param_type == "boolean":
                     result_value = value.upper() in ["1", "TRUE", "YES", "Y"]
                 elif param_type == "string":
@@ -293,7 +313,8 @@ def parse_settings_comment(line, tag, settings_dict):
                     else:
                         result_value = value.strip()
                 if result_value is not None:
-                    results[key] = result_value
+                    settings_key_name = param_def["key"]
+                    results[settings_key_name] = result_value
                 else:
                     logger.error("Failed to parse %s parameter value of %s", key, value)
             except ValueError as e:

@@ -22,6 +22,7 @@
 
 #ifndef UTILITIES_H
 #define UTILITIES_H
+#include "version.h"
 #include <string>
 #include <vector>
 #include <set>
@@ -44,7 +45,6 @@ namespace utilities{
 	extern const std::string WHITESPACE_;
 	extern const char GUID_RANGE[];
 	extern const bool GUID_DASHES[];
-
 	extern const char PATH_SEPARATOR_;
 	bool is_zero(double x, double tolerance);
 	bool is_zero(double x);
@@ -86,6 +86,7 @@ namespace utilities{
 	std::string join(const std::string* strings, size_t length, std::string sep);
 
 	std::string join(const std::vector<std::string> strings, std::string sep);
+
 	// bool contains(const std::string source, const std::string substring); // Might need this later
 	std::istream& safe_get_line(std::istream& is, std::string& t);
 
@@ -187,8 +188,6 @@ namespace utilities{
 	double rand_range(double min, double max);
 	unsigned char rand_range(unsigned char min, unsigned char max);
 	int rand_range(int min, int max);
-
-	
 	
 	class box_drawing {
 	
@@ -216,6 +215,55 @@ namespace utilities{
 			std::stringstream output_stream_;
 			int width_;
 			
+	};
+
+	struct gcode_processor_version
+	{
+		gcode_processor_version(std::string program_name, std::string sub_title = "", std::string description = "") :
+			program_name(program_name),
+			description(description),
+			sub_title(sub_title),
+			author(version_author),
+			copyright_date(version_copyright_date),
+			build_date(version_build_date),
+			git_branch(version_git_branch),
+			git_commit_hash(version_git_commit_hash),
+			git_commit_hash_short(version_git_commit_hash_short),
+			git_commit_date(version_git_commit_date),
+			git_tag(version_git_tag),
+			git_tagged_version(version_git_tagged_version),
+			git_author(version_git_author),
+			git_repository_name(version_git_repository_name),
+			git_remote_url(version_git_remote_url),
+			git_author_url(version_git_author_url),
+			git_repository_url(version_git_repository_url) {};
+		std::string program_name;
+		std::string description;
+		std::string sub_title;
+		std::string author;
+		std::string copyright_date;
+		std::string build_date;
+		std::string git_branch;
+		std::string git_commit_hash;
+		std::string git_commit_hash_short;
+		std::string git_commit_date;
+		std::string git_tag;
+		std::string git_tagged_version;
+		std::string git_author;
+		std::string git_repository_name;
+		std::string git_remote_url;
+		std::string git_author_url;
+		std::string git_repository_url;
+		std::string get_title();
+		std::string get_version_info_string();
+		std::string get_version_string();
+		std::string get_version_string_full();
+		std::string get_version_string_compact();
+		std::string get_commit_url();
+		std::string get_release_url();
+		std::string get_copyright();
+		bool is_release();
+
 	};
 
 }

@@ -119,27 +119,27 @@ compiler_opts = {
     CCompiler.compiler_type: {
         "extra_compile_args": ["-O3", "-std=c++11"],
         "extra_link_args": [],
-        "define_macros": [],
+        "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
     },
     MSVCCompiler.compiler_type: {
         "extra_compile_args": ["/O2", "/GL", "/Gy", "/MD", "/EHsc"],
         "extra_link_args": [],
-        "define_macros": [],
+        "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
     },
     UnixCCompiler.compiler_type: {
         "extra_compile_args": ["-O3", "-std=c++11", "-Wno-unknown-pragmas", '-v'],
         "extra_link_args": [],
-        "define_macros": [],
+        "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
     },
     BCPPCompiler.compiler_type: {
         "extra_compile_args": ["-O3", "-std=c++11"],
         "extra_link_args": [],
-        "define_macros": [],
+        "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
     },
     CygwinCCompiler.compiler_type: {
         "extra_compile_args": ["-O3", "-std=c++11"],
         "extra_link_args": [],
-        "define_macros": [],
+        "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
     },
 }
 
@@ -148,27 +148,27 @@ if DEBUG:
         CCompiler.compiler_type: {
             "extra_compile_args": [],
             "extra_link_args": [],
-            "define_macros": [("DEBUG_chardet", "1")],
+            "define_macros": [("IS_ARCWELDER_PLUGIN","1"),("DEBUG_chardet", "1")],
         },
         MSVCCompiler.compiler_type: {
             "extra_compile_args": ["/EHsc", "/Z7"],
             "extra_link_args": ["/DEBUG"],
-            "define_macros": [],
+            "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
         },
         UnixCCompiler.compiler_type: {
             "extra_compile_args": ["-g"],
             "extra_link_args": ["-g"],
-            "define_macros": [],
+            "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
         },
         BCPPCompiler.compiler_type: {
             "extra_compile_args": [],
             "extra_link_args": [],
-            "define_macros": [],
+            "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
         },
         CygwinCCompiler.compiler_type: {
             "extra_compile_args": [],
             "extra_link_args": [],
-            "define_macros": [],
+            "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
         },
     }
 
@@ -177,7 +177,7 @@ os_compiler_opts = {
     'Darwin': {
         "extra_compile_args": ["-mmacosx-version-min=10.8", "-stdlib=libc++"],
         "extra_link_args": ["-lc++"],
-        "define_macros": [],
+        "define_macros": [("IS_ARCWELDER_PLUGIN","1")],
     }
 }
 
@@ -211,10 +211,11 @@ class build_ext_subclass(build_ext):
 
         for extension in self.extensions:
             print(
-                "Building Extensions for {0} - extra_compile_args:{1} - extra_link_args:{2}".format(
+                "Building Extensions for {0} - extra_compile_args:{1} - extra_link_args:{2} - define_macros:{3}".format(
                     extension.name,
                     extension.extra_compile_args,
                     extension.extra_link_args,
+                    extension.define_macros
                 )
             )
 
@@ -241,6 +242,7 @@ plugin_ext_sources = [
     "octoprint_arc_welder/data/lib/c/py_arc_welder/py_logger.cpp",
     "octoprint_arc_welder/data/lib/c/py_arc_welder/py_arc_welder.cpp",
     "octoprint_arc_welder/data/lib/c/py_arc_welder/py_arc_welder_extension.cpp",
+    "octoprint_arc_welder/data/lib/c/py_arc_welder/py_arc_welder_version.cpp",
     "octoprint_arc_welder/data/lib/c/py_arc_welder/python_helpers.cpp",
 ]
 cpp_gcode_parser = Extension(

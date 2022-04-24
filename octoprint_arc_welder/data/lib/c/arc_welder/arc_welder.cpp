@@ -952,11 +952,20 @@ std::string arc_welder::get_arc_gcode(const std::string comment)
 void arc_welder::add_arcwelder_comment_to_target()
 {
   p_logger_->log(logger_type_, log_levels::DEBUG, "Adding ArcWelder comment to the target file.");
+  utilities::gcode_processor_version processor_version("ArcWelderLib");
+  
+  std::string comment_intro = 
+#ifdef IS_ARCWELDER_PLUGIN
+      "Postprocessed for the ArcWelderPlugin by [";
+#else
+      "Postprocessed by [";
+#endif
+  
+  std::string comment_start = "; ";
   std::stringstream stream;
-  stream << std::fixed;
-  stream << "; Postprocessed by [ArcWelder](https://github.com/FormerLurker/ArcWelderLib)\n";
-  stream << "; Copyright(C) 2021 - Brad Hochgesang\n";
-  stream << "; Version: " << GIT_TAGGED_VERSION << ", Branch: " << GIT_BRANCH << ", BuildDate: " << BUILD_DATE << "\n";
+  stream << comment_start << comment_intro << processor_version.program_name << "](" << processor_version.git_repository_url << ")\n";
+  stream << comment_start << processor_version.get_copyright() << "\n";
+  stream << comment_start << processor_version.get_version_string_compact() << "\n";
   stream << "; resolution=" << std::setprecision(2) << resolution_mm_ << "mm\n";
   stream << "; path_tolerance=" << std::setprecision(1) << (current_arc_.get_path_tolerance_percent() * 100.0) << "%\n";
   stream << "; max_radius=" << std::setprecision(2) << (current_arc_.get_max_radius()) << "mm\n";

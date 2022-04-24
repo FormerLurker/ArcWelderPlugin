@@ -89,6 +89,7 @@ static struct module_state _state;
 // Python 2 module method definition
 static PyMethodDef PyArcWelderMethods[] = {
 	{ "ConvertFile", (PyCFunction)ConvertFile,  METH_VARARGS  ,"Converts segmented curve approximations to actual G2/G3 arcs within the supplied resolution." },
+	{ "GetVersionInfo", (PyCFunction)GetVersionInfo, METH_NOARGS, "Gets a version information dictionary."},
 	{ NULL, NULL, 0, NULL }
 };
 
@@ -127,9 +128,23 @@ PyInit_PyArcWelder(void)
 extern "C" void initPyArcWelder(void)
 #endif
 {
-	std::cout << "Initializing PyArcWelder";
-	std::cout << "\nVersion: " << GIT_TAGGED_VERSION << ", Branch: " << GIT_BRANCH << ", BuildDate: " << BUILD_DATE;
-	std::cout << "\nCopyright(C) " << COPYRIGHT_DATE << " - " << AUTHOR;
+	std::vector<std::string> logger_names;
+	logger_names.push_back("arc_welder.gcode_conversion");
+	std::vector<int> logger_levels;
+	logger_levels.push_back(log_levels::NOSET);
+	logger_levels.push_back(log_levels::VERBOSE);
+	logger_levels.push_back(log_levels::DEBUG);
+	logger_levels.push_back(log_levels::INFO);
+	logger_levels.push_back(log_levels::WARNING);
+	logger_levels.push_back(log_levels::ERROR);
+	logger_levels.push_back(log_levels::CRITICAL);
+	p_py_logger = new py_logger(logger_names, logger_levels);
+	p_py_logger->initialize_loggers();
+	p_py_logger->set_log_level(INFO);
+
+	std::string comment_start = "; ";
+	
+	std::cout << "Initializing " << py_version.get_version_info_string() << "\n";
 #if PY_MAJOR_VERSION >= 3
 	std::cout << " Python 3+ Detected...";
 	PyObject* module = PyModule_Create(&moduledef);
@@ -147,19 +162,7 @@ extern "C" void initPyArcWelder(void)
 		Py_DECREF(module);
 		INITERROR;
 	}
-	std::vector<std::string> logger_names;
-	logger_names.push_back("arc_welder.gcode_conversion");
-	std::vector<int> logger_levels;
-	logger_levels.push_back(log_levels::NOSET);
-	logger_levels.push_back(log_levels::VERBOSE);
-	logger_levels.push_back(log_levels::DEBUG);
-	logger_levels.push_back(log_levels::INFO);
-	logger_levels.push_back(log_levels::WARNING);
-	logger_levels.push_back(log_levels::ERROR);
-	logger_levels.push_back(log_levels::CRITICAL);
-	p_py_logger = new py_logger(logger_names, logger_levels);
-	p_py_logger->initialize_loggers();
-	p_py_logger->set_log_level(INFO);
+	
 	std::cout << " Initialization Complete\r\n";
 
 #if PY_MAJOR_VERSION >= 3
@@ -224,6 +227,11 @@ extern "C"
 			p_progress
 		);
 		return p_results;
+	}
+
+	static PyObject* GetVersionInfo()
+	{
+		return py_version.build_py_arc_welder_version();
 	}
 }
 

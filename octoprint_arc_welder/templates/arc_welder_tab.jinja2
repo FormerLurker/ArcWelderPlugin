@@ -60,101 +60,24 @@
                                 class="fa fa-times text-error fa-lg"></i></a>
                         <span data-bind="visible: processing_task() && processing_task().task.octoprint_args.print_after_processing"
                               title="Will print after processing is completed.">&nbsp;<i class="fa fa-print fa-lg"></i>&nbsp;</span>
-                        <span data-bind="text: processing_task_file_name"></span><span data-bind="visible: progress_source_file_size() > 0">&nbsp;-&nbsp;<span
-                            data-bind="text: progress_source_file_size.formatted"></span></span>
+                        <span data-bind="text: processing_task_file_name"></span><span data-bind="visible: is_processing">&nbsp;-&nbsp;<span
+                            data-bind="text: processing_statistics.source_file_size.formatted"></span></span>
                     </div>
                 </div>
                 <div class="row-fluid">
                     <div class="span12"> <!--Progress Bar-->
                         <div class="progress">
                             <div class="bar"
-                                 data-bind="style: {width: progress_percent_complete().toString()+'%'}"
+                                 data-bind="style: {width: processing_statistics.progress_statistics.percent_complete().toString()+'%'}"
                                  style="margin:0; width: 100%"></div>
-                            <span data-bind="text: progress_percent_complete().toString()+'%'"></span>
+                            <span data-bind="text: processing_statistics.progress_statistics.percent_complete().toString()+'%'"></span>
                         </div>
                     </div>
                 </div>
-                <div class="short-rows" data-bind="visible: progress_percent_complete()>0">
-                    <div class="row-fluid" data-bind="visible: progress_percent_complete()==100">
-                        <div class="span4 text-right"></div>
-                        <div class="span8">
-                            <p>Saving file and processing results...</p>
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span4 text-right"><strong>Time Remaining:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: progress_seconds_remaining.formatted"></span>
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span4 text-right"><strong>Time Elapsed:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: progress_seconds_elapsed.formatted"></span>
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span4 text-right"><strong>Arcs:</strong></div>
-                        <div class="span8">
-                            Created <span data-bind="text: progress_arcs_created.formatted"></span> from <span
-                                data-bind="text: progress_points_compressed.formatted"></span>&nbsp;points
-                        </div>
-                    </div>
-                    <div class="row-fluid" data-bind="visible: progress_num_firmware_compensations() > 0">
-                        <div class="span4 text-right"><strong>Firmware Compensations:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: progress_num_firmware_compensations.formatted"></span>&nbsp;arcs aborted
-                        </div>
-                    </div>
-                    <div class="row-fluid" data-bind="visible: progress_arcs_aborted_by_flowrate() > 0">
-                        <div class="span4 text-right"><strong >Flowrate Changes:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: progress_arcs_aborted_by_flowrate.formatted"></span>&nbsp;arcs aborted
-                        </div>
-                    </div>
-                    <div class="row-fluid" data-bind="visible: progress_num_gcode_length_exceptions() > 0">
-                        <div class="span4 text-right"><strong>GCode Length Exceptions:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: progress_num_gcode_length_exceptions.formatted"></span>&nbsp;arcs aborted
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span4 text-right"><strong>Target/Source Extrusions:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: progress_target_file_total_count.formatted"></span>
-                            &#8260;
-                            <span data-bind="text: progress_source_file_total_count.formatted"></span>
-                            =&nbsp;<span data-bind="text: Math.abs(progress_total_count_reduction_percent())"></span>%
-                            <span data-bind="text: progress_total_count_reduction_percent() < 0 ? 'reduction' : (progress_total_count_reduction_percent() > 0 ? 'increase' : 'unchanged')"></span>
-                        </div>
-                    </div>
-                    <div class="row-fluid" data-bind="visible: progress_source_file_total_travel_count()> 0">
-                        <div class="span4 text-right"><strong>Target/Source Travels:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: progress_target_file_total_travel_count.formatted"></span>
-                            &#8260;
-                            <span data-bind="text: progress_source_file_total_travel_count.formatted"></span>
-                            =&nbsp;<span data-bind="text: Math.abs(progress_total_travel_count_reduction_percent())"></span>%
-                            <span data-bind="text: progress_total_travel_count_reduction_percent() < 0 ? 'reduction' : (progress_total_travel_count_reduction_percent() > 0 ? 'increase' : 'unchanged')"></span>
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span4 text-right"><strong>Compression:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: progress_compression_ratio"></span>&#8758;1 (<span
-                                data-bind="text: progress_compression_percent"></span>%)
-                        </div>
-                    </div>
-                    <div class="row-fluid">
-                        <div class="span4 text-right"><strong>File Size:</strong></div>
-                        <div class="span8">
-                            <span data-bind="text: progress_source_position.formatted"></span> - <span
-                                data-bind="text: progress_space_saved.formatted"></span> = <span
-                                data-bind="text: progress_target_file_size.formatted"></span>
-                        </div>
-                    </div>
+                <div class="short-rows" data-bind="visible: processing_statistics.progress_statistics.percent_complete()>0">
+                    <div data-bind="template: {name: 'arc_welder_statistics', data: processing_statistics, if: is_processing}"></div>
                 </div>
-                <div class="short-rows" data-bind="visible: progress_percent_complete()==0">
+                <div class="short-rows" data-bind="visible: processing_statistics.progress_statistics.percent_complete()==0">
                     <p>Loading Statistics <i class="fa fa-spinner fa-spin"></i></p>
                 </div>
 
@@ -201,112 +124,7 @@
 
         </div>
         <div id="arc-welder-stats" data-bind="visible: statistics_available" class="short-rows">
-            <div class="row-fluid">
-                <div class="span12">
-                    <h5>Arc-Welder Statistics for <span data-bind="text:selected_filename_title"></span> File</h5>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Source File:</strong></div>
-                <div class="span8">
-                    <sapn data-bind="text:statistics_source_name, attr:{title:statistics_source_name}"></sapn>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Target File:</strong></div>
-                <div class="span8">
-                    <sapn data-bind="text:statistics_target_display_name, attr:{title:statistics_target_display_name}"></sapn>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Arcs:</strong></div>
-                <div class="span8">
-                    Created <span data-bind="text: statistics_arcs_created.formatted"></span> from <span
-                        data-bind="text: statistics_points_compressed.formatted"></span> extrusions
-                </div>
-            </div>
-            <div class="row-fluid" data-bind="visible: statistics_num_firmware_compensations() > 0">
-                <div class="span4 text-right"><strong>Firmware Compensations:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_num_firmware_compensations.formatted"></span>&nbsp;arcs aborted
-                </div>
-            </div>
-            <div class="row-fluid" data-bind="visible: statistics_num_gcode_length_exceptions() > 0">
-                <div class="span4 text-right"><strong>GCode Length Exceptions:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_num_gcode_length_exceptions.formatted"></span>&nbsp;arcs aborted
-                </div>
-            </div>
-            <div class="row-fluid" data-bind="visible: statistics_arcs_aborted_by_flowrate() > 0">
-                <div class="span4 text-right"><strong>Flowrate Changes:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_arcs_aborted_by_flowrate.formatted"></span>&nbsp;arcs aborted
-                </div>
-            </div>
-
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Target/Source Extrusions:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_target_file_total_count.formatted"></span>
-                    &#8260;
-                    <span data-bind="text: statistics_source_file_total_count.formatted"></span>
-                    =&nbsp;<span data-bind="text: Math.abs(statistics_total_count_reduction_percent())"></span>%
-                    <span data-bind="text: statistics_total_count_reduction_percent() < 0 ? 'reduction' : (statistics_total_count_reduction_percent() > 0 ? 'increase' : 'unchanged')"></span>
-                </div>
-            </div>
-            <div class="row-fluid" data-bind="visible: statistics_target_file_total_travel_count()">
-                <div class="span4 text-right"><strong>Target/Source Travels:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_target_file_total_travel_count.formatted"></span>
-                    &#8260;
-                    <span data-bind="text: statistics_source_file_total_travel_count.formatted"></span>
-                    =&nbsp;<span data-bind="text: Math.abs(statistics_total_travel_count_reduction_percent())"></span>%
-                    <span data-bind="text: statistics_total_travel_count_reduction_percent() < 0 ? 'reduction' : (statistics_total_travel_count_reduction_percent() > 0 ? 'increase' : 'unchanged')"></span>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Compression:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_compression_ratio"></span>&#8758;1 (<span
-                        data-bind="text: statistics_compression_percent"></span>%)
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>File Size:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_source_file_size.formatted"></span> - <span
-                        data-bind="text: statistics_space_saved_string"></span> = <span
-                        data-bind="text: statistics_target_file_size.formatted"></span>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Line Count:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_lines_processed.formatted"></span> - <span
-                        data-bind="text: statistics_points_compressed.formatted"></span> = <span
-                        data-bind="text: statistics_target_file_lines"></span>
-                </div>
-            </div>
-            <div class="row-fluid">
-                <div class="span4 text-right"><strong>Processing Time:</strong></div>
-                <div class="span8">
-                    <span data-bind="text: statistics_seconds_elapsed.formatted"></span>
-                </div>
-            </div>
-            <div data-bind="visible: statistics_source_file_total_count()">
-                <div class="row-fluid">
-                    <div class="span12 text-center">
-                        <pre class="text-center statistics-text"><div><strong>Extrusion/Retraction Detail</strong></div><div data-bind="html: statistics_segment_statistics_text"></div></pre>
-                    </div>
-                </div>
-            </div>
-            <div data-bind="visible: statistics_source_file_total_travel_count()">
-                <div class="row-fluid">
-                    <div class="span12 text-center">
-                        <pre class="text-center statistics-text"><div><strong>Travel Detail</strong></div><div data-bind="visible: statistics_source_file_total_travel_count() != statistics_target_file_total_travel_count(), html: statistics_segment_travel_statistics_text"></div><div data-bind="visible: statistics_source_file_total_travel_count() == statistics_target_file_total_travel_count()">No travel moves were converted to arcs.  This is normal for a 3d print.</div></pre>
-                    </div>
-                </div>
-            </div>
+            <div data-bind="template: {name: 'arc_welder_statistics', data: selected_file_statistics, if: statistics_available}"></div>
         </div>
         <hr/>
     </div>
@@ -705,3 +523,5 @@
         </div>
     </div>
 </div>
+
+{% include "arc_welder_statistics.jinja2" %}

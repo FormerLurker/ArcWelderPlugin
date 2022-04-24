@@ -28,27 +28,21 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, 
   if (pyGuid == NULL)
     return NULL;
 
-  std::string segment_statistics = "";
-  std::string segment_travel_statistics = "";
-
-  if (include_detailed_statistics)
-  {
-      // Extrusion Statistics
-      source_target_segment_statistics combined_stats = source_target_segment_statistics::add(progress.segment_statistics, progress.segment_retraction_statistics);
-      segment_statistics = combined_stats.str("", utilities::box_drawing::HTML);
-      // Travel Statistics
-      segment_travel_statistics = progress.travel_statistics.str("", utilities::box_drawing::HTML);
-  }
-  PyObject* pyMessage = gcode_arc_converter::PyUnicode_SafeFromString(segment_statistics);
-  if (pyMessage == NULL)
-    return NULL;
-  double total_count_reduction_percent = progress.segment_statistics.get_total_count_reduction_percent();
   
-  PyObject* pyTravelMessage = gcode_arc_converter::PyUnicode_SafeFromString(segment_travel_statistics);
-  if (pyTravelMessage == NULL)
-    return NULL;
+
+  // Extrusion Statistics
+  // Combine extrusion and retraction statistics
+  source_target_segment_statistics combined_stats = source_target_segment_statistics::add(progress.segment_statistics, progress.segment_retraction_statistics);
+  // Combine travel statistics
+  combined_stats = source_target_segment_statistics::add(combined_stats, progress.travel_statistics);
+
+  double total_count_reduction_percent = combined_stats.get_total_count_reduction_percent();
+  double total_retraction_count_reduction_percent = progress.segment_retraction_statistics.get_total_count_reduction_percent();
+  double total_extrusion_count_reduction_percent = progress.segment_statistics.get_total_count_reduction_percent();
+  
+  
   double total_travel_count_reduction_percent = progress.travel_statistics.get_total_count_reduction_percent();
-  PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:f,s:f,s:f,s:i,s:i,s:f}",
+  PyObject* py_progress = Py_BuildValue("{s:d,s:d,s:d,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:i,s:f,s:f,s:f,s:f,s:i,s:i,s:f,s:f,s:f,s:i,s:i,s:f,s:f,s:f,s:i,s:i,s:f,s:f,s:f,s:i,s:i,s:f}",
     "percent_complete",
     progress.percent_complete,												//1
     "seconds_elapsed",
@@ -80,13 +74,13 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, 
     "compression_percent",
     progress.compression_percent,											//15
     "source_file_total_length",
-    progress.segment_statistics.total_length_source,	//16
+    combined_stats.total_length_source,	//16
     "target_file_total_length",
-    progress.segment_statistics.total_length_target,	//17
+    combined_stats.total_length_target,	//17
     "source_file_total_count",
-    progress.segment_statistics.total_count_source,		//18
+    combined_stats.total_count_source,		//18
     "target_file_total_count",
-    progress.segment_statistics.total_count_target,   //19
+    combined_stats.total_count_target,   //19
     "total_count_reduction_percent",
     total_count_reduction_percent,                    //20
     "source_file_total_travel_length",
@@ -98,7 +92,27 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, 
     "target_file_total_travel_count",
     progress.travel_statistics.total_count_target,    //24
     "total_travel_count_reduction_percent",
-    total_travel_count_reduction_percent              //25
+    total_travel_count_reduction_percent,              //25
+    "source_file_total_retraction_length",          
+    progress.segment_retraction_statistics.total_length_source,	//26
+    "target_file_total_retraction_length",
+    progress.segment_retraction_statistics.total_length_target,	//27
+    "source_file_total_retraction_count",
+    progress.segment_retraction_statistics.total_count_source,		//28
+    "target_file_total_retraction_count",
+    progress.segment_retraction_statistics.total_count_target,   //29
+    "total_retraction_count_reduction_percent",
+    total_retraction_count_reduction_percent,                    //30
+    "source_file_total_extrusion_length",
+    progress.segment_statistics.total_length_source,	//31
+    "target_file_total_extrusion_length",
+    progress.segment_statistics.total_length_target,	//32
+    "source_file_total_extrusion_count",
+    progress.segment_statistics.total_count_source,		//33
+    "target_file_total_extrusion_count",
+    progress.segment_statistics.total_count_target,   //34
+    "total_extrusion_count_reduction_percent",
+    total_extrusion_count_reduction_percent                    //35
 
   );
 
@@ -109,9 +123,42 @@ PyObject* py_arc_welder::build_py_progress(const arc_welder_progress& progress, 
   // Due to a CRAZY issue, I have to add this item after building the py_progress object,
   // else it crashes in python 2.7.  Looking forward to retiring this backwards 
   // compatible code...
-  PyDict_SetItemString(py_progress, "segment_statistics_text", pyMessage);
-  PyDict_SetItemString(py_progress, "segment_travel_statistics_text", pyTravelMessage);
+  // Build the statistics messages
+  std::string combined_segment_statistics = "";
+  std::string segment_travel_statistics = "";
+  std::string segment_extrusion_statistics = "";
+  std::string segment_retraction_statistics = "";
+  if (include_detailed_statistics)
+  {
+      combined_segment_statistics = combined_stats.str("", utilities::box_drawing::HTML);
+      // Travel Statistics
+      segment_travel_statistics = progress.travel_statistics.str("", utilities::box_drawing::HTML);
+      segment_extrusion_statistics = progress.segment_statistics.str("", utilities::box_drawing::HTML);
+      segment_retraction_statistics = progress.segment_retraction_statistics.str("", utilities::box_drawing::HTML);
+  }
+
+  PyObject* pyCombinedSegmentStatistics = gcode_arc_converter::PyUnicode_SafeFromString(combined_segment_statistics);
+  if (pyCombinedSegmentStatistics == NULL)
+      return NULL;
+
+  PyObject* pyTravelSegmentStatistics = gcode_arc_converter::PyUnicode_SafeFromString(segment_travel_statistics);
+  if (pyTravelSegmentStatistics == NULL)
+      return NULL;
+
+  PyObject* pyExtrusionSegmentStatistics = gcode_arc_converter::PyUnicode_SafeFromString(segment_extrusion_statistics);
+  if (pyExtrusionSegmentStatistics == NULL)
+      return NULL;
+
+  PyObject* pyRetractionSegmentStatistics = gcode_arc_converter::PyUnicode_SafeFromString(segment_retraction_statistics);
+  if (pyRetractionSegmentStatistics == NULL)
+      return NULL;
+
+  PyDict_SetItemString(py_progress, "segment_statistics_text", pyCombinedSegmentStatistics);
+  PyDict_SetItemString(py_progress, "segment_travel_statistics_text", pyTravelSegmentStatistics);
+  PyDict_SetItemString(py_progress, "segment_extrusion_statistics_text", pyExtrusionSegmentStatistics);
+  PyDict_SetItemString(py_progress, "segment_retraction_statistics_text", pyRetractionSegmentStatistics);
   PyDict_SetItemString(py_progress, "guid", pyGuid);
+
   return py_progress;
 }
 

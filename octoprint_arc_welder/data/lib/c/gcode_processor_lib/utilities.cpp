@@ -743,3 +743,92 @@ int utilities::rand_range(int min, int max) {
 	double f = (double)std::rand() / RAND_MAX;
 	return static_cast<int>(static_cast<double>(min) + f * (static_cast<double>(max) - static_cast<double>(min)));
 }
+
+
+bool utilities::gcode_processor_version::is_release()
+{
+	return git_tagged_version == git_tag;
+}
+std::string utilities::gcode_processor_version::get_title()
+{
+	std::string title;
+	title.append(program_name);
+	if (sub_title != "")
+	{
+		title.append(": ").append(sub_title);
+	}
+	return title;
+}
+
+std::string utilities::gcode_processor_version::get_version_info_string()
+{
+	std::string info;
+	info.append(get_title());
+	info.append("\n").append(description);
+	info.append("\n").append(get_copyright());
+	info.append("\nVersion: ").append(git_tagged_version);
+	return info;
+}
+std::string utilities::gcode_processor_version::get_version_string_compact()
+{
+	std::string short_version;
+	short_version.append("Version: ").append(git_tagged_version).append(", Branch: ").append(git_branch).append(", BuildDate: ").append(build_date);
+	return short_version;
+}
+
+std::string utilities::gcode_processor_version::get_version_string()
+{
+	std::string version;
+	version.append("Version: ").append(git_tagged_version);
+	return version;
+}
+
+std::string utilities::gcode_processor_version::get_version_string_full()
+{
+	std::string version;
+	version.append(get_title());
+
+	version.append(" - Version: ").append(git_tagged_version);
+	version.append("\n").append(get_copyright());
+	version.append("\nAuthor: ").append(git_author);
+	version.append("\nAuthor Url: ").append(git_author_url);
+	version.append("\nRepository Name: ").append(git_repository_name);
+	version.append("\nBranch: ").append(git_branch);
+	version.append("\nBuild Date: ").append(build_date);
+	version.append("\nCommit Date: ").append(git_commit_date);
+	version.append("\nCommit Hash: ").append(git_commit_hash_short);
+	version.append("\nCommit Url: ").append(get_commit_url());
+	if (is_release())
+	{
+		version.append("\nRelease Url: ").append(get_release_url());
+	}
+	else
+	{
+		version.append("\nClosest Release Url: ").append(get_release_url());
+	}
+	version.append("\nRepository Url: ").append(git_repository_url);
+	version.append("\nRemote Url: ").append(git_remote_url);
+	return version;
+}
+
+std::string utilities::gcode_processor_version::get_commit_url()
+{
+	std::string url = git_repository_url;
+
+	url.append("/commit/").append(git_commit_hash);
+	return url;
+}
+std::string utilities::gcode_processor_version::get_release_url()
+{
+	std::string url = git_repository_url;
+	url.append("/releases/tag/").append(git_tag);
+	return url;
+}
+
+std::string utilities::gcode_processor_version::get_copyright()
+{
+	std::string copyright;
+	copyright.append("Copyright(C) ").append(copyright_date).append(" - ").append(author);
+	return copyright;
+}
+

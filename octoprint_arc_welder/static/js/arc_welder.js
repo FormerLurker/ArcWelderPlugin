@@ -816,6 +816,212 @@ $(function () {
         }
     }
 
+    ArcWelder.FileStatisticsViewModel = function()
+    {
+        var self = this;
+        self.size = ko.observable().extend({arc_welder_file_size: 1});
+        self.length = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.count = ko.observable().extend({arc_welder_short_number: {precision:1}});
+
+        self.update = function(data){
+            self.size(data.size);
+            self.length(data.length);
+            self.count(data.count);
+        };
+        return self;
+    }
+
+    ArcWelder.SourceTargetStatisticsViewModel = function(name) {
+        var self = this;
+        self.name = ko.observable(name);
+        self.source = new ArcWelder.FileStatisticsViewModel();
+        self.target = new ArcWelder.FileStatisticsViewModel();
+        self.statistics_text = ko.observable();
+
+        self.reduction_percent_count = ko.pureComputed(function(){
+            return ArcWelder.getPercentChange(self.target.count(), self.source.count());
+        }).extend({arc_welder_numeric: 1});
+
+        self.reduction_percent_length = ko.pureComputed(function(){
+            return ArcWelder.getPercentChange(self.target.count(),self.source.count());
+        }).extend({arc_welder_numeric: 1});
+
+        var initial_detail_visible = ArcWelder.getLocalStorage(name + "_detail_visible") !== "false";
+        self.detail_visible = ko.observable(initial_detail_visible);
+        self.detail_visible.subscribe(function(newValue){
+            var storage_value = newValue ? 'true' : 'false';
+            ArcWelder.setLocalStorage(name + "detail_visible", storage_value);
+        });
+
+        self.update = function(data){
+            self.source.update({
+                size: data.source_file_size,
+                length: data.source_file_length,
+                count: data.source_file_count,
+            });
+            self.target.update({
+                size: data.target_file_size,
+                length: data.target_file_length,
+                count: data.target_file_count,
+            });
+            self.statistics_text(data.statistics_text);
+        };
+        return self;
+    }
+
+    ArcWelder.ProgressStatisticsViewModel = function() {
+        var self = this;
+        self.percent_complete = ko.observable(0).extend({arc_welder_numeric: 1});
+
+        self.seconds_remaining = ko.observable().extend({arc_welder_timer: {format:"estimate"}});
+        self.source_position = ko.observable().extend({arc_welder_file_size: 1});
+        self.update = function(data) {
+            self.percent_complete(data.percent_complete);
+
+            self.seconds_remaining(data.seconds_remaining);
+            self.source_position(data.file_position);
+
+        }
+        return self;
+    }
+
+    ArcWelder.StatisticsViewModel = function(is_progress) {
+        var self = this;
+        self.is_progress = is_progress;
+        self.guid = ko.observable(null);
+        self.source_name = ko.observable("");
+        self.source_file_size = ko.observable().extend({arc_welder_file_size: 1});
+        self.target_name = ko.observable("");
+        self.target_file_size = ko.observable().extend({arc_welder_file_size: 1});
+        self.lines_processed = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.seconds_elapsed = ko.observable().extend({arc_welder_timer: {format:"timer"}});
+
+        // Progress Statistics - only used for progress updates
+        self.progress_statistics = new ArcWelder.ProgressStatisticsViewModel();
+        // Conversion Statistics
+        self.arcs_created = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.num_firmware_compensations = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.num_gcode_length_exceptions = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.arcs_aborted_by_flowrate = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.points_compressed = ko.observable().extend({arc_welder_short_number: {precision:1}});
+        self.compression_ratio = ko.observable().extend({arc_welder_numeric: 1});
+        self.compression_percent = ko.observable().extend({arc_welder_numeric: 1});
+
+        // Detailed Statistics Text - Only used for non-progress statistics
+        self.combined_statistics = new ArcWelder.SourceTargetStatisticsViewModel("combined");
+        self.extrusion_statistics = new ArcWelder.SourceTargetStatisticsViewModel("extrusion");
+        self.retraction_statistics = new ArcWelder.SourceTargetStatisticsViewModel("retraction");
+        self.travel_statistics = new ArcWelder.SourceTargetStatisticsViewModel("travel");
+
+        self.space_saved = ko.pureComputed(function(){
+            return self.source_file_size() - self.target_file_size();
+        }).extend({arc_welder_file_size: 1});
+
+        self.space_saved_string = ko.pureComputed(function(){
+            return ArcWelder.toFileSizeString(
+                self.space_saved(), 1
+            );
+        });
+
+        self.target_file_lines = ko.pureComputed(function(){
+            return ArcWelder.toShortNumber(
+                self.lines_processed() - self.points_compressed(), 1);
+        });
+
+        var initial_combined_detail_visible = ArcWelder.getLocalStorage("combined_detail_visible") !== "false";
+        self.combined_detail_visible = ko.observable(initial_combined_detail_visible);
+        self.combined_detail_visible.subscribe(function(newValue){
+            var storage_value = newValue ? 'true' : 'false';
+            ArcWelder.setLocalStorage("combined_detail_visible", storage_value);
+        });
+
+        var initial_extrusion_detail_visible = ArcWelder.getLocalStorage("extrusion_detail_visible") !== "false";
+        self.extrusion_detail_visible = ko.observable(initial_extrusion_detail_visible);
+        self.extrusion_detail_visible.subscribe(function(newValue){
+            var storage_value = newValue ? 'true' : 'false';
+            ArcWelder.setLocalStorage("extrusion_detail_visible", storage_value);
+        });
+
+        var initial_retraction_detail_visible = ArcWelder.getLocalStorage("retraction_detail_visible") !== "false";
+        self.retraction_detail_visible = ko.observable(initial_retraction_detail_visible);
+        self.retraction_detail_visible.subscribe(function(newValue){
+            var storage_value = newValue ? 'true' : 'false';
+            ArcWelder.setLocalStorage("retraction_detail_visible", storage_value);
+        });
+
+        var initial_travel_detail_visible = ArcWelder.getLocalStorage("travel_detail_visible") !== "false";
+        self.travel_detail_visible = ko.observable(initial_travel_detail_visible);
+        self.travel_detail_visible.subscribe(function(newValue){
+            var storage_value = newValue ? 'true' : 'false';
+            ArcWelder.setLocalStorage("travel_detail_visible", storage_value);
+        });
+
+        self.update = function(data)
+        {
+            // Source/Target Info
+            self.source_name(data.source_name);
+            self.source_file_size(data.source_file_size);
+            self.target_name(data.target_name);
+            self.target_file_size(data.target_file_size);
+            // Progress Statistics
+            self.seconds_elapsed(data.seconds_elapsed);
+            self.lines_processed(data.lines_processed);
+            if (self.is_progress)
+            {
+                self.progress_statistics.update(data);
+            }
+            // Conversion Statistics
+
+            self.arcs_created(data.arcs_created);
+            self.num_firmware_compensations(data.num_firmware_compensations);
+            self.num_gcode_length_exceptions(data.num_gcode_length_exceptions);
+            self.arcs_aborted_by_flowrate(data.arcs_aborted_by_flowrate);
+            self.points_compressed(data.points_compressed);
+            self.compression_ratio(data.compression_ratio);
+            self.compression_percent(data.compression_percent);
+            // Detailed Statistics
+            self.combined_statistics.update({
+                source_file_size: data.source_file_total_size,
+                target_file_size: data.target_file_total_size,
+                source_file_length: data.source_file_total_length,
+                target_file_length: data.target_file_total_length,
+                source_file_count: data.source_file_total_count,
+                target_file_count: data.target_file_total_count,
+                statistics_text: data.segment_statistics_text,
+            });
+            self.extrusion_statistics.update({
+                source_file_size: data.source_file_total_size,
+                target_file_size: data.target_file_total_size,
+                source_file_length: data.source_file_total_extrusion_length,
+                target_file_length: data.target_file_total_extrusion_length,
+                source_file_count: data.source_file_total_extrusion_count,
+                target_file_count: data.target_file_total_extrusion_count,
+                statistics_text: data.segment_extrusion_statistics_text,
+            });
+            self.retraction_statistics.update({
+                source_file_size: data.source_file_total_size,
+                target_file_size: data.target_file_total_size,
+                source_file_length: data.source_file_total_retraction_length,
+                target_file_length: data.target_file_total_retraction_length,
+                source_file_count: data.source_file_total_retraction_count,
+                target_file_count: data.target_file_total_retraction_count,
+                statistics_text: data.segment_retraction_statistics_text,
+            });
+            self.travel_statistics.update({
+                source_file_size: data.source_file_total_size,
+                target_file_size: data.target_file_total_size,
+                source_file_length: data.source_file_total_travel_length,
+                target_file_length: data.target_file_total_travel_length,
+                source_file_count: data.source_file_total_travel_count,
+                target_file_count: data.target_file_total_travel_count,
+                statistics_text: data.segment_travel_statistics_text,
+            });
+            // Unique Id
+            self.guid(data.guid);
+        };
+        return self;
+    }
+
     ArcWelder.ArcWelderViewModel = function (parameters) {
         var self = this;
         ArcWelder.Tab = self;
@@ -832,68 +1038,21 @@ $(function () {
         self.git_version = ko.observable();
         self.selected_filename = ko.observable();
         self.selected_file_is_new = ko.observable(false);
-        self.is_selected_file_welded = ko.observable(null);
+
         self.welded_no_statistics = ko.observable(false);
         self.statistics_available = ko.observable(null);
         self.current_statistics_file = ko.observable();
 
-        /* Statistics Observabled */
+        /* State Observables */
+        self.is_processing = ko.observable(false);
         self.has_statistics = ko.observable(false);
-        self.statistics_total_count_reduction_percent = ko.observable().extend({arc_welder_numeric: 1});
-        self.statistics_source_file_total_length = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_target_file_total_length = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_source_file_total_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_target_file_total_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_segment_statistics_text = ko.observable();
-        self.statistics_total_travel_count_reduction_percent = ko.observable().extend({arc_welder_numeric: 1});
-        self.statistics_source_file_total_travel_length = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_target_file_total_travel_length = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_source_file_total_travel_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_target_file_total_travel_count = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_segment_travel_statistics_text = ko.observable();
-        self.statistics_seconds_elapsed = ko.observable().extend({arc_welder_timer: {format:"long"}});
-        self.statistics_gcodes_processed = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_lines_processed = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_points_compressed = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_arcs_created = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_num_firmware_compensations = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_num_gcode_length_exceptions = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_arcs_aborted_by_flowrate = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.statistics_source_file_size = ko.observable().extend({arc_welder_file_size: 1});
-        self.statistics_source_file_position = ko.observable();
-        self.statistics_target_file_size = ko.observable().extend({arc_welder_file_size: 1});
-        self.statistics_compression_ratio = ko.observable().extend({arc_welder_numeric: 1});
-        self.statistics_compression_percent = ko.observable().extend({arc_welder_numeric: 1});
-        self.statistics_source_name = ko.observable();
-        self.statistics_target_name = ko.observable();
-        self.statistics_target_display_name = ko.observable();
-        self.statistics_guid = ko.observable();
+        self.is_selected_file_welded = ko.observable(null);
 
-        /* Progress Observables */
-        self.progress_percent_complete = ko.observable(0).extend({arc_welder_numeric: 1});
-        self.progress_seconds_elapsed = ko.observable().extend({arc_welder_timer: {format:"timer"}});
-        self.progress_seconds_remaining = ko.observable().extend({arc_welder_timer: {format:"estimate"}});
-        self.progress_arcs_created = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.progress_num_firmware_compensations = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.progress_num_gcode_length_exceptions = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.progress_arcs_aborted_by_flowrate = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.progress_points_compressed = ko.observable().extend({arc_welder_short_number: {precision:1}});
-        self.progress_source_file_size = ko.observable().extend({arc_welder_file_size: 1});
-        self.progress_target_file_size = ko.observable().extend({arc_welder_file_size: 1});
-        self.progress_compression_ratio = ko.observable().extend({arc_welder_numeric: 1});
-        self.progress_compression_percent = ko.observable().extend({arc_welder_numeric: 1});
-        self.progress_source_file_position = ko.observable();
-        self.progress_space_saved = ko.observable().extend({arc_welder_file_size: 1});
-        self.progress_source_position = ko.observable().extend({arc_welder_file_size: 1});
-        self.progress_source_file_total_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
-        self.progress_target_file_total_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
-        self.progress_total_count_reduction_percent = ko.observable(0).extend({arc_welder_numeric: 1});
-        self.progress_source_file_total_travel_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
-        self.progress_target_file_total_travel_count = ko.observable(0).extend({arc_welder_short_number: {precision:1}});
-        self.progress_total_travel_count_reduction_percent = ko.observable(0).extend({arc_welder_numeric: 1});
+        self.selected_file_statistics = new ArcWelder.StatisticsViewModel(false);
+        self.processing_statistics  = new ArcWelder.StatisticsViewModel(true);
+
         /* Firmware Observables */
         self.firmware_info = new ArcWelder.FirmwareViewModel()
-        self.is_processing = ko.observable(false);
         self.queued_not_processing = ko.observable(false);
         self.preprocessing_tasks = ko.observableArray([]);
         var initial_preprocessing_tasks_visible = ArcWelder.getLocalStorage("show_preprocessing_tasks") !== "false";
@@ -937,8 +1096,6 @@ $(function () {
             ArcWelder.setLocalStorage("file_statistics_visible", storage_value);
         });
 
-        self.current_files = null;
-
         self.current_statistics_file.subscribe(function(newValue) {
             self.loadStats(newValue);
             ArcWelder.setLocalStorage("stat_file_path", newValue.path)
@@ -951,16 +1108,7 @@ $(function () {
                 && self.plugin_settings.mm_per_arc_segment() > 0;
         });
 
-        self.statistics_space_saved_string = ko.pureComputed(function(){
-            return ArcWelder.toFileSizeString(
-                self.statistics_source_file_size() - self.statistics_target_file_size(), 1
-            );
-        });
 
-        self.statistics_target_file_lines = ko.pureComputed(function(){
-            return ArcWelder.toShortNumber(
-                self.statistics_lines_processed() - self.statistics_points_compressed(), 1);
-        });
 
         self.selected_filename_title = ko.pureComputed(function() {
             var title = "Selected";
@@ -1218,35 +1366,7 @@ $(function () {
             if (statistics)
             {
                 self.has_statistics(true);
-                self.statistics_total_count_reduction_percent(statistics.total_count_reduction_percent);
-                self.statistics_source_file_total_length(statistics.source_file_total_length);
-                self.statistics_target_file_total_length(statistics.target_file_total_length);
-                self.statistics_source_file_total_count(statistics.source_file_total_count);
-                self.statistics_target_file_total_count(statistics.target_file_total_count);
-                self.statistics_segment_statistics_text(statistics.segment_statistics_text);
-                self.statistics_total_travel_count_reduction_percent(statistics.total_travel_count_reduction_percent);
-                self.statistics_source_file_total_travel_length(statistics.source_file_total_travel_length);
-                self.statistics_target_file_total_travel_length(statistics.target_file_total_travel_length);
-                self.statistics_source_file_total_travel_count(statistics.source_file_total_travel_count);
-                self.statistics_target_file_total_travel_count(statistics.target_file_total_travel_count);
-                self.statistics_segment_travel_statistics_text(statistics.segment_travel_statistics_text);
-                self.statistics_seconds_elapsed(statistics.seconds_elapsed);
-                self.statistics_gcodes_processed(statistics.gcodes_processed);
-                self.statistics_lines_processed(statistics.lines_processed);
-                self.statistics_points_compressed(statistics.points_compressed);
-                self.statistics_arcs_created(statistics.arcs_created);
-                self.statistics_num_firmware_compensations(statistics.num_firmware_compensations);
-                self.statistics_num_gcode_length_exceptions(statistics.num_gcode_length_exceptions);
-                self.statistics_arcs_aborted_by_flowrate(statistics.arcs_aborted_by_flowrate);
-                self.statistics_source_file_size(statistics.source_file_size);
-                self.statistics_source_file_position(statistics.source_file_position);
-                self.statistics_target_file_size(statistics.target_file_size);
-                self.statistics_compression_ratio(statistics.compression_ratio);
-                self.statistics_compression_percent(statistics.compression_percent);
-                self.statistics_source_name(statistics.source_name || statistics.source_filename);
-                self.statistics_target_name(statistics.target_name || statistics.target_filename);
-                self.statistics_target_display_name(statistics.target_display_name || self.statistics_target_name());
-                self.statistics_guid(statistics.guid);
+                self.selected_file_statistics.update(statistics);
             }
             if (is_welded)
             {
@@ -1357,7 +1477,7 @@ $(function () {
                         ]);
                     }
 
-                    self.progress_percent_complete(0);
+                    self.processing_statistics.progress_statistics.percent_complete(0);
                     // This file should be processing now hopefully...  will see
                     break;
                 case "preprocessing-failed":
@@ -1440,26 +1560,7 @@ $(function () {
         };
 
         self.updateProcessProgress = function(progress){
-            self.progress_seconds_elapsed(progress.seconds_elapsed);
-            self.progress_seconds_remaining(progress.seconds_remaining);
-            self.progress_arcs_created(progress.arcs_created);
-            self.progress_num_firmware_compensations(progress.num_firmware_compensations);
-            self.progress_num_gcode_length_exceptions(progress.num_gcode_length_exceptions);
-            self.progress_arcs_aborted_by_flowrate(progress.arcs_aborted_by_flowrate);
-            self.progress_points_compressed(progress.points_compressed);
-            self.progress_compression_ratio(progress.compression_ratio);
-            self.progress_compression_percent(progress.compression_percent);
-            self.progress_space_saved(progress.source_file_position - progress.target_file_size);
-            self.progress_source_position(progress.source_file_position);
-            self.progress_source_file_size(progress.source_file_size);
-            self.progress_target_file_size(progress.target_file_size);
-            self.progress_percent_complete(progress.percent_complete);
-            self.progress_source_file_total_count(progress.source_file_total_count);
-            self.progress_target_file_total_count(progress.target_file_total_count);
-            self.progress_total_count_reduction_percent(progress.total_count_reduction_percent);
-            self.progress_total_travel_count_reduction_percent(progress.total_travel_count_reduction_percent);
-            self.progress_source_file_total_travel_count(progress.source_file_total_travel_count);
-            self.progress_target_file_total_travel_count(progress.target_file_total_travel_count);
+            self.processing_statistics.update(progress);
         }
 
         self.getPreprocessingTasks = function() {

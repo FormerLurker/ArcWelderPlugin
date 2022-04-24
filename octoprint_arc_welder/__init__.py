@@ -48,6 +48,7 @@ import octoprint_arc_welder.log as log
 import octoprint_arc_welder.preprocessor as preprocessor
 import octoprint_arc_welder.utilities as utilities
 import octoprint_arc_welder.firmware_checker as firmware_checker
+
 # stupid python 2/python 3 compatibility imports
 
 try:
@@ -60,10 +61,17 @@ try:
 except ImportError:
     import urllib as urllibparse
 
+
+
 logging_configurator = log.LoggingConfigurator("arc_welder", "arc_welder.", "octoprint_arc_welder.")
 root_logger = logging_configurator.get_root_logger()
 # so that we can
 logger = logging_configurator.get_logger("__init__")
+
+# must import AFTER the logger is imported,
+# else this will fail to log and may crash
+import PyArcWelder as converter
+
 
 class ArcWelderPlugin(
     octoprint.plugin.StartupPlugin,
@@ -98,17 +106,29 @@ class ArcWelderPlugin(
     # This is the tag that starts all settings.  Example: ; ArcWelder: {settings}
     ARC_WELDER_GCODE_TAG = "ARCWELDER"
     ARC_WELDER_GCODE_PARAMETERS = {
-        "WELD": {"type": "boolean"},
-        "PRINT": {"type": "boolean"},
-        "DELETE": {"type": "boolean"},
-        "SELECT": {"type": "boolean"},
-        "PREFIX": {"type": "string"},
-        "POSTFIX": {"type": "string"},
-        "OVERWRITE-SOURCE": {"type": "boolean"},
-        "G90-INFLUENCES-EXTRUDER": {"type": "boolean"},
-        "RESOLUTION-MM": {"type": "float"},
-        "PATH-TOLERANCE-PERCENT": {"type": "percent"},
-        "MAX-RADIUS-MM": {"type": "float"},
+        "WELD": {"type": "boolean", "key": "weld"},
+        "PRINT": {"type": "boolean", "key": "print"},
+        "DELETE": {"type": "boolean", "key": "delete"},
+        "SELECT": {"type": "boolean", "key": "select"},
+        "PREFIX": {"type": "string", "key": "prefix"},
+        "POSTFIX": {"type": "string", "key": "postfix"},
+        "OVERWRITE-SOURCE": {"type": "boolean", "key": "overwrite-source"},
+        "G90-INFLUENCES-EXTRUDER": {"type": "boolean", "key": "g90_g91_influences_extruder"},
+        "RESOLUTION-MM": {"type": "float", "key": "resolution_mm"},
+        "PATH-TOLERANCE-PERCENT": {"type": "percent", "key": "path_tolerance_percent"},
+        "MAX-RADIUS-MM": {"type": "float", "key": "max_radius_mm"},
+        "DYNAMIC-GCODE-PRECISION-ENABLED": {"type": "boolean", "key": "allow_dynamic_precision"},
+        "DEFAULT-XYZ-PRECISION": {"type": "integer", "key": "default_xyz_precision"},
+        "DEFAULT-E-PRECISION": {"type": "integer", "key": "default_e_precision"},
+        "EXTRUSION-RATE-VARIANCE-DETECTION-ENABLED": {"type": "boolean", "key": "extrusion_rate_variance_detection_enabled"},
+        "EXTRUSION-RATE-VARIANCE-PERCENT": {"type": "percent", "key": "extrusion_rate_variance_percent"},
+        "3D-ARCS-ENABLED": {"type": "boolean", "key": "allow_3d_arcs"},
+        "TRAVEL-ARCS-ENABLED": {"type": "boolean", "key": "allow_travel_arcs"},
+        "MAX-G2-G3-LENGTH-DETECTION-ENABLED": {"type": "boolean", "key": "max_gcode_length_detection_enabled"},
+        "MAX-G2-G3-LENGTH": {"type": "integer", "key": "max_gcode_length"},
+        "FIRMWARE-COMPENSATION-ENABLED": {"type": "boolean", "key": "firmware_compensation_enabled"},
+        "MIN-ARC-SEGMENTS": {"type": "integer", "key": "min_arc_segments"},
+        "MM-PER-ARC-SEGMENT": {"type": "float", "key": "mm_per_arc_segment"}
     }
     SEARCH_FUNCTION_SETTINGS = {
         "name": "settings",
@@ -119,7 +139,11 @@ class ArcWelderPlugin(
     SEARCH_FUNCTION_IS_WELDED = {
         "name": "is_welded",
         "type": utilities.COMMENT_SEARCH_TYPE_CONTAINS,
-        "find": "Postprocessed by [ArcWelder]".upper(),
+        "find": [
+            "Postprocessed by [ArcWelder]".upper(),
+            "Postprocessed by [ArcWelderLib]".upper(),
+            "Postprocessed for the ArcWelderPlugin by [ArcWelderLib]".upper()
+        ],
         "if_found": "return_this"
     }
     SEARCH_FUNCTION_CURA_UPLOAD = {
@@ -129,15 +153,18 @@ class ArcWelderPlugin(
         "value": "Cura-OctoPrintPlugin"
     }
 
+
     def __init__(self):
         super(ArcWelderPlugin, self).__init__()
+        # get version information for PyArcWelder
+        self.arc_welder_lib_version_info = converter.GetVersionInfo();
 
+        # get version information from versioneer
         from ._version import get_versions
-
         self.source_version = get_versions()["version"]
         self.git_version = get_versions()["full-revisionid"]
-
         del get_versions
+
         # Note, you cannot count the number of items left to process using the
         # _processing_queue.  Items put into this queue will be inserted into
         # an internal dequeue by the preprocessor
@@ -183,7 +210,8 @@ class ArcWelderPlugin(
                 enabled_loggers=[],
             ),
             version=self.source_version,
-            git_version=self.git_version
+            git_version=self.git_version,
+            arc_welder_lib_version_info = self.arc_welder_lib_version_info
         )
         # preprocessor worker
         self._preprocessor_worker = None
@@ -243,15 +271,7 @@ class ArcWelderPlugin(
                     self._settings.set(["max_gcode_length"], 0)
                 logger.info("Settings downgraded to version 2 successfully.")
 
-
     def on_after_startup(self):
-
-        # Update arcwelder version
-        if (self._settings.get(["version"]) != self._plugin_version or self._settings.get(
-                ["git_version"]) != self.git_version):
-            self._settings.set(["version"], self._plugin_version)
-            self._settings.set(["git_version"], self.git_version)
-
         logging_configurator.configure_loggers(
             self._log_file_path, self._logging_configuration
         )
@@ -291,7 +311,7 @@ class ArcWelderPlugin(
     # Events
     def get_settings_defaults(self):
         # plugin_version is not instantiated when __init__ is called.  Update it now.
-        self.settings_default["version"] = self._plugin_version
+        #self.settings_default["version"] = self._plugin_version
         return self.settings_default
 
     def on_settings_save(self, data):
@@ -302,11 +322,6 @@ class ArcWelderPlugin(
                 "data": errors
             }
             self._plugin_manager.send_plugin_message(self._identifier, error_data)
-
-        # Update arcwelder version
-        if (self._settings.get(["version"]) != self._plugin_version or self._settings.get(["git_version"]) != __git_version__):
-            self._settings.set(["version"], self._plugin_version)
-            self._settings.set(["git_version"], __git_version__)
 
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
         # reconfigure logging
@@ -633,7 +648,6 @@ class ArcWelderPlugin(
         return dict(
             js=[
                 "js/showdown.min.js",
-
                 #"js/showdown.js",
                 "js/pnotify_extensions.js",
                 "js/markdown_help.js",
@@ -922,9 +936,9 @@ class ArcWelderPlugin(
         overwrite_source_file = self._overwrite_source_file
         if not overwrite_source_file:
             target_prefix = self._target_prefix
-            target_prefix = gcode_comment_settings.get("PREFIX", target_prefix)
+            target_prefix = gcode_comment_settings.get("prefix", target_prefix)
             target_postfix = self._target_postfix
-            target_postfix = gcode_comment_settings.get("POSTFIX", target_postfix)
+            target_postfix = gcode_comment_settings.get("postfix", target_postfix)
             if target_prefix == "" and target_postfix == "":
                 # our gcode comment settings say we should overwrite the source, so do it!
                 overwrite_source_file = True
@@ -1198,6 +1212,9 @@ class ArcWelderPlugin(
         data = copy.copy(progress)
         # remove the segment statistics text, it is large and currently unused
         data.pop("segment_statistics_text")
+        data.pop("segment_travel_statistics_text")
+        data.pop("segment_extrusion_statistics_text")
+        data.pop("segment_retraction_statistics_text")
 
         # add the sorce and target name as well as the message type from the task
         data["source_name"] = current_task["octoprint_args"]["source_name"]
@@ -1388,14 +1405,14 @@ class ArcWelderPlugin(
         # This option doesn't work atm, maybe in the future
         #uploaded_by_slicer = gcode_comment_settings.get("slicer_upload_type", "") != ""
         select_after_processing = self._get_select_after_processing(not is_manual_request)
-        select_after_processing = gcode_comment_settings.get("SELECT", select_after_processing)
+        select_after_processing = gcode_comment_settings.get("select", select_after_processing)
         delete_after_processing = self._get_delete_source()
-        delete_after_processing = gcode_comment_settings.get("DELETE", delete_after_processing)
+        delete_after_processing = gcode_comment_settings.get("delete", delete_after_processing)
         # we can't delete if the pre and postfix are both overridden and empty
         if (
                 delete_after_processing
-                and gcode_comment_settings.get("PREFIX", "NOTFOUND") == ""
-                and gcode_comment_settings.get("POSTFIX", "NOTFOUND") == ""
+                and gcode_comment_settings.get("prefix", "NOTFOUND") == ""
+                and gcode_comment_settings.get("postfix", "NOTFOUND") == ""
         ):
             logger.debug("Cannot delete after processing due to source overwrite.")
             delete_after_processing = False
@@ -1407,50 +1424,67 @@ class ArcWelderPlugin(
             # first, get this value based on the settings
             print_after_processing = self._get_print_after_processing(is_manual_request)
             # now override if the WELD paramater is supplied within the gcode
-            print_after_processing = gcode_comment_settings.get("WELD", print_after_processing)
+            print_after_processing = gcode_comment_settings.get("print", print_after_processing)
         additional_metadata = self.get_additional_metadata(metadata)
 
         source_path_on_disk = self._file_manager.path_on_disk(FileDestinations.LOCAL, source_path)
         # make sure the path starts with a / for compatibility
         if source_path[0] != '/':
             source_path = '/' + source_path
-        # the gcode comment settings override everything else if they exist
+
+        # Gcode comment settings will override those from the interface.  Get them one at a time, and test the values
+
         resolution_mm = gcode_comment_settings.get("resolution_mm", self._resolution_mm)
-        # TODO: Test the logging messages
         if resolution_mm > 0.5:
             logger.warning(
                 "The resolution_mm setting  %0.2f is greater than the recommended max of 0.5mm", resolution_mm
             )
+
         path_tolerance_percent = gcode_comment_settings.get("path_tolerance_percent", self._path_tolerance_percent)
         if path_tolerance_percent > 5:
             logger.warning(
                 "The path tolerance percent %0.2f percent is greater than the recommended max of 5%%", path_tolerance_percent
             )
-        extrusion_rate_variance_percent = gcode_comment_settings.get("extrusion_rate_variance_percent", self._extrusion_rate_variance_percent)
-        if extrusion_rate_variance_percent < 0:
-            logger.warning(
-                "The extrusion rate tolerance percent of %0.2f is less than 0, and has been set to the default.", extrusion_rate_variance_percent
-            )
-            extrusion_rate_variance_percent = self._extrusion_rate_variance_percent;
+
+        extrusion_rate_variance_detection_enabled = gcode_comment_settings.get(
+            "extrusion_rate_variance_detection_enabled", self._extrusion_rate_variance_detection_enabled
+        )
+        extrusion_rate_variance_percent = 0
+        if extrusion_rate_variance_detection_enabled:
+            extrusion_rate_variance_percent = gcode_comment_settings.get("extrusion_rate_variance_percent", self._extrusion_rate_variance_percent)
+            if extrusion_rate_variance_percent < 0:
+                logger.warning(
+                    "The extrusion rate tolerance percent of %0.2f is less than 0, and has been set to the default.", extrusion_rate_variance_percent
+                )
+                extrusion_rate_variance_percent = self.settings_default.get("extrusion_rate_variance_percent")
 
         max_radius_mm = gcode_comment_settings.get("max_radius_mm", self._max_radius_mm)
         if max_radius_mm > 1000000:
             logger.warning(
                 "The max radius mm of %0.2fmm is greater than the recommended max of 1000000mm (1km).", max_radius_mm
             )
+        elif max_radius_mm <= 0:
+            logger.warning(
+                "The max radius mm of %0.2fmm is less than or equal to zero.  Setting to the default value.", max_radius_mm
+            )
+            max_radius_mm = self.settings_default.get("max_radius_mm")
 
-        if not self._firmware_compensation_enabled:
+        firmware_compensation_enabled = gcode_comment_settings.get(
+            "firmware_compensation_enabled", self._firmware_compensation_enabled
+        )
+
+        if not firmware_compensation_enabled:
             min_arc_segments = 0
             mm_per_arc_segment = 0
         else:
             min_arc_segments = gcode_comment_settings.get("min_arc_segments", self._min_arc_segments)
             if min_arc_segments < 0:
-                logger.warning("The min arc segments value is less than 0.  Setting to the 0.")
+                logger.warning("The min arc segments value is less than 0.  Setting to 0, which will disable firmware compensation.")
                 min_arc_segments = 0
 
             mm_per_arc_segment = gcode_comment_settings.get("mm_per_arc_segment", self._mm_per_arc_segment)
             if mm_per_arc_segment < 0:
-                logger.warning("The mm per arc segment value is less than 0.  Setting to the 0.")
+                logger.warning("The mm per arc segment value is less than 0.  Setting to 0, which will disable firmware compensation.")
                 mm_per_arc_segment = 0
 
         allow_3d_arcs = gcode_comment_settings.get(
@@ -1465,26 +1499,60 @@ class ArcWelderPlugin(
             "g90_g91_influences_extruder", self._g90_g91_influences_extruder
         )
 
-        allow_dynamic_precision = self._allow_dynamic_precision
-        default_xyz_precision = self._default_xyz_precision
+        allow_dynamic_precision = gcode_comment_settings.get(
+            "allow_dynamic_precision", self._allow_dynamic_precision
+        )
+
+        default_xyz_precision = gcode_comment_settings.get(
+            "default_xyz_precision", self._default_xyz_precision
+        )
+
         if not default_xyz_precision:
-            default_xyz_precision = 3
+            logger.warning(
+                "The default XYZ precision was not specified.  Setting to the default value.")
+            default_xyz_precision = self.settings_default.get("default_xyz_precision")
         elif default_xyz_precision < 3:
-            default_xyz_precision = 3
+            logger.warning(
+                "The default XYZ precision is less than 3.  Setting to the default value.")
+            default_xyz_precision = self.settings_default.get("default_xyz_precision")
         elif default_xyz_precision > 6:
+            logger.warning(
+                "The default XYZ precision is greater than 6, setting to 6.")
             default_xyz_precision = 6
 
-        default_e_precision = self._default_e_precision
+        default_e_precision = gcode_comment_settings.get(
+            "default_e_precision", self._default_e_precision
+        )
         if not default_e_precision:
+            logger.warning(
+                "The default E precision was not specified.  Setting to the default value.")
             default_e_precision = 5
         elif default_e_precision < 3:
+            logger.warning(
+                "The default E precision is less than 3.  Setting to the default value.")
             default_e_precision = 3
         elif default_e_precision > 6:
+            logger.warning(
+                "The default E precision is greater than 6, setting to 6.")
             default_e_precision = 6
 
-        max_gcode_length = gcode_comment_settings.get(
-            "max_gcode_length", self._max_gcode_length
+        max_gcode_length_detection_enabled = gcode_comment_settings.get(
+            "max_gcode_length_detection_enabled", self._max_gcode_length_detection_enabled
         )
+        max_gcode_length = 0
+        if max_gcode_length_detection_enabled:
+            max_gcode_length = gcode_comment_settings.get(
+                "max_gcode_length", self._max_gcode_length
+            )
+            if max_gcode_length < 0:
+                logger.warning("The max g2/g3 length setting is less than 0.  Setting to 0, which will disable max g2 g3 length detection.")
+                max_gcode_length = 0
+                max_gcode_length_detection_enabled = false
+            elif max_gcode_length < 31:
+                logger.warning(
+                    "The max g2/g3 length setting is less than 31, but not 0.  Setting to 0, which will disable max g2 g3 length detection.")
+                max_gcode_length = 0
+                max_gcode_length_detection_enabled = false
 
         # determine the target file name and path
         target_name, target_path, target_display_name = self.get_output_file_name_and_path(source_name, source_path, gcode_comment_settings)
@@ -1590,7 +1658,7 @@ class ArcWelderPlugin(
             #if "slicer_upload_type" in gcode_search_results:
             #    is_slicer_upload = True
             #    logger.info("Detected slicer upload via: %s", gcode_search_results["slicer_upload_type"])
-        if not gcode_comment_settings.get("WELD", False):
+        if not gcode_comment_settings.get("weld", False):
             # If the gcode file is set to weld, we don't want to enforce any of this
             if not self._get_process_file(is_manual_request):
                 logger.debug("Cannot weld '%s', Welding is not enabled for uploaded files.", source_name)

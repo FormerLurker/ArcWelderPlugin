@@ -89,7 +89,34 @@
         </ul>
         I would also love to hear any feedback you have, since I'm always trying to improve my plugins.
     </p>
-    <h4>Included Libraries</h4>
+    <h4 data-bind="text: plugin_settings().arc_welder_lib_version_info.title"></h4>
+    <p>
+        This extension was written in C++, and is the basis for the ArcWelder Octoprint plugin.  It does the heavy
+        lifting of processing the gcode, and turning G0/G1 commands into G2/G3 commands according to the parameters supplied.
+    </p>
+    <h5>Version Information</h5>
+    <p data-bind="text: plugin_settings().arc_welder_lib_version_info.title"></p>
+    <div class="row-fluid">
+        <div class="span4 right">Author:</div>
+        <div class="span8"> <a target="_blank" data-bind="text: plugin_settings().arc_welder_lib_version_info.git_author, attr: { href: plugin_settings().arc_welder_lib_version_info.git_author_url }"></a></div>
+    </div>
+    <div class="row-fluid">
+        <div class="span4 right">Version:</div>
+        <div class="span8"> <a target="_blank" data-bind="visible: plugin_settings().arc_welder_lib_version_info.is_release(), text: plugin_settings().arc_welder_lib_version_info.git_tagged_version, attr: { href: plugin_settings().arc_welder_lib_version_info.release_url }"></a><a target="_blank" data-bind="visible: !plugin_settings().arc_welder_lib_version_info.is_release(), text: plugin_settings().arc_welder_lib_version_info.git_tagged_version, attr: { href: plugin_settings().arc_welder_lib_version_info.commit_url }"></a></div>
+    </div>
+    <div class="row-fluid" data-bind="visible: !plugin_settings().arc_welder_lib_version_info.is_release()">
+        <div class="span4 right">Closest Release:</div>
+        <div class="span8"> <a target="_blank" data-bind="text: plugin_settings().arc_welder_lib_version_info.git_tag, attr: { href: plugin_settings().arc_welder_lib_version_info.release_url }"></a></div>
+    </div>
+    <div class="row-fluid">
+        <div class="span4 right">Branch:</div>
+        <div class="span8"><span data-bind="text:  plugin_settings().arc_welder_lib_version_info.git_branch"></span></div>
+    </div>
+    <div class="row-fluid">
+        <div class="span4 right">Build Date:</div>
+        <div class="span8"><span data-bind="text:  plugin_settings().arc_welder_lib_version_info.build_date"></span></div>
+    </div>
+    <h5>Included Libraries</h5>
     <p>
         A couple external libraries are included in ArcWelder:
     </p>
@@ -98,5 +125,6 @@
         The original fpconv algorithm - <a href="https://github.com/miloyip/dtoa-benchmark/blob/master/src/fpconv/license" target="_blank">Copyright(c) 2013 Andreas Samoljuk</a><br/>
     </p>
     <p>In addition, the console version includes the powerful command line argument processing tool <a href="http://tclap.sourceforge.net/" target="_blank">TCLAP</a>.  Even though this is not used in the ArcWelder Plugin plugin, I want to give this library some much deserved love!</p>
+
 
 </script>

@@ -1,0 +1,202 @@
+<!--###############################################################################
+# Arc Welder: Anti-Stutter
+#
+# A plugin for OctoPrint that converts G0/G1 commands into G2/G3 commands where possible and ensures that the tool
+# paths don't deviate by more than a predefined resolution.  This compresses the gcode file sice, and reduces reduces
+# the number of gcodes per second sent to a 3D printer that supports arc commands (G2 G3)
+#
+# Copyright (C) 2022  Brad Hochgesang
+# #################################################################################
+# This program is free software:
+# you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see the following:
+# https://github.com/FormerLurker/ArcWelderPlugin/blob/master/LICENSE
+#
+# You can contact the author either through the git-hub repository, or at the
+# following email address: FormerLurker@pm.me
+##################################################################################-->
+<script type="text/html" id="arc_welder_statistics">
+    <div class="row-fluid">
+                    <div class="span4 text-right"><strong>Source File:</strong></div>
+                    <div class="span8">
+                        <sapn data-bind="text:source_name, attr:{title:source_name}"></sapn>
+                    </div>
+                </div>
+    <div class="row-fluid">
+        <div class="span4 text-right"><strong>Target File:</strong></div>
+        <div class="span8">
+            <sapn data-bind="text:target_name, attr:{title:target_name}"></sapn>
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span4 text-right"><strong>Arcs:</strong></div>
+        <div class="span8">
+            Created <span data-bind="text: arcs_created.formatted"></span> from <span
+                data-bind="text: points_compressed.formatted"></span> extrusions
+        </div>
+    </div>
+    <div class="row-fluid" data-bind="visible: num_firmware_compensations() > 0">
+        <div class="span4 text-right"><strong>Firmware Compensations:</strong></div>
+        <div class="span8">
+            <span data-bind="text: num_firmware_compensations.formatted"></span>&nbsp;arcs aborted
+        </div>
+    </div>
+    <div class="row-fluid" data-bind="visible: num_gcode_length_exceptions() > 0">
+        <div class="span4 text-right"><strong>GCode Length Exceptions:</strong></div>
+        <div class="span8">
+            <span data-bind="text: num_gcode_length_exceptions.formatted"></span>&nbsp;arcs aborted
+        </div>
+    </div>
+    <div class="row-fluid" data-bind="visible: arcs_aborted_by_flowrate() > 0">
+        <div class="span4 text-right"><strong>Flowrate Changes:</strong></div>
+        <div class="span8">
+            <span data-bind="text: arcs_aborted_by_flowrate.formatted"></span>&nbsp;arcs aborted
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span4 text-right"><strong>All Segments:</strong></div>
+        <div class="span8">
+            <span data-bind="text: combined_statistics.target.count.formatted"></span>
+            &#8260;
+            <span data-bind="text: combined_statistics.source.count.formatted"></span>
+            =&nbsp;<span data-bind="text: Math.abs(combined_statistics.reduction_percent_count())"></span>%
+            <span data-bind="text: combined_statistics.reduction_percent_count() > 0 ? 'reduction' : (combined_statistics.reduction_percent_count() < 0 ? 'increase' : 'unchanged')"></span>
+        </div>
+    </div>
+    <div class="row-fluid" data-bind="visible: extrusion_statistics.source.count()">
+        <div class="span4 text-right"><strong>Extrusion:</strong></div>
+        <div class="span8">
+            <span data-bind="text: extrusion_statistics.target.count.formatted"></span>
+            &#8260;
+            <span data-bind="text: extrusion_statistics.source.count.formatted"></span>
+            =&nbsp;<span data-bind="text: Math.abs(extrusion_statistics.reduction_percent_count())"></span>%
+            <span data-bind="text: extrusion_statistics.reduction_percent_count() > 0 ? 'reduction' : (extrusion_statistics.reduction_percent_count() < 0 ? 'increase' : 'unchanged')"></span>
+        </div>
+    </div>
+    <div class="row-fluid" data-bind="visible: retraction_statistics.source.count()">
+        <div class="span4 text-right"><strong>Retraction:</strong></div>
+        <div class="span8">
+            <span data-bind="text: retraction_statistics.target.count.formatted"></span>
+            &#8260;
+            <span data-bind="text: retraction_statistics.source.count.formatted"></span>
+            =&nbsp;<span data-bind="text: Math.abs(retraction_statistics.reduction_percent_count())"></span>%
+            <span data-bind="text: retraction_statistics.reduction_percent_count() > 0 ? 'reduction' : (retraction_statistics.reduction_percent_count() < 0 ? 'increase' : 'unchanged')"></span>
+        </div>
+    </div>
+    <div class="row-fluid" data-bind="visible: travel_statistics.source.count()">
+        <div class="span4 text-right"><strong>Travel:</strong></div>
+        <div class="span8">
+            <span data-bind="text: travel_statistics.target.count.formatted"></span>
+            &#8260;
+            <span data-bind="text: travel_statistics.source.count.formatted"></span>
+            =&nbsp;<span data-bind="text: Math.abs(travel_statistics.reduction_percent_count())"></span>%
+            <span data-bind="text: travel_statistics.reduction_percent_count() > 0 ? 'reduction' : (travel_statistics.reduction_percent_count() < 0 ? 'increase' : 'unchanged')"></span>
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span4 text-right"><strong>Compression:</strong></div>
+        <div class="span8">
+            <span data-bind="text: compression_ratio"></span>&#8758;1 (<span
+                data-bind="text: compression_percent"></span>%)
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span4 text-right"><strong>File Size:</strong></div>
+        <div class="span8">
+            <span data-bind="text: source_file_size.formatted"></span> - <span
+                data-bind="text: space_saved_string"></span> = <span
+                data-bind="text: target_file_size.formatted"></span>
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span4 text-right"><strong>Line Count:</strong></div>
+        <div class="span8">
+            <span data-bind="text: lines_processed.formatted"></span> - <span
+                data-bind="text: points_compressed.formatted"></span> = <span
+                data-bind="text: target_file_lines"></span>
+        </div>
+    </div>
+    <div class="row-fluid">
+        <div class="span4 text-right"><strong>Processing Time:</strong></div>
+        <div class="span8">
+            <span data-bind="text: seconds_elapsed.formatted"></span>
+        </div>
+    </div>
+    <div data-bind="if: !is_progress">
+        <div data-bind="visible: combined_statistics.statistics_text">
+            <div class="row-fluid">
+                <div class="span12">
+                    <h5>
+                        <a id="arc_welder_show_extrusion_retraction_statistics" href="#" class="no-underline"
+                            data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc-welder-extrusion-retraction-stats', toggle_observable: combined_detail_visible }">
+                            Combined
+                            <i class="fa fa-no-shadow fa-caret-down"></i>
+                        </a>
+                    </h5>
+                    <div id="arc-welder-extrusion-retraction-stats" class="text-center">
+                        <pre class="text-center statistics-text"><div data-bind="html: combined_statistics.statistics_text"></div></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div data-bind="visible: extrusion_statistics.statistics_text">
+            <div class="row-fluid">
+                <div class="span12">
+                    <h5>
+                        <a id="arc_welder_show_extrusion_statistics" href="#" class="no-underline"
+                            data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc-welder-extrusion-stats', toggle_observable: extrusion_detail_visible }">
+                            Extrusion
+                            <i class="fa fa-no-shadow fa-caret-down"></i>
+                        </a>
+                    </h5>
+                    <div id="arc-welder-extrusion-stats" class="text-center">
+                        <pre class="text-center statistics-text"><div data-bind="html: extrusion_statistics.statistics_text"></div></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div data-bind="visible: retraction_statistics.statistics_text">
+            <div class="row-fluid">
+                <div class="span12">
+                    <h5>
+                        <a id="arc_welder_show_retraction_statistics" href="#" class="no-underline"
+                            data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc-welder-retraction-stats', toggle_observable: retraction_detail_visible }">
+                            Retraction
+                            <i class="fa fa-no-shadow fa-caret-down"></i>
+                        </a>
+                    </h5>
+                    <div id="arc-welder-retraction-stats" class="text-center">
+                        <pre class="text-center statistics-text"><div data-bind="html: retraction_statistics.statistics_text"></div></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div data-bind="visible: travel_statistics.statistics_text">
+            <div class="row-fluid">
+                <div class="span12">
+                    <h5>
+                        <a id="arc_welder_show_travel_statistics" href="#" class="no-underline"
+                            data-bind="arc_welder_toggle: { class_showing: 'fa-caret-down', class_hiding: 'fa-caret-right', container: '#arc-welder-travel-stats', toggle_observable: travel_detail_visible }">
+                            Travel
+                            <i class="fa fa-no-shadow fa-caret-down"></i>
+                        </a>
+                    </h5>
+                    <div id="arc-welder-travel-stats" class="text-center">
+                        <pre class="text-center statistics-text">
+                            <div data-bind="visible: travel_statistics.source.count() != travel_statistics.target.count(), html: travel_statistics.statistics_text"></div>
+                            <div data-bind="visible: travel_statistics.source.count() == travel_statistics.target.count()">No travel moves were converted to arcs.  This is normal for a 3d print.</div>
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>

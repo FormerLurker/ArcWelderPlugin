@@ -30,8 +30,11 @@
 #endif
 #include <string>
 #include "py_arc_welder.h"
+#include "py_arc_welder_version.h"
 #include "py_logger.h"
 #include "arc_welder.h"
+#include "utilities.h"
+
 extern "C"
 {
 #if PY_MAJOR_VERSION >= 3
@@ -40,10 +43,13 @@ extern "C"
 	extern "C" void initPyArcWelder(void);
 #endif
 	static PyObject* ConvertFile(PyObject* self, PyObject* args);
+	static PyObject* GetVersionInfo();
 }
 
 // global logger
 py_logger* p_py_logger = NULL;
+
+py_arc_welder_version py_version("PyArcWelder", "Python Extension for ArcWelder", "Converts G0/G1 commands to G2/G3 (arc) commands. Reduces the number of gcodes per second sent to a 3D printer, which can reduce stuttering.");
 /*
 static void AtExit()
 {
@@ -52,5 +58,5 @@ static void AtExit()
 
 
 
-	
+
 

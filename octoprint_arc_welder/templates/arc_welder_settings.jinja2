@@ -237,10 +237,10 @@
                                 </label>
                                 <div class="controls">
                                     <div class="input-append">
-                                        <input id="arc_welder_max_gcode_length" class="input-small" required="true" type="number" min="0" max="255"
+                                        <input id="arc_welder_max_gcode_length" class="input-small" required="true" type="number" min="30" max="255"
                                                step="1"
                                                data-bind="value: plugin_settings().max_gcode_length">
-                                        <span class="add-on" data-bind="text: (plugin_settings().max_gcode_length() > 0 ? 'characters' : 'unlimited')"></span>
+                                        <span class="add-on">characters</span>
                                     </div>
                                     <a class="arc_welder_help" data-help-url="settings.max_gcode_length.md"
                                        data-help-title="Max Gcode Length"></a>
